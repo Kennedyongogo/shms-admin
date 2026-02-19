@@ -2,15 +2,14 @@ import React from "react";
 import {
   Box,
   Dialog,
-  DialogActions,
   DialogContent,
   DialogTitle,
   IconButton,
   Typography,
   Divider,
-  Button,
   Avatar,
   Chip,
+  Stack,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import PersonIcon from "@mui/icons-material/Person";
@@ -20,66 +19,62 @@ import WorkIcon from "@mui/icons-material/Work";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import LoginIcon from "@mui/icons-material/Login";
+import { useTheme } from "@mui/material/styles";
 
-export default function UserAccount({ open, onClose, currentUser }) {
+// Helper to build URL for uploaded assets using Vite proxy
+const buildImageUrl = (relativePath) => {
+  if (!relativePath) return "";
+  if (String(relativePath).startsWith("http")) return relativePath;
+  if (String(relativePath).startsWith("uploads/")) return `/${relativePath}`;
+  if (String(relativePath).startsWith("/uploads/")) return relativePath;
+  return relativePath;
+};
+
+const formatDateTime = (value) => {
+  if (!value) return "—";
+  try {
+    return new Date(value).toLocaleString();
+  } catch {
+    return String(value);
+  }
+};
+
+export default function UserAccount({ open, onClose, currentUser, roleName }) {
+  const theme = useTheme();
+  const status = currentUser?.status || "—";
+  const isActive = status === "active";
   return (
     <Dialog
       open={open}
       onClose={onClose}
       fullWidth
-      maxWidth="sm"
+      maxWidth="xs"
       PaperProps={{
         sx: {
           borderRadius: 3,
-          boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+          boxShadow: "0 10px 40px rgba(2, 132, 122, 0.18)",
         },
       }}
     >
       <DialogTitle
         sx={{
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
           color: "white",
-          fontWeight: "bold",
+          fontWeight: 900,
           display: "flex",
           alignItems: "center",
-          gap: 2,
-          p: 3,
+          gap: 1.5,
+          p: 2.25,
           position: "relative",
           overflow: "hidden",
         }}
       >
-        {/* Decorative Elements */}
-        <Box
-          sx={{
-            position: "absolute",
-            top: -20,
-            right: -20,
-            width: 100,
-            height: 100,
-            background: "rgba(255, 255, 255, 0.1)",
-            borderRadius: "50%",
-            zIndex: 0,
-          }}
-        />
-        <Box
-          sx={{
-            position: "absolute",
-            bottom: -15,
-            left: -15,
-            width: 80,
-            height: 80,
-            background: "rgba(255, 255, 255, 0.05)",
-            borderRadius: "50%",
-            zIndex: 0,
-          }}
-        />
-
-        <PersonIcon sx={{ position: "relative", zIndex: 1, fontSize: 28 }} />
+        <PersonIcon sx={{ position: "relative", zIndex: 1, fontSize: 22 }} />
         <Box sx={{ position: "relative", zIndex: 1 }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, fontSize: "1.1rem" }}>
+          <Typography variant="h6" sx={{ fontWeight: 900, fontSize: "1rem", lineHeight: 1.1 }}>
             Account Details
           </Typography>
-          <Typography variant="body2" sx={{ opacity: 0.9, fontSize: "0.9rem" }}>
+          <Typography variant="body2" sx={{ opacity: 0.9 }}>
             {currentUser?.full_name}
           </Typography>
         </Box>
@@ -88,8 +83,8 @@ export default function UserAccount({ open, onClose, currentUser }) {
           onClick={onClose}
           sx={{
             position: "absolute",
-            top: 16,
-            right: 16,
+            top: 10,
+            right: 10,
             color: "white",
             zIndex: 1,
             "&:hover": {
@@ -101,219 +96,79 @@ export default function UserAccount({ open, onClose, currentUser }) {
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ p: 3, backgroundColor: "#fafafa" }}>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {/* Name */}
-          <Box
-            sx={{
-              p: 2,
-              backgroundColor: "white",
-              borderRadius: 2,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-              border: "1px solid #e0e0e0",
-            }}
-          >
-            <Typography
-              variant="subtitle2"
+      <DialogContent sx={{ p: 2 }}>
+        <Stack spacing={1.5}>
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Avatar
+              src={buildImageUrl(currentUser?.profile_image_path)}
+              alt={currentUser?.full_name}
               sx={{
-                color: "text.secondary",
-                mb: 1,
-                fontSize: "0.8rem",
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
+                width: 46,
+                height: 46,
+                bgcolor: "rgba(0, 137, 123, 0.12)",
+                color: theme.palette.primary.dark,
+                fontWeight: 900,
               }}
             >
-              <PersonIcon sx={{ fontSize: 16 }} />
-              Name
-            </Typography>
-            <Typography
-              variant="body1"
-              sx={{ fontWeight: 500, color: "text.primary" }}
-            >
-              {currentUser?.full_name}
-            </Typography>
-          </Box>
-
-          {/* Email */}
-          <Box
-            sx={{
-              p: 2,
-              backgroundColor: "white",
-              borderRadius: 2,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-              border: "1px solid #e0e0e0",
-            }}
-          >
-            <Typography
-              variant="subtitle2"
-              sx={{
-                color: "text.secondary",
-                mb: 1,
-                fontSize: "0.8rem",
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-              }}
-            >
-              <EmailIcon sx={{ fontSize: 16 }} />
-              Email
-            </Typography>
-            <Typography
-              variant="body1"
-              sx={{ fontWeight: 500, color: "text.primary" }}
-            >
-              {currentUser?.email}
-            </Typography>
-          </Box>
-
-          {/* Phone */}
-          <Box
-            sx={{
-              p: 2,
-              backgroundColor: "white",
-              borderRadius: 2,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-              border: "1px solid #e0e0e0",
-            }}
-          >
-            <Typography
-              variant="subtitle2"
-              sx={{
-                color: "text.secondary",
-                mb: 1,
-                fontSize: "0.8rem",
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-              }}
-            >
-              <PhoneIcon sx={{ fontSize: 16 }} />
-              Phone Number
-            </Typography>
-            <Typography
-              variant="body1"
-              sx={{ fontWeight: 500, color: "text.primary" }}
-            >
-              {currentUser?.phone || "Not provided"}
-            </Typography>
-          </Box>
-
-          {/* Role */}
-          <Box
-            sx={{
-              p: 2,
-              backgroundColor: "white",
-              borderRadius: 2,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-              border: "1px solid #e0e0e0",
-            }}
-          >
-            <Typography
-              variant="subtitle2"
-              sx={{
-                color: "text.secondary",
-                mb: 1,
-                fontSize: "0.8rem",
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-              }}
-            >
-              <WorkIcon sx={{ fontSize: 16 }} />
-              Role
-            </Typography>
+              {(currentUser?.full_name || "U").trim().charAt(0).toUpperCase()}
+            </Avatar>
+            <Box sx={{ flex: 1 }}>
+              <Typography sx={{ fontWeight: 900, fontSize: 16, lineHeight: 1.2 }}>
+                {currentUser?.full_name || "—"}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {currentUser?.email || "—"}
+              </Typography>
+            </Box>
             <Chip
-              label={
-                currentUser?.role?.charAt(0).toUpperCase() +
-                currentUser?.role?.slice(1)
-              }
-              color="primary"
-              variant="outlined"
-              sx={{ fontWeight: 600 }}
+              icon={isActive ? <CheckCircleIcon /> : <CancelIcon />}
+              label={status}
+              color={isActive ? "success" : "default"}
+              variant={isActive ? "filled" : "outlined"}
+              sx={{ fontWeight: 800, textTransform: "lowercase" }}
             />
-          </Box>
+          </Stack>
 
-          {/* Status */}
-          <Box
-            sx={{
-              p: 2,
-              backgroundColor: "white",
-              borderRadius: 2,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-              border: "1px solid #e0e0e0",
-            }}
-          >
-            <Typography
-              variant="subtitle2"
-              sx={{
-                color: "text.secondary",
-                mb: 1,
-                fontSize: "0.8rem",
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-              }}
-            >
-              Status
-            </Typography>
-            <Chip
-              icon={
-                currentUser?.isActive !== false ? <CheckCircleIcon /> : <CancelIcon />
-              }
-              label={currentUser?.isActive !== false ? "Active" : "Inactive"}
-              color={currentUser?.isActive !== false ? "success" : "error"}
-              variant="filled"
-              sx={{ fontWeight: 600 }}
-            />
-          </Box>
+          <Divider />
 
-          {/* Last Login */}
-          <Box
-            sx={{
-              p: 2,
-              backgroundColor: "white",
-              borderRadius: 2,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-              border: "1px solid #e0e0e0",
-            }}
-          >
-            <Typography
-              variant="subtitle2"
-              sx={{
-                color: "text.secondary",
-                mb: 1,
-                fontSize: "0.8rem",
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-              }}
-            >
-              <LoginIcon sx={{ fontSize: 16 }} />
-              Last Login
-            </Typography>
-            <Typography
-              variant="body1"
-              sx={{ fontWeight: 500, color: "text.primary" }}
-            >
-              {currentUser?.lastLogin
-                ? new Date(currentUser.lastLogin).toLocaleString()
-                : "Current Session"}
-            </Typography>
-          </Box>
-        </Box>
+          <Stack spacing={1}>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <PhoneIcon sx={{ fontSize: 18, color: theme.palette.primary.main }} />
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  Phone
+                </Typography>
+                <Typography sx={{ fontWeight: 700 }}>
+                  {currentUser?.phone || "—"}
+                </Typography>
+              </Box>
+            </Stack>
+
+            <Stack direction="row" spacing={1} alignItems="center">
+              <WorkIcon sx={{ fontSize: 18, color: theme.palette.primary.main }} />
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  Role
+                </Typography>
+                <Typography sx={{ fontWeight: 700 }}>
+                  {roleName || "—"}
+                </Typography>
+              </Box>
+            </Stack>
+
+            <Stack direction="row" spacing={1} alignItems="center">
+              <LoginIcon sx={{ fontSize: 18, color: theme.palette.primary.main }} />
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  Last login
+                </Typography>
+                <Typography sx={{ fontWeight: 700 }}>
+                  {currentUser?.last_login ? formatDateTime(currentUser.last_login) : "Current session"}
+                </Typography>
+              </Box>
+            </Stack>
+          </Stack>
+        </Stack>
       </DialogContent>
     </Dialog>
   );

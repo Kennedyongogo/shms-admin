@@ -25,20 +25,20 @@ import {
   Email as EmailIcon,
   Lock,
   Login as LoginIcon,
-  Agriculture,
+  LocalHospital,
 } from "@mui/icons-material";
 import Swal from "sweetalert2";
 
 // Design tokens from the provided layout
-const primaryGreen = "#11d432";
-const primaryDark = "#0ea327";
-const earthBrown = "#5d4037";
+const primaryTeal = "#00897B"; // public portal hero teal
+const primaryTealDark = "#00695C";
+const earthBrown = "#37474F";
 const backgroundLight = "#f6f8f6";
-const backgroundDark = "#102213";
+const backgroundDark = "#0b2a27";
 const textPrimary = "#111812";
 
-// Left panel background image (sunflower field - from public folder)
-const leftPanelImage = "/sunflower-1627193_1920.jpg";
+// Left panel background image (from public folder)
+const leftPanelImage = "/shirley810-dentist-372792_1920.jpg";
 
 export default function LoginPage() {
   const theme = useTheme();
@@ -48,6 +48,7 @@ export default function LoginPage() {
   const rfEmail = useRef();
   const rfPassword = useRef();
   const rsEmail = useRef();
+  const rsNewPassword = useRef();
 
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
@@ -69,7 +70,7 @@ export default function LoginPage() {
         icon: "error",
         title: "Invalid Email",
         text: "Please enter a valid email address",
-        confirmButtonColor: primaryGreen,
+        confirmButtonColor: primaryTeal,
       });
       return;
     }
@@ -79,7 +80,7 @@ export default function LoginPage() {
         icon: "error",
         title: "Invalid Password",
         text: "Password must be at least 6 characters",
-        confirmButtonColor: primaryGreen,
+        confirmButtonColor: primaryTeal,
       });
       return;
     }
@@ -92,9 +93,8 @@ export default function LoginPage() {
     });
 
     try {
-      const response = await fetch("/api/admin-users/login", {
+      const response = await fetch("/api/auth/login", {
         method: "POST",
-        credentials: "include",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
@@ -107,27 +107,27 @@ export default function LoginPage() {
         Swal.fire({
           icon: "error",
           title: "Login Failed",
-          text: data.message,
-          confirmButtonColor: primaryGreen,
+          text: data.message || "Login failed",
+          confirmButtonColor: primaryTeal,
         });
       } else if (data.success) {
         Swal.fire({
           icon: "success",
           title: "Success!",
-          text: data.message,
+          text: "Signed in successfully",
           timer: 1500,
           showConfirmButton: false,
         });
         localStorage.setItem("token", data.data.token);
-        localStorage.setItem("userRole", data.data.admin.role);
-        localStorage.setItem("user", JSON.stringify(data.data.admin));
-        setTimeout(() => navigate("/analytics"), 1500);
+        localStorage.setItem("user", JSON.stringify(data.data.user));
+        localStorage.setItem("role", JSON.stringify(data.data.role ?? null));
+        setTimeout(() => navigate("/users"), 1500);
       } else {
         Swal.fire({
           icon: "error",
           title: "Login Failed",
-          text: data.message,
-          confirmButtonColor: primaryGreen,
+          text: data.message || "Login failed",
+          confirmButtonColor: primaryTeal,
         });
       }
     } catch (err) {
@@ -135,7 +135,7 @@ export default function LoginPage() {
         icon: "error",
         title: "Error",
         text: "Login failed. Please try again.",
-        confirmButtonColor: primaryGreen,
+        confirmButtonColor: primaryTeal,
       });
     } finally {
       setLoading(false);
@@ -143,14 +143,27 @@ export default function LoginPage() {
   };
 
   const reset = async () => {
-    const d = { Email: rsEmail.current?.value?.toLowerCase?.()?.trim() ?? "" };
+    const d = {
+      email: rsEmail.current?.value?.toLowerCase?.()?.trim() ?? "",
+      new_password: rsNewPassword.current?.value ?? "",
+    };
 
-    if (!validateEmail(d.Email)) {
+    if (!validateEmail(d.email)) {
       Swal.fire({
         icon: "error",
         title: "Invalid Email",
         text: "Please enter a valid email address",
-        confirmButtonColor: primaryGreen,
+        confirmButtonColor: primaryTeal,
+      });
+      return;
+    }
+
+    if (!validatePassword(d.new_password)) {
+      Swal.fire({
+        icon: "error",
+        title: "Invalid Password",
+        text: "Password must be at least 6 characters",
+        confirmButtonColor: primaryTeal,
       });
       return;
     }
@@ -163,9 +176,8 @@ export default function LoginPage() {
     });
 
     try {
-      const response = await fetch("/api/auth/forgot", {
+      const response = await fetch("/api/auth/reset-password", {
         method: "POST",
-        credentials: "include",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
@@ -179,15 +191,15 @@ export default function LoginPage() {
         Swal.fire({
           icon: "success",
           title: "Success",
-          text: data.message,
-          confirmButtonColor: primaryGreen,
+          text: data.message || "Password reset successful",
+          confirmButtonColor: primaryTeal,
         });
       } else {
         Swal.fire({
           icon: "error",
           title: "Error",
-          text: data.message,
-          confirmButtonColor: primaryGreen,
+          text: data.message || "Password reset failed",
+          confirmButtonColor: primaryTeal,
         });
       }
     } catch (err) {
@@ -195,7 +207,7 @@ export default function LoginPage() {
         icon: "error",
         title: "Error",
         text: "Something went wrong. Please try again.",
-        confirmButtonColor: primaryGreen,
+        confirmButtonColor: primaryTeal,
       });
     } finally {
       setResetLoading(false);
@@ -216,13 +228,13 @@ export default function LoginPage() {
       borderRadius: "8px",
       bgcolor: "white",
       "& fieldset": { borderColor: "#dbe6dd" },
-      "&:hover fieldset": { borderColor: "#11d432", borderWidth: "1px" },
+        "&:hover fieldset": { borderColor: primaryTeal, borderWidth: "1px" },
       "&.Mui-focused fieldset": {
-        borderColor: primaryGreen,
+          borderColor: primaryTeal,
         borderWidth: "2px",
       },
     },
-    "& .MuiInputLabel-root.Mui-focused": { color: primaryGreen },
+      "& .MuiInputLabel-root.Mui-focused": { color: primaryTeal },
     "& .MuiInputBase-input": {
       py: "clamp(10px, 2vh, 14px)",
       pl: "clamp(40px, 10vw, 56px)",
@@ -305,8 +317,8 @@ export default function LoginPage() {
                   display: "inline-block",
                   px: 1.5,
                   py: 0.5,
-                  bgcolor: primaryGreen,
-                  color: backgroundDark,
+                  bgcolor: primaryTeal,
+                  color: "white",
                   fontSize: "clamp(0.65rem, 1.5vh, 0.75rem)",
                   fontWeight: 700,
                   textTransform: "uppercase",
@@ -328,7 +340,7 @@ export default function LoginPage() {
                   wordBreak: "break-word",
                 }}
               >
-                Harvesting Innovation & Growth.
+                Smart Care. Streamlined Operations.
               </Typography>
               <Typography
                 sx={{
@@ -339,7 +351,7 @@ export default function LoginPage() {
                   lineHeight: 1.5,
                 }}
               >
-                Access the centralized management platform for MK Agribusiness Consultants.
+                Manage patients, staff, appointments, laboratory, pharmacy, billing, and inpatient care — all in one system.
               </Typography>
             </Box>
           </Box>
@@ -385,7 +397,7 @@ export default function LoginPage() {
                 height: "clamp(40px, 10vw, 64px)",
                 minWidth: 40,
                 minHeight: 40,
-                bgcolor: primaryGreen,
+                bgcolor: primaryTeal,
                 borderRadius: 2,
                 display: "flex",
                 alignItems: "center",
@@ -394,9 +406,9 @@ export default function LoginPage() {
                 mb: "clamp(8px, 2vh, 16px)",
               }}
             >
-              <Agriculture
+              <LocalHospital
                 sx={{
-                  color: backgroundDark,
+                  color: "white",
                   fontSize: "clamp(24, 6vw, 40)",
                 }}
               />
@@ -410,7 +422,7 @@ export default function LoginPage() {
                 lineHeight: 1.2,
               }}
             >
-              MK Agribusiness Consultants
+              Smart Hospital Management System
             </Typography>
             <Typography
               sx={{
@@ -421,7 +433,7 @@ export default function LoginPage() {
                 mt: 0.5,
               }}
             >
-              Empowering Farmers, Transforming Agribusiness
+              Admin Portal
             </Typography>
           </Box>
 
@@ -535,7 +547,7 @@ export default function LoginPage() {
                       onChange={(e) => setRememberMe(e.target.checked)}
                       sx={{
                         color: "#dbe6dd",
-                        "&.Mui-checked": { color: primaryGreen },
+                        "&.Mui-checked": { color: primaryTeal },
                       }}
                     />
                   }
@@ -578,16 +590,16 @@ export default function LoginPage() {
                 sx={{
                   mt: "clamp(16px, 3vh, 24px)",
                   py: "clamp(12px, 2.5vh, 14px)",
-                  bgcolor: primaryGreen,
-                  color: backgroundDark,
+                  bgcolor: primaryTeal,
+                  color: "white",
                   fontWeight: 900,
                   fontSize: "clamp(0.75rem, 1.5vw + 0.4rem, 0.875rem)",
                   letterSpacing: "0.05em",
                   borderRadius: "8px",
-                  boxShadow: "0 0 20px rgba(17, 212, 50, 0.2)",
+                  boxShadow: "0 0 20px rgba(0, 137, 123, 0.22)",
                   "&:hover": {
-                    bgcolor: primaryDark,
-                    boxShadow: "0 0 24px rgba(17, 212, 50, 0.3)",
+                    bgcolor: primaryTealDark,
+                    boxShadow: "0 0 24px rgba(0, 137, 123, 0.3)",
                   },
                   "&:active": { transform: "scale(0.98)" },
                 }}
@@ -616,7 +628,7 @@ export default function LoginPage() {
                 fontSize: "clamp(0.65rem, 1.2vw + 0.3rem, 0.75rem)",
               }}
             >
-              © 2024 MK Agribusiness Consultants. All rights reserved.
+              © {new Date().getFullYear()} Smart Hospital Management System. All rights reserved.
             </Typography>
           </Box>
         </Box>
@@ -637,7 +649,7 @@ export default function LoginPage() {
         </DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
-            Enter your registered email and we'll send you a secure link to reset your password.
+            Enter your registered email and a new password to reset your account password.
           </DialogContentText>
           <form
             onSubmit={(e) => {
@@ -649,7 +661,15 @@ export default function LoginPage() {
               inputRef={rsEmail}
               type="email"
               label="Email Address"
-              placeholder="admin@mkconsultants.com"
+              placeholder="admin@hospital.com"
+              fullWidth
+              sx={{ ...inputSx, mb: 2 }}
+            />
+            <TextField
+              inputRef={rsNewPassword}
+              type="password"
+              label="New Password"
+              placeholder="••••••••"
               fullWidth
               sx={{ ...inputSx, mb: 2 }}
             />
@@ -667,12 +687,12 @@ export default function LoginPage() {
                 disabled={resetLoading}
                 startIcon={resetLoading ? <CircularProgress size={18} color="inherit" /> : null}
                 sx={{
-                  bgcolor: primaryGreen,
-                  color: backgroundDark,
-                  "&:hover": { bgcolor: primaryDark },
+                  bgcolor: primaryTeal,
+                  color: "white",
+                  "&:hover": { bgcolor: primaryTealDark },
                 }}
               >
-                {resetLoading ? "Sending..." : "Send Reset Link"}
+                {resetLoading ? "Saving..." : "Reset Password"}
               </Button>
             </DialogActions>
           </form>

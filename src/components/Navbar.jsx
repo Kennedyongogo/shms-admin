@@ -1,46 +1,6 @@
-import React, { cloneElement, Fragment, useEffect, useState } from "react";
-import {
-  Logout,
-  ExpandLess,
-  ExpandMore,
-  PeopleAlt,
-  Map,
-  Dashboard,
-  CreditCard,
-  MapOutlined,
-  StarRateSharp,
-  Search,
-  DataArray,
-  DataObject,
-  Help,
-  DataUsage,
-  AccountCircle,
-  Description,
-  AccountBalance,
-  LocationOn,
-  Warning,
-  Settings,
-  QuestionAnswer,
-  Schedule,
-  Business,
-  Build,
-  Folder,
-  History,
-  Assessment,
-  RateReview,
-  Favorite,
-  Article,
-  Event,
-  Image,
-  ContactMail,
-  RequestQuote,
-  EventAvailable,
-  Campaign,
-  Assignment,
-  Storefront,
-} from "@mui/icons-material";
-import { Money } from "@phosphor-icons/react";
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import React, { cloneElement, useEffect, useState } from "react";
+import { EventNote, LocalHospital, LocalPharmacy, Logout, PeopleAlt, PersonalInjury, Science } from "@mui/icons-material";
+import { useNavigate, useLocation } from "react-router-dom";
 import { styled, useTheme } from "@mui/material/styles";
 import MuiDrawer from "@mui/material/Drawer";
 import MuiAppBar from "@mui/material/AppBar";
@@ -56,9 +16,6 @@ import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import { Box } from "@mui/material";
 import Header from "./Header/Header";
-import { Gear } from "@phosphor-icons/react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBuilding } from "@fortawesome/free-solid-svg-icons";
 
 const drawerWidth = 300;
 
@@ -89,7 +46,7 @@ const DrawerHeader = styled("div")(({ theme }) => ({
   justifyContent: "space-between",
   padding: theme.spacing(1, 0, 1, 1),
   backgroundColor: "#fff",
-  color: "#B85C38",
+  color: theme.palette.primary.main,
   ...theme.mixins.toolbar,
 }));
 
@@ -97,8 +54,8 @@ const AppBar = styled(MuiAppBar, {
   shouldForwardProp: (prop) => prop !== "open",
 })(({ theme, open }) => ({
   zIndex: theme.zIndex.drawer + 1,
-  background: "linear-gradient(135deg, #6B4E3D 0%, #B85C38 100%)",
-  boxShadow: "0 4px 20px rgba(107, 78, 61, 0.3)",
+  background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
+  boxShadow: "0 4px 20px rgba(0, 137, 123, 0.25)",
   transition: theme.transitions.create(["width", "margin"], {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
@@ -139,110 +96,24 @@ const Navbar = (props) => {
   const [open, setOpen] = useState(() => {
     return window.innerWidth >= theme.breakpoints.values.md;
   });
-  const [openSections, setOpenSections] = useState({
-    Resources: false,
-    System: false,
-  });
   const [menuItems, setMenuItems] = useState([]);
 
   const handleDrawerOpen = () => setOpen(true);
   const handleDrawerClose = () => setOpen(false);
 
-  const handleToggle = (section) => {
-    setOpenSections((prevState) => ({
-      ...prevState,
-      [section]: !prevState[section],
-    }));
-  };
-
   const logout = () => {
     localStorage.clear();
     navigate("/");
-    fetch("/api/admin-users/logout", {
-      method: "GET",
-      credentials: "include",
-    });
+    fetch("/api/auth/logout", { method: "POST" });
   };
 
   const adminItems = [
-    { text: "Dashboard", icon: <Dashboard />, path: "/analytics" },
-    {
-      text: "Blogs",
-      icon: <Article />,
-      path: "/blogs",
-    },
-    {
-      text: "Projects",
-      icon: <Business />,
-      path: "/projects",
-    },
-    {
-      text: "Services",
-      icon: <Build />,
-      path: "/services",
-    },
-    {
-      text: "Forms",
-      icon: <Description />,
-      path: "/forms",
-    },
-    {
-      text: "Users",
-      icon: <PeopleAlt />,
-      path: "/users",
-    },
-    {
-      text: "Marketplace",
-      icon: <Storefront />,
-      path: "/marketplace",
-    },
-        {
-          text: "Resources",
-          icon: <Folder />,
-          subItems: [
-            {
-              text: "Submissions",
-              icon: <Assignment />,
-              path: "/submissions",
-            },
-            {
-              text: "Documents",
-              icon: <Folder />,
-              path: "/documents",
-            },
-            {
-              text: "MK Map",
-              icon: <Map />,
-              path: "/map",
-            },
-            {
-              text: "Reviews",
-              icon: <RateReview />,
-              path: "/reviews",
-            },
-            {
-              text: "FAQs",
-              icon: <QuestionAnswer />,
-              path: "/faqs",
-            },
-          ],
-        },
-    {
-      text: "System",
-      icon: <Settings />,
-      subItems: [
-        {
-          text: "Audit Trail",
-          icon: <History />,
-          path: "/audit",
-        },
-        {
-          text: "Settings",
-          icon: <Settings />,
-          path: "/settings",
-        },
-      ],
-    },
+    { text: "Hospital", icon: <LocalHospital />, path: "/hospitals" },
+    { text: "Appointments", icon: <EventNote />, path: "/appointments" },
+    { text: "Patients", icon: <PersonalInjury />, path: "/patients" },
+    { text: "Laboratory", icon: <Science />, path: "/laboratory" },
+    { text: "Pharmacy", icon: <LocalPharmacy />, path: "/pharmacy" },
+    { text: "Users & Roles", icon: <PeopleAlt />, path: "/users" },
   ];
 
   useEffect(() => {
@@ -296,121 +167,29 @@ const Navbar = (props) => {
         <Divider />
         <List>
           {menuItems.map((item) => (
-            <Fragment key={item.text}>
-              {item.subItems ? (
-                <>
-                  <ListItem
-                    button
-                    onClick={() => handleToggle(item.text)}
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      pr: 1,
-                    }}
-                  >
-                    <Box
-                      sx={{ display: "flex", alignItems: "center", flex: 1 }}
-                    >
-                      <ListItemIcon>{item.icon}</ListItemIcon>
-                      <ListItemText
-                        sx={{
-                          fontSize: "small",
-                          color:
-                            location.pathname === item.path
-                              ? "primary"
-                              : "textSecondary",
-                          fontWeight:
-                            location.pathname === item.path ? "bold" : "normal",
-                        }}
-                        primary={item.text}
-                      />
-                    </Box>
-                    <Box sx={{ ml: "auto" }}>
-                      {openSections[item.text] ? (
-                        <ExpandLess />
-                      ) : (
-                        <ExpandMore />
-                      )}
-                    </Box>
-                  </ListItem>
-                  {openSections[item.text] && (
-                    <List component="div" disablePadding>
-                      {item.subItems.map((subItem) => (
-                        <ListItem
-                          key={subItem.text}
-                          button
-                          onClick={() => navigate(subItem.path)}
-                          selected={location.pathname === subItem.path}
-                          sx={{
-                            fontSize: "x-small",
-                            pl: 4, // Indent subitems
-                            typography: "body2", // Reduce font size
-                            fontStyle: "italic", // Italicize text
-                            cursor: "pointer",
-                            bgcolor:
-                              location.pathname === subItem.path
-                                ? "action.selected"
-                                : "transparent", // Highlight selected subitem
-                          }}
-                        >
-                          <ListItemIcon>{subItem.icon}</ListItemIcon>
-                          <ListItemText
-                            primary={subItem.text}
-                            sx={{
-                              fontSize: "x-small",
-                              color:
-                                location.pathname === item.path
-                                  ? "primary"
-                                  : "textSecondary",
-                              fontWeight:
-                                location.pathname === item.path
-                                  ? "bold"
-                                  : "normal", // Highlight text for selected item
-                            }}
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  )}
-                </>
-              ) : (
-                <ListItem
-                  key={item.text}
-                  button
-                  onClick={() => navigate(item.path)}
-                  selected={location.pathname === item.path}
-                  sx={{
-                    cursor: "pointer",
-                    bgcolor:
-                      location.pathname === item.path
-                        ? "action.selected"
-                        : "transparent", // Highlight selected item
-                  }}
-                >
-                  <ListItemIcon>
-                    {cloneElement(item.icon, {
-                      color:
-                        location.pathname === item.path
-                          ? "primary"
-                          : "textSecondary",
-                    })}
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={item.text}
-                    sx={{
-                      cursor: "pointer",
-                      color:
-                        location.pathname === item.path
-                          ? "primary"
-                          : "textSecondary",
-                      fontWeight:
-                        location.pathname === item.path ? "bold" : "normal", // Highlight text for selected item
-                    }}
-                  />
-                </ListItem>
-              )}
-            </Fragment>
+            <ListItem
+              key={item.text}
+              button
+              onClick={() => navigate(item.path)}
+              selected={location.pathname === item.path}
+              sx={{
+                cursor: "pointer",
+                bgcolor: location.pathname === item.path ? "action.selected" : "transparent",
+              }}
+            >
+              <ListItemIcon>
+                {cloneElement(item.icon, {
+                  color: location.pathname === item.path ? "primary" : "textSecondary",
+                })}
+              </ListItemIcon>
+              <ListItemText
+                primary={item.text}
+                sx={{
+                  color: location.pathname === item.path ? "primary" : "textSecondary",
+                  fontWeight: location.pathname === item.path ? "bold" : "normal",
+                }}
+              />
+            </ListItem>
           ))}
         </List>
         <Divider />

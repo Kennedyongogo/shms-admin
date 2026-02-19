@@ -3,34 +3,34 @@ import { createTheme } from "@mui/material/styles";
 const theme = createTheme({
   palette: {
     primary: {
-      main: "#0e8d45", // Vihiga green as primary color
-      light: "#40a86c", // Lighter variant
-      dark: "#0a6231", // Darker variant
+      main: "#00897B", // teal (match public portal hero)
+      light: "#4DB6AC",
+      dark: "#00695C",
     },
     secondary: {
-      main: "#f1ea32", // Vihiga yellow as secondary color
-      light: "#f4ef5b", // Lighter variant
-      dark: "#c1bb28", // Darker variant
+      main: "#1f89e5", // public portal blue accent
+      light: "#6fb3f0",
+      dark: "#166ab4",
     },
     info: {
-      main: "#2491cf", // Vihiga blue
-      light: "#4fa7d9", // Lighter variant
-      dark: "#1b73a5", // Darker variant
+      main: "#1f89e5",
+      light: "#6fb3f0",
+      dark: "#166ab4",
     },
     background: {
       default: "#ffffff",
       paper: "#f9f9f9",
-      dark: "#090909", // Vihiga dark color
+      dark: "#0b2a27",
     },
     text: {
-      primary: "#090909", // Using Vihiga dark for text
+      primary: "#0f172a",
       secondary: "#555555",
     },
     // Keep success color for notifications/status indicators
     success: {
-      main: "#0e8d45", // Using Vihiga green for success states
-      light: "#40a86c",
-      dark: "#0a6231",
+      main: "#00897B",
+      light: "#4DB6AC",
+      dark: "#00695C",
     },
   },
   typography: {

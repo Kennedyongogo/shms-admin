@@ -13,12 +13,9 @@ import {
   ArrowDropDown as ArrowDropDownIcon,
   Person as PersonIcon,
   AccountCircle as AccountCircleIcon,
-  Lock as LockIcon,
   Logout as LogoutIcon,
 } from "@mui/icons-material";
 import UserAccount from "./userAccount";
-import EditUserDetails from "./editUserDetails";
-import ChangePassword from "./changePassword";
 import { useNavigate } from "react-router-dom";
 
 const LoadingScreen = () => (
@@ -51,6 +48,20 @@ const buildImageUrl = (imageUrl) => {
   return imageUrl;
 };
 
+const getToken = () => localStorage.getItem("token");
+const fetchJson = async (url) => {
+  const token = getToken();
+  const res = await fetch(url, {
+    headers: {
+      Accept: "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.message || `Request failed (${res.status})`);
+  return data;
+};
+
 // Helper to get user initials
 const getInitials = (name) => {
   if (!name) return "U";
@@ -61,37 +72,73 @@ const getInitials = (name) => {
 
 export default function Header(props) {
   const [currentUser, setCurrentUser] = useState("");
+  const [currentRoleName, setCurrentRoleName] = useState("");
   const [anchorEl, setAnchorEl] = useState(null);
   const [toggleAccount, setToggleAccount] = useState(false);
-  const [toggleEditDetails, setToggleEditDetails] = useState(false);
-  const [toggleChangePass, setToggleChangePass] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    setLoading(true);
-    // Load user from localStorage instead of API call
-    const savedUser = localStorage.getItem("user");
-    const token = localStorage.getItem("token");
+    const bootstrap = async () => {
+      setLoading(true);
+      const savedUser = localStorage.getItem("user");
+      const token = getToken();
 
-    if (savedUser && token) {
-      const userData = JSON.parse(savedUser);
-      setCurrentUser(userData);
-      props.setUser(userData);
-      setLoading(false);
-    } else {
-      // Redirect to login if no user or token
-      window.location.href = "/";
-    }
+      if (!savedUser || !token) {
+        window.location.href = "/";
+        return;
+      }
+
+      // Show something immediately, then refresh from backend
+      try {
+        const userData = JSON.parse(savedUser);
+        setCurrentUser(userData);
+        props.setUser(userData);
+      } catch {
+        // ignore parse issues
+      }
+
+      try {
+        const userId = JSON.parse(savedUser)?.id;
+        if (!userId) {
+          setLoading(false);
+          return;
+        }
+
+        const uRes = await fetchJson(`/api/users/${userId}`);
+        const freshUser = uRes?.data || null;
+        if (freshUser) {
+          setCurrentUser(freshUser);
+          props.setUser(freshUser);
+          localStorage.setItem("user", JSON.stringify(freshUser));
+        }
+
+        const roleId = freshUser?.role_id;
+        if (roleId) {
+          const rRes = await fetchJson(`/api/roles/${roleId}`);
+          const role = rRes?.data || null;
+          const roleName = role?.name || "";
+          setCurrentRoleName(roleName);
+          localStorage.setItem("role", JSON.stringify(role ? { id: role.id, name: role.name } : null));
+        } else {
+          setCurrentRoleName("");
+          localStorage.setItem("role", JSON.stringify(null));
+        }
+      } catch (e) {
+        // If token expired/invalid, force login
+        console.error("Header refresh error:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    bootstrap();
   }, []);
 
   const logout = () => {
     localStorage.clear();
     navigate("/");
-    fetch("/api/admin/logout", {
-      method: "GET",
-      credentials: "include",
-    });
+    fetch("/api/auth/logout", { method: "POST" });
   };
 
   const handleClick = (event) => {
@@ -137,9 +184,9 @@ export default function Header(props) {
 
           {/* Profile Picture or Avatar */}
           <Box sx={{ mr: 1 }}>
-            {currentUser?.profile_image ? (
+            {currentUser?.profile_image_path ? (
               <Avatar
-                src={buildImageUrl(currentUser.profile_image)}
+                src={buildImageUrl(currentUser.profile_image_path)}
                 alt={currentUser?.full_name}
                 sx={{
                   width: 32,
@@ -185,14 +232,6 @@ export default function Header(props) {
           </MenuItem>
           <MenuItem
             onClick={() => {
-              navigate("/settings");
-              handleClose();
-            }}
-          >
-            <LockIcon sx={{ mr: 1 }} /> Change Password
-          </MenuItem>
-          <MenuItem
-            onClick={() => {
               logout();
               handleClose();
             }}
@@ -208,24 +247,7 @@ export default function Header(props) {
             }}
             open={toggleAccount}
             currentUser={currentUser}
-          />
-        )}
-        {currentUser && (
-          <EditUserDetails
-            open={toggleEditDetails}
-            onClose={() => {
-              setToggleEditDetails(false);
-            }}
-            currentUser={currentUser}
-          />
-        )}
-        {currentUser && (
-          <ChangePassword
-            open={toggleChangePass}
-            onClose={() => {
-              setToggleChangePass(false);
-            }}
-            currentUser={currentUser}
+            roleName={currentRoleName}
           />
         )}
       </Box>
