@@ -164,6 +164,7 @@ export default function VisitsManagement() {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
+  const [billAmount, setBillAmount] = useState("0");
   const [appointmentDate, setAppointmentDate] = useState(() =>
     toLocalDateTimeInputValue(),
   );
@@ -403,6 +404,7 @@ export default function VisitsManagement() {
     setSelectedDoctor(null);
     setSelectedService(null);
     setWalkIn(true);
+    setBillAmount("0");
     setAppointmentDate(toLocalDateTimeInputValue());
     setCreateApptOpen(true);
     searchPatients("");
@@ -450,12 +452,25 @@ export default function VisitsManagement() {
         text: "Please select a doctor.",
       });
 
+    if (walkIn) {
+      const n = Number(billAmount);
+      if (!Number.isFinite(n) || n < 0) {
+        return Swal.fire({
+          icon: "warning",
+          title: "Invalid amount",
+          text: "Enter a valid bill amount (0 or more).",
+        });
+      }
+    }
+
     const payload = {
       patient_id: selectedPatient.id,
       doctor_id: selectedDoctor.id,
       service_id: selectedService?.id ?? null,
       appointment_date: new Date(appointmentDate).toISOString(),
       created_by: currentUser?.id ?? null,
+      is_walk_in: !!walkIn,
+      bill_amount: walkIn ? Number(billAmount) : null,
     };
 
     try {
@@ -483,14 +498,10 @@ export default function VisitsManagement() {
         if (payNow.isConfirmed) {
           const paid = await payForAppointment(full.data);
           if (paid) {
-            await fetchJson(`${API.appointments}/${appt.id}/confirm`, {
-              method: "PATCH",
-              token,
-            });
             const result = await Swal.fire({
               icon: "success",
-              title: "Walk-in appointment confirmed",
-              text: "Do you want to record the consultation now?",
+              title: "Payment recorded",
+              text: "Payment has been recorded. The appointment will be confirmed automatically. Do you want to record the consultation now?",
               showCancelButton: true,
               confirmButtonText: "Record now",
               cancelButtonText: "Later",
@@ -566,6 +577,42 @@ export default function VisitsManagement() {
       });
       return;
     }
+
+    // Consultation is only allowed after payment → appointment confirmed
+    if (appt.status !== "confirmed" && appt.status !== "completed") {
+      const ask = await Swal.fire({
+        icon: "warning",
+        title: "Appointment not confirmed",
+        text: "You can only record a consultation after payment is made and the appointment is confirmed. Do you want to take payment now?",
+        showCancelButton: true,
+        confirmButtonText: "Pay now",
+        cancelButtonText: "Later",
+        reverseButtons: true,
+      });
+      if (ask.isConfirmed) {
+        const paid = await payForAppointment(appt);
+        if (!paid) return;
+        try {
+          const refreshed = await fetchJson(`${API.appointments}/${appt.id}`, { token });
+          const updatedAppt = refreshed?.data;
+          if (updatedAppt?.status !== "confirmed" && updatedAppt?.status !== "completed") {
+            await Swal.fire({
+              icon: "info",
+              title: "Not confirmed yet",
+              text: "Payment was recorded, but the appointment is not confirmed yet. Please refresh and try again.",
+            });
+            return;
+          }
+          appt = updatedAppt;
+        } catch (e) {
+          Swal.fire({ icon: "error", title: "Failed", text: e.message });
+          return;
+        }
+      } else {
+        return;
+      }
+    }
+
     try {
       // Backend enforces one consultation per appointment.
       const existing = await fetchJson(
@@ -601,13 +648,11 @@ export default function VisitsManagement() {
     setApptViewLoading(true);
     setApptView(null);
     setApptStatusDraft("");
-    setApptBilling(null);
     try {
       const data = await fetchJson(`${API.appointments}/${appt.id}`, { token });
       const full = data?.data || null;
       setApptView(full);
       setApptStatusDraft(full?.status || "");
-      if (full?.id) loadAppointmentBilling(full.id);
     } catch (e) {
       Swal.fire({ icon: "error", title: "Failed", text: e.message });
       setApptViewOpen(false);
@@ -618,7 +663,8 @@ export default function VisitsManagement() {
 
   const allowedNextStatuses = (current) => {
     if (!current) return [];
-    if (current === "pending") return ["confirmed", "cancelled"];
+    // Confirmation is payment-driven from Billing & Payments; only allow cancelling while pending.
+    if (current === "pending") return ["cancelled"];
     if (current === "confirmed") return ["completed", "cancelled"];
     return [];
   };
@@ -643,26 +689,6 @@ export default function VisitsManagement() {
       });
     }
 
-    if (
-      (apptStatusDraft === "confirmed" || apptStatusDraft === "completed") &&
-      !apptBilling?.paid
-    ) {
-      const ask = await Swal.fire({
-        icon: "warning",
-        title: "Payment required",
-        text: "You must record payment before confirming/completing this appointment.",
-        showCancelButton: true,
-        confirmButtonText: "Pay now",
-        cancelButtonText: "Cancel",
-        reverseButtons: true,
-      });
-      if (ask.isConfirmed) {
-        await payForAppointment(apptView);
-        await loadAppointmentBilling(apptView.id);
-      }
-      return;
-    }
-
     setApptStatusSaving(true);
     try {
       await fetchJson(`${API.appointments}/${apptView.id}/status`, {
@@ -680,19 +706,11 @@ export default function VisitsManagement() {
       await loadAppointments();
     } catch (e) {
       if (Number(e?.status) === 402 && e?.data?.code === "PAYMENT_REQUIRED") {
-        const ask = await Swal.fire({
+        Swal.fire({
           icon: "warning",
           title: "Payment required",
-          text: e.message,
-          showCancelButton: true,
-          confirmButtonText: "Pay now",
-          cancelButtonText: "Cancel",
-          reverseButtons: true,
+          text: "Record payment from the Billing & Payments page, then the appointment will confirm automatically.",
         });
-        if (ask.isConfirmed) {
-          await payForAppointment(apptView);
-          await loadAppointmentBilling(apptView.id);
-        }
         return;
       }
       Swal.fire({ icon: "error", title: "Failed", text: e.message });
@@ -758,19 +776,33 @@ export default function VisitsManagement() {
     const amount = Number(ask.value);
 
     try {
-      const billRes = await fetchJson(`${API.billing}/generate`, {
-        method: "POST",
-        token,
-        body: { patient_id: patientId, consultation_id: null },
+      // Prefer the auto-created bill (walk-in) by reference; fallback to generating one if missing.
+      const qs = new URLSearchParams({
+        item_type: "appointment",
+        reference_id: String(appt.id),
       });
-      const billId = billRes?.data?.id;
-      await fetchJson(`${API.billing}/${billId}/items`, {
-        method: "POST",
-        token,
-        body: {
-          items: [{ item_type: "appointment", reference_id: appt.id, amount }],
-        },
-      });
+      const billingRes = await fetchJson(
+        `${API.billing}/by-reference?${qs.toString()}`,
+        { token },
+      );
+      let billId = billingRes?.data?.bill_id || null;
+
+      if (!billId) {
+        const billRes = await fetchJson(`${API.billing}/generate`, {
+          method: "POST",
+          token,
+          body: { patient_id: patientId, consultation_id: null },
+        });
+        billId = billRes?.data?.id;
+        await fetchJson(`${API.billing}/${billId}/items`, {
+          method: "POST",
+          token,
+          body: {
+            items: [{ item_type: "appointment", reference_id: appt.id, amount }],
+          },
+        });
+      }
+
       await fetchJson(`${API.payments}/process`, {
         method: "POST",
         token,
@@ -1038,6 +1070,32 @@ export default function VisitsManagement() {
       });
       await loadConsultations();
     } catch (e) {
+      if (Number(e?.status) === 402 && e?.data?.code === "PAYMENT_REQUIRED") {
+        const ask = await Swal.fire({
+          icon: "warning",
+          title: "Payment required",
+          text: e.message,
+          showCancelButton: true,
+          confirmButtonText: "Pay now",
+          cancelButtonText: "Cancel",
+          reverseButtons: true,
+        });
+        if (ask.isConfirmed) {
+          const paid = await payForAppointment(recordForAppointment);
+          if (paid) {
+            return openRecordConsultation(recordForAppointment);
+          }
+        }
+        return;
+      }
+      if (Number(e?.status) === 409 && e?.data?.code === "APPOINTMENT_NOT_CONFIRMED") {
+        Swal.fire({
+          icon: "info",
+          title: "Not confirmed",
+          text: "This appointment is not confirmed yet. Record payment first, then try again.",
+        });
+        return;
+      }
       Swal.fire({ icon: "error", title: "Failed", text: e.message });
     }
   };
@@ -1067,18 +1125,40 @@ export default function VisitsManagement() {
             alignItems={{ md: "center" }}
             justifyContent="space-between"
           >
-            <Box>
+            <Box sx={{ minWidth: 0, maxWidth: { md: "58%", lg: "65%", xl: "70%" } }}>
               <Stack direction="row" spacing={1} alignItems="center">
                 <EventNoteIcon />
-                <Typography variant="h5" sx={{ fontWeight: 800 }}>
+                <Typography
+                  variant="h5"
+                  noWrap
+                  sx={{
+                    fontWeight: 800,
+                    fontSize: "clamp(1.05rem, 2.1vw, 1.5rem)",
+                    lineHeight: 1.15,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
                   Appointments & Consultations
                 </Typography>
               </Stack>
-              <Typography sx={{ opacity: 0.9, mt: 0.5 }}>
+              <Typography
+                noWrap
+                sx={{
+                  opacity: 0.9,
+                  mt: 0.5,
+                  fontSize: "clamp(0.75rem, 1.4vw, 0.95rem)",
+                  lineHeight: 1.25,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
                 Book appointments, support walk-ins, and record consultations.
               </Typography>
             </Box>
-            <Stack direction="row" spacing={1}>
+            <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", justifyContent: { xs: "flex-start", md: "flex-end" }, flexShrink: 0 }}>
               <Tooltip title="Refresh">
                 <IconButton
                   onClick={() => {
@@ -1101,6 +1181,8 @@ export default function VisitsManagement() {
                   bgcolor: "rgba(255,255,255,0.15)",
                   color: "white",
                   fontWeight: 800,
+                  fontSize: "clamp(0.72rem, 1.1vw, 0.9rem)",
+                  whiteSpace: "nowrap",
                   border: "1px solid rgba(255,255,255,0.25)",
                   "&:hover": { bgcolor: "rgba(255,255,255,0.22)" },
                 }}
@@ -1116,6 +1198,8 @@ export default function VisitsManagement() {
                     borderColor: "rgba(255,255,255,0.55)",
                     color: "white",
                     fontWeight: 800,
+                    fontSize: "clamp(0.72rem, 1.05vw, 0.9rem)",
+                    whiteSpace: "nowrap",
                     "&:hover": {
                       borderColor: "rgba(255,255,255,0.85)",
                       bgcolor: "rgba(255,255,255,0.08)",
@@ -1291,12 +1375,21 @@ export default function VisitsManagement() {
                                 <VisibilityIcon fontSize="inherit" />
                               </IconButton>
                             </Tooltip>
-                            <Tooltip title="Record consultation">
+                            <Tooltip
+                              title={
+                                a.status !== "confirmed" && a.status !== "completed"
+                                  ? "Payment required before consultation"
+                                  : "Record consultation"
+                              }
+                            >
                               <span>
                                 <IconButton
                                   onClick={() => openRecordConsultation(a)}
                                   size="small"
-                                  disabled={!isAdmin && !isAssignedDoctor(a)}
+                                  disabled={
+                                    (!isAdmin && !isAssignedDoctor(a)) ||
+                                    (a.status !== "confirmed" && a.status !== "completed")
+                                  }
                                 >
                                   <NoteAddIcon fontSize="inherit" />
                                 </IconButton>
@@ -1485,10 +1578,17 @@ export default function VisitsManagement() {
               control={
                 <Switch
                   checked={walkIn}
-                  onChange={(e) => setWalkIn(e.target.checked)}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setWalkIn(checked);
+                    if (checked) {
+                      const price = selectedService?.price;
+                      setBillAmount(price != null && price !== "" ? String(price) : "0");
+                    }
+                  }}
                 />
               }
-              label="Walk-in (create & auto-confirm)"
+              label="Walk-in (auto-create bill; confirmation after payment)"
             />
 
             <Autocomplete
@@ -1532,7 +1632,13 @@ export default function VisitsManagement() {
             <Autocomplete
               options={serviceOptions}
               value={selectedService}
-              onChange={(_, v) => setSelectedService(v)}
+              onChange={(_, v) => {
+                setSelectedService(v);
+                if (walkIn) {
+                  const price = v?.price;
+                  setBillAmount(price != null && price !== "" ? String(price) : "0");
+                }
+              }}
               loading={serviceLoading}
               getOptionLabel={(s) =>
                 `${s.name || "—"}${s.department?.name ? ` • ${s.department.name}` : ""}${s.price != null && s.price !== "" ? ` • ${s.price}` : ""}`
@@ -1547,6 +1653,17 @@ export default function VisitsManagement() {
                 />
               )}
             />
+
+            {walkIn && (
+              <TextField
+                label="Amount to bill"
+                value={billAmount}
+                onChange={(e) => setBillAmount(e.target.value)}
+                inputMode="decimal"
+                helperText="This amount will be used to create the unpaid bill for this walk-in appointment."
+                fullWidth
+              />
+            )}
 
             <TextField
               label="Appointment date & time"
@@ -1684,67 +1801,6 @@ export default function VisitsManagement() {
                   ? ` • ${apptView.service.price}`
                   : ""}
               </Typography>
-
-              <Box
-                sx={{
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: 2,
-                  p: 2,
-                }}
-              >
-                <Stack
-                  direction={{ xs: "column", md: "row" }}
-                  spacing={1}
-                  alignItems={{ md: "center" }}
-                  justifyContent="space-between"
-                >
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography sx={{ fontWeight: 900 }}>Payment</Typography>
-                    {apptBillingLoading ? (
-                      <Chip size="small" label="Checking…" />
-                    ) : (
-                      <Chip
-                        size="small"
-                        label={
-                          apptBilling?.paid
-                            ? "paid"
-                            : apptBilling?.exists
-                              ? apptBilling?.status || "unpaid"
-                              : "unbilled"
-                        }
-                        color={apptBilling?.paid ? "success" : "default"}
-                        variant={apptBilling?.paid ? "filled" : "outlined"}
-                        sx={{ fontWeight: 800 }}
-                      />
-                    )}
-                  </Stack>
-                  <Button
-                    variant="outlined"
-                    onClick={() => payForAppointment(apptView)}
-                    disabled={apptBillingLoading || apptBilling?.paid}
-                    sx={{ fontWeight: 900 }}
-                  >
-                    Pay now (test)
-                  </Button>
-                </Stack>
-                {apptBilling?.exists ? (
-                  <Typography color="text.secondary" sx={{ mt: 1 }}>
-                    Total: {apptBilling.total_amount} • Paid:{" "}
-                    {apptBilling.paid_amount} • Balance: {apptBilling.balance}
-                  </Typography>
-                ) : (
-                  <Typography color="text.secondary" sx={{ mt: 1 }}>
-                    No bill found for this appointment yet.
-                  </Typography>
-                )}
-                {!apptBilling?.paid && (
-                  <Alert severity="warning" sx={{ mt: 1 }}>
-                    Appointment confirmation/completion is blocked until payment
-                    is recorded.
-                  </Alert>
-                )}
-              </Box>
 
               <FormControl
                 fullWidth

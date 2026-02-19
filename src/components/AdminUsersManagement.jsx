@@ -807,7 +807,6 @@ export default function AdminUsersManagement() {
                       <TableCell sx={{ fontWeight: 800 }}>Email</TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Role</TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Status</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Last login</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 800 }}>
                         Actions
                       </TableCell>
@@ -816,7 +815,7 @@ export default function AdminUsersManagement() {
                   <TableBody>
                     {usersLoading ? (
                       <TableRow>
-                        <TableCell colSpan={8}>
+                        <TableCell colSpan={7}>
                           <Stack
                             direction="row"
                             spacing={1}
@@ -885,7 +884,6 @@ export default function AdminUsersManagement() {
                               }
                             />
                           </TableCell>
-                          <TableCell>{formatDateTime(u.last_login)}</TableCell>
                           <TableCell align="right">
                             <Tooltip title="View">
                               <IconButton
@@ -930,7 +928,7 @@ export default function AdminUsersManagement() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={8}>
+                        <TableCell colSpan={7}>
                           <Typography sx={{ py: 2 }} color="text.secondary">
                             No users found.
                           </Typography>

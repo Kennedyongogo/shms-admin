@@ -10,6 +10,7 @@ import HospitalsManagement from "./HospitalsManagement";
 import WalkInPatientCreate from "./WalkInPatientCreate";
 import PatientsManagement from "./PatientsManagement";
 import LaboratoryManagement from "./LaboratoryManagement";
+import BillingPaymentsManagement from "./BillingPaymentsManagement";
 
 function PageRoutes() {
   const [user, setUser] = useState(null);
@@ -59,6 +60,7 @@ function PageRoutes() {
             <Route path="patients" element={<PatientsManagement />} />
             <Route path="laboratory" element={<LaboratoryManagement />} />
             <Route path="hospitals" element={<HospitalsManagement />} />
+            <Route path="billing" element={<BillingPaymentsManagement />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         )}
