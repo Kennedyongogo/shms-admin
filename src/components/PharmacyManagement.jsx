@@ -70,7 +70,8 @@ async function fetchJson(url, { method = "GET", body, token } = {}) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const message = data?.message || data?.error || `Request failed (${res.status})`;
+    const message =
+      data?.message || data?.error || `Request failed (${res.status})`;
     const err = new Error(message);
     err.status = res.status;
     err.data = data;
@@ -94,8 +95,13 @@ export default function PharmacyManagement() {
   const isAdmin = getRoleName() === "admin";
 
   const [tab, setTab] = useState(0); // 0 meds, 1 prescriptions, 2 dispense
-  const [toast, setToast] = useState({ open: false, severity: "success", message: "" });
-  const showToast = (severity, message) => setToast({ open: true, severity, message });
+  const [toast, setToast] = useState({
+    open: false,
+    severity: "success",
+    message: "",
+  });
+  const showToast = (severity, message) =>
+    setToast({ open: true, severity, message });
 
   // Medications
   const medsReqId = useRef(0);
@@ -107,8 +113,17 @@ export default function PharmacyManagement() {
   const [medsSearch, setMedsSearch] = useState("");
   const [medsSearchLocked, setMedsSearchLocked] = useState(true);
 
-  const [medDialog, setMedDialog] = useState({ open: false, mode: "create", id: null });
-  const [medForm, setMedForm] = useState({ name: "", dosage_form: "", manufacturer: "", unit_price: "" });
+  const [medDialog, setMedDialog] = useState({
+    open: false,
+    mode: "create",
+    id: null,
+  });
+  const [medForm, setMedForm] = useState({
+    name: "",
+    dosage_form: "",
+    manufacturer: "",
+    unit_price: "",
+  });
   const [medView, setMedView] = useState({ open: false, med: null });
 
   // Prescriptions
@@ -120,7 +135,11 @@ export default function PharmacyManagement() {
   const [presTotal, setPresTotal] = useState(0);
   const [presSearch, setPresSearch] = useState("");
   const [presSearchLocked, setPresSearchLocked] = useState(true);
-  const [presView, setPresView] = useState({ open: false, prescription: null, loading: false });
+  const [presView, setPresView] = useState({
+    open: false,
+    prescription: null,
+    loading: false,
+  });
   const [presBilling, setPresBilling] = useState(null);
   const [presBillingLoading, setPresBillingLoading] = useState(false);
   const [presDispensing, setPresDispensing] = useState(false);
@@ -153,8 +172,14 @@ export default function PharmacyManagement() {
       const page = medsPage + 1;
       const limit = medsRowsPerPage;
       const search = medsSearch.trim();
-      const qs = new URLSearchParams({ page: String(page), limit: String(limit), ...(search ? { search } : {}) });
-      const data = await fetchJson(`${API.medications}?${qs.toString()}`, { token });
+      const qs = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+        ...(search ? { search } : {}),
+      });
+      const data = await fetchJson(`${API.medications}?${qs.toString()}`, {
+        token,
+      });
       if (reqId !== medsReqId.current) return;
       setMedications(data.data || []);
       setMedsTotal(data.pagination?.total ?? (data.data?.length || 0));
@@ -176,12 +201,22 @@ export default function PharmacyManagement() {
       const limit = presRowsPerPage;
       const search = presSearch.trim();
       // backend supports patient_id/doctor_id filters; use search as a loose id filter client-side by passing none, then filtering in UI
-      const qs = new URLSearchParams({ page: String(page), limit: String(limit) });
-      const data = await fetchJson(`${API.prescriptions}?${qs.toString()}`, { token });
+      const qs = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+      });
+      const data = await fetchJson(`${API.prescriptions}?${qs.toString()}`, {
+        token,
+      });
       if (reqId !== presReqId.current) return;
       const rows = data.data || [];
       const filtered = search
-        ? rows.filter((r) => String(r.id).includes(search) || String(r.patient_id).includes(search) || String(r.doctor_id || "").includes(search))
+        ? rows.filter(
+            (r) =>
+              String(r.id).includes(search) ||
+              String(r.patient_id).includes(search) ||
+              String(r.doctor_id || "").includes(search),
+          )
         : rows;
       setPrescriptions(filtered);
       setPresTotal(data.pagination?.total ?? rows.length);
@@ -202,13 +237,24 @@ export default function PharmacyManagement() {
       const page = dispPage + 1;
       const limit = dispRowsPerPage;
       const search = dispSearch.trim();
-      const qs = new URLSearchParams({ page: String(page), limit: String(limit), ...(search ? { search } : {}) });
-      const data = await fetchJson(`${API.dispense}?${qs.toString()}`, { token });
+      const qs = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+        ...(search ? { search } : {}),
+      });
+      const data = await fetchJson(`${API.dispense}?${qs.toString()}`, {
+        token,
+      });
       if (reqId !== dispReqId.current) return;
       // backend doesn't implement search; do client-side
       const rows = data.data || [];
       const filtered = search
-        ? rows.filter((r) => String(r.id).includes(search) || String(r.prescription_id).includes(search) || String(r.pharmacist_id || "").includes(search))
+        ? rows.filter(
+            (r) =>
+              String(r.id).includes(search) ||
+              String(r.prescription_id).includes(search) ||
+              String(r.pharmacist_id || "").includes(search),
+          )
         : rows;
       setDispenses(filtered);
       setDispTotal(data.pagination?.total ?? rows.length);
@@ -291,7 +337,8 @@ export default function PharmacyManagement() {
 
   const saveMed = async () => {
     if (!requireTokenGuard()) return;
-    if (!medForm.name.trim()) return showToast("error", "Medication name is required");
+    if (!medForm.name.trim())
+      return showToast("error", "Medication name is required");
     const payload = {
       name: medForm.name.trim(),
       dosage_form: medForm.dosage_form.trim() || null,
@@ -300,10 +347,18 @@ export default function PharmacyManagement() {
     };
     try {
       if (medDialog.mode === "create") {
-        await fetchJson(API.medications, { method: "POST", token, body: payload });
+        await fetchJson(API.medications, {
+          method: "POST",
+          token,
+          body: payload,
+        });
         showToast("success", "Medication created");
       } else {
-        await fetchJson(`${API.medications}/${medDialog.id}`, { method: "PUT", token, body: payload });
+        await fetchJson(`${API.medications}/${medDialog.id}`, {
+          method: "PUT",
+          token,
+          body: payload,
+        });
         showToast("success", "Medication updated");
       }
       setMedDialog({ open: false, mode: "create", id: null });
@@ -328,7 +383,10 @@ export default function PharmacyManagement() {
     });
     if (!result.isConfirmed) return;
     try {
-      await fetchJson(`${API.medications}/${m.id}`, { method: "DELETE", token });
+      await fetchJson(`${API.medications}/${m.id}`, {
+        method: "DELETE",
+        token,
+      });
       showToast("success", "Medication deleted");
       await loadMedications();
     } catch (e) {
@@ -354,8 +412,14 @@ export default function PharmacyManagement() {
     if (!requireTokenGuard()) return;
     setPresBillingLoading(true);
     try {
-      const qs = new URLSearchParams({ item_type: "prescription", reference_id: String(prescriptionId) });
-      const data = await fetchJson(`${API.billing}/by-reference?${qs.toString()}`, { token });
+      const qs = new URLSearchParams({
+        item_type: "prescription",
+        reference_id: String(prescriptionId),
+      });
+      const data = await fetchJson(
+        `${API.billing}/by-reference?${qs.toString()}`,
+        { token },
+      );
       setPresBilling(data?.data || null);
     } catch {
       setPresBilling(null);
@@ -373,7 +437,10 @@ export default function PharmacyManagement() {
       return false;
     }
 
-    const computed = (prescription?.items || []).reduce((sum, it) => sum + Number(it?.medication?.unit_price || 0), 0);
+    const computed = (prescription?.items || []).reduce(
+      (sum, it) => sum + Number(it?.medication?.unit_price || 0),
+      0,
+    );
     const ask = await Swal.fire({
       icon: "question",
       title: "Take payment (test)",
@@ -397,18 +464,34 @@ export default function PharmacyManagement() {
       const billRes = await fetchJson(`${API.billing}/generate`, {
         method: "POST",
         token,
-        body: { patient_id: patientId, consultation_id: prescription?.consultation_id ?? null },
+        body: {
+          patient_id: patientId,
+          consultation_id: prescription?.consultation_id ?? null,
+        },
       });
       const billId = billRes?.data?.id;
       await fetchJson(`${API.billing}/${billId}/items`, {
         method: "POST",
         token,
-        body: { items: [{ item_type: "prescription", reference_id: prescription.id, amount }] },
+        body: {
+          items: [
+            {
+              item_type: "prescription",
+              reference_id: prescription.id,
+              amount,
+            },
+          ],
+        },
       });
       await fetchJson(`${API.payments}/process`, {
         method: "POST",
         token,
-        body: { bill_id: billId, amount_paid: amount, payment_method: "cash", payment_date: new Date().toISOString() },
+        body: {
+          bill_id: billId,
+          amount_paid: amount,
+          payment_method: "cash",
+          payment_date: new Date().toISOString(),
+        },
       });
       await loadPrescriptionBilling(prescription.id);
       showToast("success", "Payment recorded (test).");
@@ -443,7 +526,11 @@ export default function PharmacyManagement() {
 
     setPresDispensing(true);
     try {
-      await fetchJson(API.dispense, { method: "POST", token, body: { prescription_id: prescription.id } });
+      await fetchJson(API.dispense, {
+        method: "POST",
+        token,
+        body: { prescription_id: prescription.id },
+      });
       showToast("success", "Dispensed successfully.");
       setPresView({ open: false, prescription: null, loading: false });
       await loadDispenses();
@@ -472,9 +559,29 @@ export default function PharmacyManagement() {
 
   return (
     <Box sx={{ width: "100%" }}>
-      <Card elevation={0} sx={{ mb: 3, borderRadius: 3, border: "1px solid", borderColor: "divider", overflow: "hidden" }}>
-        <Box sx={{ p: { xs: 2.5, md: 3 }, color: "white", background: heroGradient }}>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }} justifyContent="space-between">
+      <Card
+        elevation={0}
+        sx={{
+          mb: 3,
+          borderRadius: 3,
+          border: "1px solid",
+          borderColor: "divider",
+          overflow: "hidden",
+        }}
+      >
+        <Box
+          sx={{
+            p: { xs: 2.5, md: 3 },
+            color: "white",
+            background: heroGradient,
+          }}
+        >
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={2}
+            alignItems={{ md: "center" }}
+            justifyContent="space-between"
+          >
             <Box>
               <Stack direction="row" spacing={1} alignItems="center">
                 <LocalPharmacyIcon />
@@ -494,7 +601,10 @@ export default function PharmacyManagement() {
                     loadPrescriptions();
                     loadDispenses();
                   }}
-                  sx={{ color: "white", border: "1px solid rgba(255,255,255,0.25)" }}
+                  sx={{
+                    color: "white",
+                    border: "1px solid rgba(255,255,255,0.25)",
+                  }}
                 >
                   <RefreshIcon />
                 </IconButton>
@@ -520,10 +630,31 @@ export default function PharmacyManagement() {
         </Box>
 
         <CardContent sx={{ p: 0 }}>
-          <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ px: 2, "& .MuiTabs-indicator": { backgroundColor: theme.palette.primary.main } }}>
-            <Tab icon={<InventoryIcon />} iconPosition="start" label="Medicine Catalogue" />
-            <Tab icon={<ReceiptLongIcon />} iconPosition="start" label="Prescriptions" />
-            <Tab icon={<LocalPharmacyIcon />} iconPosition="start" label="Dispense Records" />
+          <Tabs
+            value={tab}
+            onChange={(_, v) => setTab(v)}
+            sx={{
+              px: 2,
+              "& .MuiTabs-indicator": {
+                backgroundColor: theme.palette.primary.main,
+              },
+            }}
+          >
+            <Tab
+              icon={<InventoryIcon />}
+              iconPosition="start"
+              label="Medicine Catalogue"
+            />
+            <Tab
+              icon={<ReceiptLongIcon />}
+              iconPosition="start"
+              label="Prescriptions"
+            />
+            <Tab
+              icon={<LocalPharmacyIcon />}
+              iconPosition="start"
+              label="Dispense Records"
+            />
           </Tabs>
           <Divider />
 
@@ -542,18 +673,34 @@ export default function PharmacyManagement() {
                 onFocus={() => setMedsSearchLocked(false)}
                 onClick={() => setMedsSearchLocked(false)}
                 InputProps={{ readOnly: medsSearchLocked }}
-                inputProps={{ autoComplete: "off", "data-lpignore": "true", "data-1p-ignore": "true" }}
+                inputProps={{
+                  autoComplete: "off",
+                  "data-lpignore": "true",
+                  "data-1p-ignore": "true",
+                }}
                 sx={{ mb: 2 }}
               />
 
-              <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
+              <TableContainer
+                sx={{
+                  borderRadius: 2,
+                  border: "1px solid",
+                  borderColor: "divider",
+                }}
+              >
                 <Table size="small">
                   <TableHead>
                     <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: 64 }}>
+                        No
+                      </TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Name</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Dosage form</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Manufacturer</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>
+                        Dosage form
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>
+                        Manufacturer
+                      </TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Unit price</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 800 }}>
                         Actions
@@ -564,35 +711,58 @@ export default function PharmacyManagement() {
                     {medsLoading ? (
                       <TableRow>
                         <TableCell colSpan={6}>
-                          <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
+                          <Stack
+                            direction="row"
+                            spacing={1}
+                            alignItems="center"
+                            sx={{ py: 2 }}
+                          >
                             <CircularProgress size={18} />
-                            <Typography color="text.secondary">Loading medications…</Typography>
+                            <Typography color="text.secondary">
+                              Loading medications…
+                            </Typography>
                           </Stack>
                         </TableCell>
                       </TableRow>
                     ) : medications.length ? (
                       medications.map((m, idx) => (
                         <TableRow key={m.id} hover>
-                          <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{medsPage * medsRowsPerPage + idx + 1}</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>{m.name}</TableCell>
+                          <TableCell
+                            sx={{ color: "text.secondary", fontWeight: 700 }}
+                          >
+                            {medsPage * medsRowsPerPage + idx + 1}
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>
+                            {m.name}
+                          </TableCell>
                           <TableCell>{m.dosage_form || "—"}</TableCell>
                           <TableCell>{m.manufacturer || "—"}</TableCell>
                           <TableCell>{m.unit_price ?? "—"}</TableCell>
                           <TableCell align="right">
                             <Tooltip title="View">
-                              <IconButton onClick={() => openViewMed(m)} size="small">
+                              <IconButton
+                                onClick={() => openViewMed(m)}
+                                size="small"
+                              >
                                 <VisibilityIcon fontSize="inherit" />
                               </IconButton>
                             </Tooltip>
                             {isAdmin && (
                               <>
                                 <Tooltip title="Edit">
-                                  <IconButton onClick={() => openEditMed(m)} size="small">
+                                  <IconButton
+                                    onClick={() => openEditMed(m)}
+                                    size="small"
+                                  >
                                     <EditIcon fontSize="inherit" />
                                   </IconButton>
                                 </Tooltip>
                                 <Tooltip title="Delete">
-                                  <IconButton onClick={() => deleteMed(m)} size="small" color="error">
+                                  <IconButton
+                                    onClick={() => deleteMed(m)}
+                                    size="small"
+                                    color="error"
+                                  >
                                     <DeleteIcon fontSize="inherit" />
                                   </IconButton>
                                 </Tooltip>
@@ -644,19 +814,33 @@ export default function PharmacyManagement() {
                 onFocus={() => setPresSearchLocked(false)}
                 onClick={() => setPresSearchLocked(false)}
                 InputProps={{ readOnly: presSearchLocked }}
-                inputProps={{ autoComplete: "off", "data-lpignore": "true", "data-1p-ignore": "true" }}
+                inputProps={{
+                  autoComplete: "off",
+                  "data-lpignore": "true",
+                  "data-1p-ignore": "true",
+                }}
                 sx={{ mb: 2 }}
               />
 
-              <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
+              <TableContainer
+                sx={{
+                  borderRadius: 2,
+                  border: "1px solid",
+                  borderColor: "divider",
+                }}
+              >
                 <Table size="small">
                   <TableHead>
                     <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: 64 }}>
+                        No
+                      </TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Patient</TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Doctor</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Consultation</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>
+                        Consultation
+                      </TableCell>
                       <TableCell align="right" sx={{ fontWeight: 800 }}>
                         Actions
                       </TableCell>
@@ -666,22 +850,54 @@ export default function PharmacyManagement() {
                     {presLoading ? (
                       <TableRow>
                         <TableCell colSpan={6}>
-                          <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
+                          <Stack
+                            direction="row"
+                            spacing={1}
+                            alignItems="center"
+                            sx={{ py: 2 }}
+                          >
                             <CircularProgress size={18} />
-                            <Typography color="text.secondary">Loading prescriptions…</Typography>
+                            <Typography color="text.secondary">
+                              Loading prescriptions…
+                            </Typography>
                           </Stack>
                         </TableCell>
                       </TableRow>
                     ) : prescriptions.length ? (
                       prescriptions.map((p, idx) => (
-                        <TableRow key={p.id} hover sx={{ cursor: "pointer" }} onClick={() => openPrescription(p)}>
-                          <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{presPage * presRowsPerPage + idx + 1}</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>{formatDateTime(p.prescription_date)}</TableCell>
-                          <TableCell sx={{ fontFamily: "monospace" }}>{p.patient_id}</TableCell>
-                          <TableCell sx={{ fontFamily: "monospace" }}>{p.doctor_id || "—"}</TableCell>
-                          <TableCell sx={{ fontFamily: "monospace" }}>{p.consultation_id || "—"}</TableCell>
+                        <TableRow
+                          key={p.id}
+                          hover
+                          sx={{ cursor: "pointer" }}
+                          onClick={() => openPrescription(p)}
+                        >
+                          <TableCell
+                            sx={{ color: "text.secondary", fontWeight: 700 }}
+                          >
+                            {presPage * presRowsPerPage + idx + 1}
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>
+                            {formatDateTime(p.prescription_date)}
+                          </TableCell>
+                          <TableCell sx={{ fontFamily: "monospace" }}>
+                            {p.patient_id}
+                          </TableCell>
+                          <TableCell sx={{ fontFamily: "monospace" }}>
+                            {p.doctor_id || "—"}
+                          </TableCell>
+                          <TableCell sx={{ fontFamily: "monospace" }}>
+                            {p.consultation_id || "—"}
+                          </TableCell>
                           <TableCell align="right">
-                            <Chip size="small" label="View items" sx={{ fontWeight: 800, bgcolor: "rgba(0, 137, 123, 0.10)", color: theme.palette.primary.dark }} />
+                            <Chip
+                              size="small"
+                              label="View items"
+                              sx={{
+                                fontWeight: 800,
+                                bgcolor: "rgba(0, 137, 123, 0.10)",
+                                color: theme.palette.primary.dark,
+                              }}
+                            />
                           </TableCell>
                         </TableRow>
                       ))
@@ -728,17 +944,33 @@ export default function PharmacyManagement() {
                 onFocus={() => setDispSearchLocked(false)}
                 onClick={() => setDispSearchLocked(false)}
                 InputProps={{ readOnly: dispSearchLocked }}
-                inputProps={{ autoComplete: "off", "data-lpignore": "true", "data-1p-ignore": "true" }}
+                inputProps={{
+                  autoComplete: "off",
+                  "data-lpignore": "true",
+                  "data-1p-ignore": "true",
+                }}
                 sx={{ mb: 2 }}
               />
 
-              <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
+              <TableContainer
+                sx={{
+                  borderRadius: 2,
+                  border: "1px solid",
+                  borderColor: "divider",
+                }}
+              >
                 <Table size="small">
                   <TableHead>
                     <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Dispense date</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Prescription</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: 64 }}>
+                        No
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>
+                        Dispense date
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>
+                        Prescription
+                      </TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Pharmacist</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 800 }}>
                         Actions
@@ -749,22 +981,44 @@ export default function PharmacyManagement() {
                     {dispLoading ? (
                       <TableRow>
                         <TableCell colSpan={5}>
-                          <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
+                          <Stack
+                            direction="row"
+                            spacing={1}
+                            alignItems="center"
+                            sx={{ py: 2 }}
+                          >
                             <CircularProgress size={18} />
-                            <Typography color="text.secondary">Loading dispense records…</Typography>
+                            <Typography color="text.secondary">
+                              Loading dispense records…
+                            </Typography>
                           </Stack>
                         </TableCell>
                       </TableRow>
                     ) : dispenses.length ? (
                       dispenses.map((r, idx) => (
                         <TableRow key={r.id} hover>
-                          <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{dispPage * dispRowsPerPage + idx + 1}</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>{formatDateTime(r.dispense_date)}</TableCell>
-                          <TableCell sx={{ fontFamily: "monospace" }}>{r.prescription_id}</TableCell>
-                          <TableCell>{r.pharmacist?.full_name || "—"}</TableCell>
+                          <TableCell
+                            sx={{ color: "text.secondary", fontWeight: 700 }}
+                          >
+                            {dispPage * dispRowsPerPage + idx + 1}
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>
+                            {formatDateTime(r.dispense_date)}
+                          </TableCell>
+                          <TableCell sx={{ fontFamily: "monospace" }}>
+                            {r.prescription_id}
+                          </TableCell>
+                          <TableCell>
+                            {r.pharmacist?.full_name || "—"}
+                          </TableCell>
                           <TableCell align="right">
                             <Tooltip title="View">
-                              <IconButton onClick={() => setDispView({ open: true, record: r })} size="small">
+                              <IconButton
+                                onClick={() =>
+                                  setDispView({ open: true, record: r })
+                                }
+                                size="small"
+                              >
                                 <VisibilityIcon fontSize="inherit" />
                               </IconButton>
                             </Tooltip>
@@ -802,14 +1056,21 @@ export default function PharmacyManagement() {
       </Card>
 
       {/* Medication view */}
-      <Dialog open={medView.open} onClose={() => setMedView({ open: false, med: null })} fullWidth maxWidth="xs">
+      <Dialog
+        open={medView.open}
+        onClose={() => setMedView({ open: false, med: null })}
+        fullWidth
+        maxWidth="xs"
+      >
         <DialogTitle sx={{ fontWeight: 900 }}>Medication Details</DialogTitle>
         <DialogContent>
           <Stack spacing={1} sx={{ mt: 0.5 }}>
             <Typography variant="overline" color="text.secondary">
               Name
             </Typography>
-            <Typography sx={{ fontWeight: 900, fontSize: 18 }}>{medView.med?.name || "—"}</Typography>
+            <Typography sx={{ fontWeight: 900, fontSize: 18 }}>
+              {medView.med?.name || "—"}
+            </Typography>
             <Divider sx={{ my: 1 }} />
             <Stack direction="row" spacing={2}>
               <Box sx={{ flex: 1 }}>
@@ -834,65 +1095,141 @@ export default function PharmacyManagement() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setMedView({ open: false, med: null })}>Close</Button>
+          <Button onClick={() => setMedView({ open: false, med: null })}>
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
 
       {/* Medication create/edit */}
-      <Dialog open={medDialog.open} onClose={() => setMedDialog({ open: false, mode: "create", id: null })} fullWidth maxWidth="sm">
-        <DialogTitle sx={{ fontWeight: 900 }}>{medDialog.mode === "create" ? "Create Medication" : "Edit Medication"}</DialogTitle>
+      <Dialog
+        open={medDialog.open}
+        onClose={() => setMedDialog({ open: false, mode: "create", id: null })}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle sx={{ fontWeight: 900 }}>
+          {medDialog.mode === "create"
+            ? "Create Medication"
+            : "Edit Medication"}
+        </DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField label="Name" fullWidth value={medForm.name} onChange={(e) => setMedForm((p) => ({ ...p, name: e.target.value }))} />
+            <TextField
+              label="Name"
+              fullWidth
+              value={medForm.name}
+              onChange={(e) =>
+                setMedForm((p) => ({ ...p, name: e.target.value }))
+              }
+            />
             <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
               <TextField
                 label="Dosage form"
                 fullWidth
                 value={medForm.dosage_form}
-                onChange={(e) => setMedForm((p) => ({ ...p, dosage_form: e.target.value }))}
+                onChange={(e) =>
+                  setMedForm((p) => ({ ...p, dosage_form: e.target.value }))
+                }
               />
               <TextField
                 label="Unit price"
                 fullWidth
                 value={medForm.unit_price}
-                onChange={(e) => setMedForm((p) => ({ ...p, unit_price: e.target.value }))}
+                onChange={(e) =>
+                  setMedForm((p) => ({ ...p, unit_price: e.target.value }))
+                }
               />
             </Stack>
             <TextField
               label="Manufacturer"
               fullWidth
               value={medForm.manufacturer}
-              onChange={(e) => setMedForm((p) => ({ ...p, manufacturer: e.target.value }))}
+              onChange={(e) =>
+                setMedForm((p) => ({ ...p, manufacturer: e.target.value }))
+              }
             />
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setMedDialog({ open: false, mode: "create", id: null })}>Cancel</Button>
-          <Button variant="contained" onClick={saveMed} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: theme.palette.primary.dark } }}>
+          <Button
+            onClick={() =>
+              setMedDialog({ open: false, mode: "create", id: null })
+            }
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={saveMed}
+            sx={{
+              bgcolor: theme.palette.primary.main,
+              "&:hover": { bgcolor: theme.palette.primary.dark },
+            }}
+          >
             Save
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Prescription view with items */}
-      <Dialog open={presView.open} onClose={() => setPresView({ open: false, prescription: null, loading: false })} fullWidth maxWidth="md">
+      <Dialog
+        open={presView.open}
+        onClose={() =>
+          setPresView({ open: false, prescription: null, loading: false })
+        }
+        fullWidth
+        maxWidth="md"
+      >
         <DialogTitle sx={{ fontWeight: 900 }}>Prescription Items</DialogTitle>
         <DialogContent>
           {presView.loading ? (
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              sx={{ py: 2 }}
+            >
               <CircularProgress size={18} />
-              <Typography color="text.secondary">Loading prescription…</Typography>
+              <Typography color="text.secondary">
+                Loading prescription…
+              </Typography>
             </Stack>
           ) : (
             <>
-              <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ mb: 2 }}>
-                <Chip label={`Date: ${formatDateTime(presView.prescription?.prescription_date)}`} />
-                <Chip label={`Patient: ${presView.prescription?.patient_id || "—"}`} sx={{ fontFamily: "monospace" }} />
-                <Chip label={`Doctor: ${presView.prescription?.doctor_id || "—"}`} sx={{ fontFamily: "monospace" }} />
+              <Stack
+                direction={{ xs: "column", md: "row" }}
+                spacing={2}
+                sx={{ mb: 2 }}
+              >
+                <Chip
+                  label={`Date: ${formatDateTime(presView.prescription?.prescription_date)}`}
+                />
+                <Chip
+                  label={`Patient: ${presView.prescription?.patient_id || "—"}`}
+                  sx={{ fontFamily: "monospace" }}
+                />
+                <Chip
+                  label={`Doctor: ${presView.prescription?.doctor_id || "—"}`}
+                  sx={{ fontFamily: "monospace" }}
+                />
               </Stack>
 
-              <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2, mb: 2 }}>
-                <Stack direction={{ xs: "column", md: "row" }} spacing={1} alignItems={{ md: "center" }} justifyContent="space-between">
+              <Box
+                sx={{
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 2,
+                  p: 2,
+                  mb: 2,
+                }}
+              >
+                <Stack
+                  direction={{ xs: "column", md: "row" }}
+                  spacing={1}
+                  alignItems={{ md: "center" }}
+                  justifyContent="space-between"
+                >
                   <Stack direction="row" spacing={1} alignItems="center">
                     <Typography sx={{ fontWeight: 900 }}>Payment</Typography>
                     {presBillingLoading ? (
@@ -900,7 +1237,13 @@ export default function PharmacyManagement() {
                     ) : (
                       <Chip
                         size="small"
-                        label={presBilling?.paid ? "paid" : presBilling?.exists ? presBilling?.status || "unpaid" : "unbilled"}
+                        label={
+                          presBilling?.paid
+                            ? "paid"
+                            : presBilling?.exists
+                              ? presBilling?.status || "unpaid"
+                              : "unbilled"
+                        }
                         color={presBilling?.paid ? "success" : "default"}
                         variant={presBilling?.paid ? "filled" : "outlined"}
                         sx={{ fontWeight: 800 }}
@@ -918,7 +1261,8 @@ export default function PharmacyManagement() {
                 </Stack>
                 {presBilling?.exists ? (
                   <Typography color="text.secondary" sx={{ mt: 1 }}>
-                    Total: {presBilling.total_amount} • Paid: {presBilling.paid_amount} • Balance: {presBilling.balance}
+                    Total: {presBilling.total_amount} • Paid:{" "}
+                    {presBilling.paid_amount} • Balance: {presBilling.balance}
                   </Typography>
                 ) : (
                   <Typography color="text.secondary" sx={{ mt: 1 }}>
@@ -932,11 +1276,19 @@ export default function PharmacyManagement() {
                 )}
               </Box>
 
-              <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
+              <TableContainer
+                sx={{
+                  borderRadius: 2,
+                  border: "1px solid",
+                  borderColor: "divider",
+                }}
+              >
                 <Table size="small">
                   <TableHead>
                     <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: 64 }}>
+                        No
+                      </TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Medication</TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Dosage</TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Frequency</TableCell>
@@ -947,8 +1299,14 @@ export default function PharmacyManagement() {
                     {presView.prescription?.items?.length ? (
                       presView.prescription.items.map((it, idx) => (
                         <TableRow key={it.id} hover>
-                          <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{idx + 1}</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>{it.medication?.name || it.medication_id}</TableCell>
+                          <TableCell
+                            sx={{ color: "text.secondary", fontWeight: 700 }}
+                          >
+                            {idx + 1}
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>
+                            {it.medication?.name || it.medication_id}
+                          </TableCell>
                           <TableCell>{it.dosage || "—"}</TableCell>
                           <TableCell>{it.frequency || "—"}</TableCell>
                           <TableCell>{it.duration || "—"}</TableCell>
@@ -970,35 +1328,65 @@ export default function PharmacyManagement() {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setPresView({ open: false, prescription: null, loading: false })}>Close</Button>
-          <Button variant="contained" onClick={dispensePrescription} disabled={presView.loading || presDispensing || !presView.prescription?.id} sx={{ fontWeight: 900 }}>
+          <Button
+            onClick={() =>
+              setPresView({ open: false, prescription: null, loading: false })
+            }
+          >
+            Close
+          </Button>
+          <Button
+            variant="contained"
+            onClick={dispensePrescription}
+            disabled={
+              presView.loading || presDispensing || !presView.prescription?.id
+            }
+            sx={{ fontWeight: 900 }}
+          >
             {presDispensing ? "Dispensing…" : "Dispense now"}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Dispense view */}
-      <Dialog open={dispView.open} onClose={() => setDispView({ open: false, record: null })} fullWidth maxWidth="sm">
+      <Dialog
+        open={dispView.open}
+        onClose={() => setDispView({ open: false, record: null })}
+        fullWidth
+        maxWidth="sm"
+      >
         <DialogTitle sx={{ fontWeight: 900 }}>Dispense Record</DialogTitle>
         <DialogContent>
           <Stack spacing={1} sx={{ mt: 0.5 }}>
             <Typography variant="overline" color="text.secondary">
               Dispense date
             </Typography>
-            <Typography sx={{ fontWeight: 900, fontSize: 18 }}>{formatDateTime(dispView.record?.dispense_date)}</Typography>
+            <Typography sx={{ fontWeight: 900, fontSize: 18 }}>
+              {formatDateTime(dispView.record?.dispense_date)}
+            </Typography>
             <Divider sx={{ my: 1 }} />
             <Typography variant="overline" color="text.secondary">
               Prescription
             </Typography>
-            <Typography sx={{ fontFamily: "monospace" }}>{dispView.record?.prescription_id || "—"}</Typography>
-            <Typography variant="overline" color="text.secondary" sx={{ mt: 1 }}>
+            <Typography sx={{ fontFamily: "monospace" }}>
+              {dispView.record?.prescription_id || "—"}
+            </Typography>
+            <Typography
+              variant="overline"
+              color="text.secondary"
+              sx={{ mt: 1 }}
+            >
               Pharmacist
             </Typography>
-            <Typography>{dispView.record?.pharmacist?.full_name || "—"}</Typography>
+            <Typography>
+              {dispView.record?.pharmacist?.full_name || "—"}
+            </Typography>
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDispView({ open: false, record: null })}>Close</Button>
+          <Button onClick={() => setDispView({ open: false, record: null })}>
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -1016,4 +1404,3 @@ export default function PharmacyManagement() {
     </Box>
   );
 }
-

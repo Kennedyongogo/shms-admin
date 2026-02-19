@@ -32,7 +32,14 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { Add, Delete, Refresh, Science, Search, Visibility } from "@mui/icons-material";
+import {
+  Add,
+  Delete,
+  Refresh,
+  Science,
+  Search,
+  Visibility,
+} from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
 import Swal from "sweetalert2";
 
@@ -66,7 +73,8 @@ async function fetchJson(url, { method = "GET", body, token } = {}) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const message = data?.message || data?.error || `Request failed (${res.status})`;
+    const message =
+      data?.message || data?.error || `Request failed (${res.status})`;
     const err = new Error(message);
     err.status = res.status;
     err.data = data;
@@ -100,7 +108,11 @@ export default function LaboratoryManagement() {
 
   const requireTokenGuard = () => {
     if (!token) {
-      Swal.fire({ icon: "error", title: "Not logged in", text: "Please sign in again." });
+      Swal.fire({
+        icon: "error",
+        title: "Not logged in",
+        text: "Please sign in again.",
+      });
       setTimeout(() => (window.location.href = "/"), 500);
       return false;
     }
@@ -136,8 +148,16 @@ export default function LaboratoryManagement() {
   const [testSearch, setTestSearch] = useState("");
   const [testSearchLocked, setTestSearchLocked] = useState(true);
 
-  const [testDialog, setTestDialog] = useState({ open: false, mode: "create", id: null });
-  const [testForm, setTestForm] = useState({ test_name: "", test_code: "", price: "" });
+  const [testDialog, setTestDialog] = useState({
+    open: false,
+    mode: "create",
+    id: null,
+  });
+  const [testForm, setTestForm] = useState({
+    test_name: "",
+    test_code: "",
+    price: "",
+  });
 
   // Lab Results
   const resultReqId = useRef(0);
@@ -149,9 +169,17 @@ export default function LaboratoryManagement() {
   const [resultSearch, setResultSearch] = useState("");
   const [resultSearchLocked, setResultSearchLocked] = useState(true);
 
-  const [resultDialog, setResultDialog] = useState({ open: false, lab_order_item_id: null });
+  const [resultDialog, setResultDialog] = useState({
+    open: false,
+    lab_order_item_id: null,
+  });
   const [resultSaving, setResultSaving] = useState(false);
-  const [resultForm, setResultForm] = useState({ result_value: "", reference_range: "", interpretation: "", result_date: "" });
+  const [resultForm, setResultForm] = useState({
+    result_value: "",
+    reference_range: "",
+    interpretation: "",
+    result_date: "",
+  });
 
   const loadOrders = async () => {
     if (!requireTokenGuard()) return;
@@ -164,7 +192,9 @@ export default function LaboratoryManagement() {
         ...(orderSearch.trim() ? { search: orderSearch.trim() } : {}),
         ...(orderStatusFilter ? { status: orderStatusFilter } : {}),
       });
-      const data = await fetchJson(`${API.labOrders}?${qs.toString()}`, { token });
+      const data = await fetchJson(`${API.labOrders}?${qs.toString()}`, {
+        token,
+      });
       if (reqId !== orderReqId.current) return;
       setOrders(data.data || []);
       setOrderTotal(data.pagination?.total ?? (data.data?.length || 0));
@@ -187,7 +217,9 @@ export default function LaboratoryManagement() {
         limit: String(testRowsPerPage),
         ...(testSearch.trim() ? { search: testSearch.trim() } : {}),
       });
-      const data = await fetchJson(`${API.labTests}?${qs.toString()}`, { token });
+      const data = await fetchJson(`${API.labTests}?${qs.toString()}`, {
+        token,
+      });
       if (reqId !== testReqId.current) return;
       setTests(data.data || []);
       setTestTotal(data.pagination?.total ?? (data.data?.length || 0));
@@ -210,7 +242,9 @@ export default function LaboratoryManagement() {
         limit: String(resultRowsPerPage),
         ...(resultSearch.trim() ? { search: resultSearch.trim() } : {}),
       });
-      const data = await fetchJson(`${API.labResults}?${qs.toString()}`, { token });
+      const data = await fetchJson(`${API.labResults}?${qs.toString()}`, {
+        token,
+      });
       if (reqId !== resultReqId.current) return;
       setResults(data.data || []);
       setResultTotal(data.pagination?.total ?? (data.data?.length || 0));
@@ -259,7 +293,15 @@ export default function LaboratoryManagement() {
     if (tab === 1) loadOrders();
     if (tab === 2) loadResults();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, orderPage, orderRowsPerPage, testPage, testRowsPerPage, resultPage, resultRowsPerPage]);
+  }, [
+    tab,
+    orderPage,
+    orderRowsPerPage,
+    testPage,
+    testRowsPerPage,
+    resultPage,
+    resultRowsPerPage,
+  ]);
 
   const openOrder = (o) => {
     setOrderView({ open: true, order: o });
@@ -284,7 +326,12 @@ export default function LaboratoryManagement() {
     if (!r.isConfirmed) return;
     try {
       await fetchJson(`${API.labOrders}/${o.id}`, { method: "DELETE", token });
-      Swal.fire({ icon: "success", title: "Deleted", timer: 900, showConfirmButton: false });
+      Swal.fire({
+        icon: "success",
+        title: "Deleted",
+        timer: 900,
+        showConfirmButton: false,
+      });
       await loadOrders();
       setOrderView({ open: false, order: null });
     } catch (e) {
@@ -314,8 +361,17 @@ export default function LaboratoryManagement() {
     }
     setOrderStatusSaving(true);
     try {
-      await fetchJson(`${API.labOrders}/${o.id}/status`, { method: "PATCH", token, body: { status: orderStatusDraft } });
-      Swal.fire({ icon: "success", title: "Updated", timer: 900, showConfirmButton: false });
+      await fetchJson(`${API.labOrders}/${o.id}/status`, {
+        method: "PATCH",
+        token,
+        body: { status: orderStatusDraft },
+      });
+      Swal.fire({
+        icon: "success",
+        title: "Updated",
+        timer: 900,
+        showConfirmButton: false,
+      });
       setOrderView({ open: false, order: null });
       await loadOrders();
     } catch (e) {
@@ -345,8 +401,14 @@ export default function LaboratoryManagement() {
     if (!requireTokenGuard()) return;
     setOrderBillingLoading(true);
     try {
-      const qs = new URLSearchParams({ item_type: "lab_order", reference_id: String(orderId) });
-      const data = await fetchJson(`${API.billing}/by-reference?${qs.toString()}`, { token });
+      const qs = new URLSearchParams({
+        item_type: "lab_order",
+        reference_id: String(orderId),
+      });
+      const data = await fetchJson(
+        `${API.billing}/by-reference?${qs.toString()}`,
+        { token },
+      );
       setOrderBilling(data?.data || null);
     } catch {
       setOrderBilling(null);
@@ -360,11 +422,18 @@ export default function LaboratoryManagement() {
     if (!order?.id) return false;
     const patientId = order?.patient?.id || order?.patient_id;
     if (!patientId) {
-      Swal.fire({ icon: "error", title: "Missing patient", text: "Cannot generate a bill without patient_id." });
+      Swal.fire({
+        icon: "error",
+        title: "Missing patient",
+        text: "Cannot generate a bill without patient_id.",
+      });
       return false;
     }
 
-    const computed = (order?.items || []).reduce((sum, it) => sum + Number(it?.labTest?.price || 0), 0);
+    const computed = (order?.items || []).reduce(
+      (sum, it) => sum + Number(it?.labTest?.price || 0),
+      0,
+    );
     const ask = await Swal.fire({
       icon: "question",
       title: "Take payment (test)",
@@ -385,20 +454,38 @@ export default function LaboratoryManagement() {
     const amount = Number(ask.value);
 
     try {
-      const billRes = await fetchJson(`${API.billing}/generate`, { method: "POST", token, body: { patient_id: patientId, consultation_id: order?.consultation_id ?? null } });
+      const billRes = await fetchJson(`${API.billing}/generate`, {
+        method: "POST",
+        token,
+        body: {
+          patient_id: patientId,
+          consultation_id: order?.consultation_id ?? null,
+        },
+      });
       const billId = billRes?.data?.id;
       await fetchJson(`${API.billing}/${billId}/items`, {
         method: "POST",
         token,
-        body: { items: [{ item_type: "lab_order", reference_id: order.id, amount }] },
+        body: {
+          items: [{ item_type: "lab_order", reference_id: order.id, amount }],
+        },
       });
       await fetchJson(`${API.payments}/process`, {
         method: "POST",
         token,
-        body: { bill_id: billId, amount_paid: amount, payment_method: "cash", payment_date: new Date().toISOString() },
+        body: {
+          bill_id: billId,
+          amount_paid: amount,
+          payment_method: "cash",
+          payment_date: new Date().toISOString(),
+        },
       });
       await loadOrderBilling(order.id);
-      Swal.fire({ icon: "success", title: "Paid", text: "Payment recorded (test)." });
+      Swal.fire({
+        icon: "success",
+        title: "Paid",
+        text: "Payment recorded (test).",
+      });
       return true;
     } catch (e) {
       Swal.fire({ icon: "error", title: "Payment failed", text: e.message });
@@ -411,15 +498,29 @@ export default function LaboratoryManagement() {
     setTestDialog({ open: true, mode: "create", id: null });
   };
   const openEditTest = (t) => {
-    setTestForm({ test_name: t.test_name || "", test_code: t.test_code || "", price: t.price ?? "" });
+    setTestForm({
+      test_name: t.test_name || "",
+      test_code: t.test_code || "",
+      price: t.price ?? "",
+    });
     setTestDialog({ open: true, mode: "edit", id: t.id });
   };
 
   const saveTest = async () => {
     if (!requireTokenGuard()) return;
     if (!isAdmin) return;
-    if (!testForm.test_name.trim()) return Swal.fire({ icon: "warning", title: "Missing name", text: "Test name is required." });
-    if (!testForm.test_code.trim()) return Swal.fire({ icon: "warning", title: "Missing code", text: "Test code is required." });
+    if (!testForm.test_name.trim())
+      return Swal.fire({
+        icon: "warning",
+        title: "Missing name",
+        text: "Test name is required.",
+      });
+    if (!testForm.test_code.trim())
+      return Swal.fire({
+        icon: "warning",
+        title: "Missing code",
+        text: "Test code is required.",
+      });
     const priceRaw = String(testForm.price ?? "").trim();
     const payload = {
       test_name: testForm.test_name.trim(),
@@ -429,10 +530,24 @@ export default function LaboratoryManagement() {
     try {
       if (testDialog.mode === "create") {
         await fetchJson(API.labTests, { method: "POST", token, body: payload });
-        Swal.fire({ icon: "success", title: "Created", timer: 900, showConfirmButton: false });
+        Swal.fire({
+          icon: "success",
+          title: "Created",
+          timer: 900,
+          showConfirmButton: false,
+        });
       } else {
-        await fetchJson(`${API.labTests}/${testDialog.id}`, { method: "PUT", token, body: payload });
-        Swal.fire({ icon: "success", title: "Updated", timer: 900, showConfirmButton: false });
+        await fetchJson(`${API.labTests}/${testDialog.id}`, {
+          method: "PUT",
+          token,
+          body: payload,
+        });
+        Swal.fire({
+          icon: "success",
+          title: "Updated",
+          timer: 900,
+          showConfirmButton: false,
+        });
       }
       setTestDialog({ open: false, mode: "create", id: null });
       await loadTests();
@@ -456,7 +571,12 @@ export default function LaboratoryManagement() {
     if (!r.isConfirmed) return;
     try {
       await fetchJson(`${API.labTests}/${t.id}`, { method: "DELETE", token });
-      Swal.fire({ icon: "success", title: "Deleted", timer: 900, showConfirmButton: false });
+      Swal.fire({
+        icon: "success",
+        title: "Deleted",
+        timer: 900,
+        showConfirmButton: false,
+      });
       await loadTests();
     } catch (e) {
       Swal.fire({ icon: "error", title: "Failed", text: e.message });
@@ -469,7 +589,9 @@ export default function LaboratoryManagement() {
       result_value: existingResult?.result_value || "",
       reference_range: existingResult?.reference_range || "",
       interpretation: existingResult?.interpretation || "",
-      result_date: existingResult?.result_date ? new Date(existingResult.result_date).toISOString().slice(0, 16) : "",
+      result_date: existingResult?.result_date
+        ? new Date(existingResult.result_date).toISOString().slice(0, 16)
+        : "",
     });
   };
 
@@ -486,10 +608,17 @@ export default function LaboratoryManagement() {
           result_value: resultForm.result_value.trim() || null,
           reference_range: resultForm.reference_range.trim() || null,
           interpretation: resultForm.interpretation.trim() || null,
-          result_date: resultForm.result_date ? new Date(resultForm.result_date).toISOString() : null,
+          result_date: resultForm.result_date
+            ? new Date(resultForm.result_date).toISOString()
+            : null,
         },
       });
-      Swal.fire({ icon: "success", title: "Saved", timer: 900, showConfirmButton: false });
+      Swal.fire({
+        icon: "success",
+        title: "Saved",
+        timer: 900,
+        showConfirmButton: false,
+      });
       setResultDialog({ open: false, lab_order_item_id: null });
       await loadOrders();
       await loadResults();
@@ -502,9 +631,29 @@ export default function LaboratoryManagement() {
 
   return (
     <Box sx={{ width: "100%" }}>
-      <Card elevation={0} sx={{ mb: 3, borderRadius: 3, border: "1px solid", borderColor: "divider", overflow: "hidden" }}>
-        <Box sx={{ p: { xs: 2.5, md: 3 }, color: "white", background: heroGradient }}>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }} justifyContent="space-between">
+      <Card
+        elevation={0}
+        sx={{
+          mb: 3,
+          borderRadius: 3,
+          border: "1px solid",
+          borderColor: "divider",
+          overflow: "hidden",
+        }}
+      >
+        <Box
+          sx={{
+            p: { xs: 2.5, md: 3 },
+            color: "white",
+            background: heroGradient,
+          }}
+        >
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={2}
+            alignItems={{ md: "center" }}
+            justifyContent="space-between"
+          >
             <Box>
               <Stack direction="row" spacing={1} alignItems="center">
                 <Science />
@@ -512,7 +661,9 @@ export default function LaboratoryManagement() {
                   Laboratory
                 </Typography>
               </Stack>
-              <Typography sx={{ opacity: 0.9, mt: 0.5 }}>Track lab orders, maintain lab tests, and enter results.</Typography>
+              <Typography sx={{ opacity: 0.9, mt: 0.5 }}>
+                Track lab orders, maintain lab tests, and enter results.
+              </Typography>
             </Box>
             <Stack direction="row" spacing={1}>
               <Tooltip title="Refresh">
@@ -522,7 +673,10 @@ export default function LaboratoryManagement() {
                     if (tab === 1) loadOrders();
                     if (tab === 2) loadResults();
                   }}
-                  sx={{ color: "white", border: "1px solid rgba(255,255,255,0.25)" }}
+                  sx={{
+                    color: "white",
+                    border: "1px solid rgba(255,255,255,0.25)",
+                  }}
                 >
                   <Refresh />
                 </IconButton>
@@ -548,7 +702,16 @@ export default function LaboratoryManagement() {
         </Box>
 
         <CardContent sx={{ p: 0 }}>
-          <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ px: 2, "& .MuiTabs-indicator": { backgroundColor: theme.palette.primary.main } }}>
+          <Tabs
+            value={tab}
+            onChange={(_, v) => setTab(v)}
+            sx={{
+              px: 2,
+              "& .MuiTabs-indicator": {
+                backgroundColor: theme.palette.primary.main,
+              },
+            }}
+          >
             <Tab label="Lab Tests" />
             <Tab label="Lab Orders" />
             <Tab label="Results" />
@@ -559,7 +722,8 @@ export default function LaboratoryManagement() {
             <Box sx={{ p: 2 }}>
               {!isAdmin && (
                 <Alert severity="info" sx={{ mb: 2 }}>
-                  You can view lab tests, but only admins can create/edit/delete.
+                  You can view lab tests, but only admins can
+                  create/edit/delete.
                 </Alert>
               )}
               <TextField
@@ -580,15 +744,27 @@ export default function LaboratoryManagement() {
                     </InputAdornment>
                   ),
                 }}
-                inputProps={{ autoComplete: "off", "data-lpignore": "true", "data-1p-ignore": "true" }}
+                inputProps={{
+                  autoComplete: "off",
+                  "data-lpignore": "true",
+                  "data-1p-ignore": "true",
+                }}
                 sx={{ mb: 2 }}
               />
 
-              <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
+              <TableContainer
+                sx={{
+                  borderRadius: 2,
+                  border: "1px solid",
+                  borderColor: "divider",
+                }}
+              >
                 <Table size="small">
                   <TableHead>
                     <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: 64 }}>
+                        No
+                      </TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Name</TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Code</TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Price</TableCell>
@@ -601,26 +777,52 @@ export default function LaboratoryManagement() {
                     {testLoading ? (
                       <TableRow>
                         <TableCell colSpan={5}>
-                          <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
+                          <Stack
+                            direction="row"
+                            spacing={1}
+                            alignItems="center"
+                            sx={{ py: 2 }}
+                          >
                             <CircularProgress size={18} />
-                            <Typography color="text.secondary">Loading lab tests…</Typography>
+                            <Typography color="text.secondary">
+                              Loading lab tests…
+                            </Typography>
                           </Stack>
                         </TableCell>
                       </TableRow>
                     ) : tests.length ? (
                       tests.map((t, idx) => (
                         <TableRow key={t.id} hover>
-                          <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{testPage * testRowsPerPage + idx + 1}</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>{t.test_name}</TableCell>
+                          <TableCell
+                            sx={{ color: "text.secondary", fontWeight: 700 }}
+                          >
+                            {testPage * testRowsPerPage + idx + 1}
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>
+                            {t.test_name}
+                          </TableCell>
                           <TableCell>{t.test_code}</TableCell>
                           <TableCell>{fmt(t.price)}</TableCell>
-                          <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
+                          <TableCell
+                            align="right"
+                            sx={{ whiteSpace: "nowrap" }}
+                          >
                             {isAdmin && (
                               <>
-                                <Button size="small" variant="outlined" onClick={() => openEditTest(t)} sx={{ mr: 1 }}>
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  onClick={() => openEditTest(t)}
+                                  sx={{ mr: 1 }}
+                                >
                                   Edit
                                 </Button>
-                                <Button size="small" variant="outlined" color="error" onClick={() => deleteTest(t)}>
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  color="error"
+                                  onClick={() => deleteTest(t)}
+                                >
                                   Delete
                                 </Button>
                               </>
@@ -658,7 +860,12 @@ export default function LaboratoryManagement() {
 
           {tab === 1 && (
             <Box sx={{ p: 2 }}>
-              <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems={{ md: "center" }} sx={{ mb: 2 }}>
+              <Stack
+                direction={{ xs: "column", md: "row" }}
+                spacing={1.5}
+                alignItems={{ md: "center" }}
+                sx={{ mb: 2 }}
+              >
                 <TextField
                   value={orderSearch}
                   onChange={(e) => setOrderSearch(e.target.value)}
@@ -677,11 +884,19 @@ export default function LaboratoryManagement() {
                       </InputAdornment>
                     ),
                   }}
-                  inputProps={{ autoComplete: "off", "data-lpignore": "true", "data-1p-ignore": "true" }}
+                  inputProps={{
+                    autoComplete: "off",
+                    "data-lpignore": "true",
+                    "data-1p-ignore": "true",
+                  }}
                 />
                 <FormControl size="small" sx={{ minWidth: 180 }}>
                   <InputLabel>Status</InputLabel>
-                  <Select value={orderStatusFilter} label="Status" onChange={(e) => setOrderStatusFilter(e.target.value)}>
+                  <Select
+                    value={orderStatusFilter}
+                    label="Status"
+                    onChange={(e) => setOrderStatusFilter(e.target.value)}
+                  >
                     <MenuItem value="">All</MenuItem>
                     <MenuItem value="pending">pending</MenuItem>
                     <MenuItem value="in_progress">in_progress</MenuItem>
@@ -691,11 +906,19 @@ export default function LaboratoryManagement() {
                 </FormControl>
               </Stack>
 
-              <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
+              <TableContainer
+                sx={{
+                  borderRadius: 2,
+                  border: "1px solid",
+                  borderColor: "divider",
+                }}
+              >
                 <Table size="small">
                   <TableHead>
                     <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: 64 }}>
+                        No
+                      </TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Created</TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Patient</TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Doctor</TableCell>
@@ -710,37 +933,84 @@ export default function LaboratoryManagement() {
                     {orderLoading ? (
                       <TableRow>
                         <TableCell colSpan={7}>
-                          <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
+                          <Stack
+                            direction="row"
+                            spacing={1}
+                            alignItems="center"
+                            sx={{ py: 2 }}
+                          >
                             <CircularProgress size={18} />
-                            <Typography color="text.secondary">Loading lab orders…</Typography>
+                            <Typography color="text.secondary">
+                              Loading lab orders…
+                            </Typography>
                           </Stack>
                         </TableCell>
                       </TableRow>
                     ) : orders.length ? (
                       orders.map((o, idx) => (
                         <TableRow key={o.id} hover>
-                          <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{orderPage * orderRowsPerPage + idx + 1}</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>{formatDateTime(o.createdAt)}</TableCell>
+                          <TableCell
+                            sx={{ color: "text.secondary", fontWeight: 700 }}
+                          >
+                            {orderPage * orderRowsPerPage + idx + 1}
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>
+                            {formatDateTime(o.createdAt)}
+                          </TableCell>
                           <TableCell>
-                            {o.patient?.full_name || o.patient?.user?.full_name || "—"}
-                            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                              {o.patient?.phone || o.patient?.email || o.patient?.user?.phone || o.patient?.user?.email || ""}
+                            {o.patient?.full_name ||
+                              o.patient?.user?.full_name ||
+                              "—"}
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              sx={{ display: "block" }}
+                            >
+                              {o.patient?.phone ||
+                                o.patient?.email ||
+                                o.patient?.user?.phone ||
+                                o.patient?.user?.email ||
+                                ""}
                             </Typography>
                           </TableCell>
-                          <TableCell>{o.doctor?.user?.full_name || o.doctor?.staff_type || "—"}</TableCell>
                           <TableCell>
-                            <Chip size="small" label={o.status} color={o.status === "completed" ? "success" : o.status === "cancelled" ? "error" : "default"} variant={o.status === "pending" ? "outlined" : "filled"} />
+                            {o.doctor?.user?.full_name ||
+                              o.doctor?.staff_type ||
+                              "—"}
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              size="small"
+                              label={o.status}
+                              color={
+                                o.status === "completed"
+                                  ? "success"
+                                  : o.status === "cancelled"
+                                    ? "error"
+                                    : "default"
+                              }
+                              variant={
+                                o.status === "pending" ? "outlined" : "filled"
+                              }
+                            />
                           </TableCell>
                           <TableCell>{o.items?.length || 0}</TableCell>
                           <TableCell align="right">
                             <Tooltip title="View / Enter results">
-                              <IconButton onClick={() => openOrder(o)} size="small">
+                              <IconButton
+                                onClick={() => openOrder(o)}
+                                size="small"
+                              >
                                 <Visibility fontSize="inherit" />
                               </IconButton>
                             </Tooltip>
                             {isAdmin && (
                               <Tooltip title="Delete">
-                                <IconButton onClick={() => deleteOrder(o)} size="small" color="error">
+                                <IconButton
+                                  onClick={() => deleteOrder(o)}
+                                  size="small"
+                                  color="error"
+                                >
                                   <Delete fontSize="inherit" />
                                 </IconButton>
                               </Tooltip>
@@ -796,15 +1066,27 @@ export default function LaboratoryManagement() {
                     </InputAdornment>
                   ),
                 }}
-                inputProps={{ autoComplete: "off", "data-lpignore": "true", "data-1p-ignore": "true" }}
+                inputProps={{
+                  autoComplete: "off",
+                  "data-lpignore": "true",
+                  "data-1p-ignore": "true",
+                }}
                 sx={{ mb: 2 }}
               />
 
-              <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
+              <TableContainer
+                sx={{
+                  borderRadius: 2,
+                  border: "1px solid",
+                  borderColor: "divider",
+                }}
+              >
                 <Table size="small">
                   <TableHead>
                     <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: 64 }}>
+                        No
+                      </TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Patient</TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Test</TableCell>
@@ -820,24 +1102,52 @@ export default function LaboratoryManagement() {
                     {resultLoading ? (
                       <TableRow>
                         <TableCell colSpan={8}>
-                          <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
+                          <Stack
+                            direction="row"
+                            spacing={1}
+                            alignItems="center"
+                            sx={{ py: 2 }}
+                          >
                             <CircularProgress size={18} />
-                            <Typography color="text.secondary">Loading results…</Typography>
+                            <Typography color="text.secondary">
+                              Loading results…
+                            </Typography>
                           </Stack>
                         </TableCell>
                       </TableRow>
                     ) : results.length ? (
                       results.map((r, idx) => (
                         <TableRow key={r.id} hover>
-                          <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{resultPage * resultRowsPerPage + idx + 1}</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>{formatDateTime(r.result_date || r.createdAt)}</TableCell>
-                          <TableCell>{r.labOrderItem?.labOrder?.patient?.full_name || r.labOrderItem?.labOrder?.patient?.user?.full_name || "—"}</TableCell>
-                          <TableCell>{r.labOrderItem?.labTest?.test_name || "—"}</TableCell>
+                          <TableCell
+                            sx={{ color: "text.secondary", fontWeight: 700 }}
+                          >
+                            {resultPage * resultRowsPerPage + idx + 1}
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>
+                            {formatDateTime(r.result_date || r.createdAt)}
+                          </TableCell>
+                          <TableCell>
+                            {r.labOrderItem?.labOrder?.patient?.full_name ||
+                              r.labOrderItem?.labOrder?.patient?.user
+                                ?.full_name ||
+                              "—"}
+                          </TableCell>
+                          <TableCell>
+                            {r.labOrderItem?.labTest?.test_name || "—"}
+                          </TableCell>
                           <TableCell>{fmt(r.result_value)}</TableCell>
                           <TableCell>{fmt(r.reference_range)}</TableCell>
-                          <TableCell>{r.labTechnician?.user?.full_name || "—"}</TableCell>
+                          <TableCell>
+                            {r.labTechnician?.user?.full_name || "—"}
+                          </TableCell>
                           <TableCell align="right">
-                            <Button size="small" variant="outlined" onClick={() => openEnterResult(r.lab_order_item_id, r)}>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              onClick={() =>
+                                openEnterResult(r.lab_order_item_id, r)
+                              }
+                            >
                               Update
                             </Button>
                           </TableCell>
@@ -874,17 +1184,39 @@ export default function LaboratoryManagement() {
       </Card>
 
       {/* Order view */}
-      <Dialog open={orderView.open} onClose={() => setOrderView({ open: false, order: null })} fullWidth maxWidth="md">
+      <Dialog
+        open={orderView.open}
+        onClose={() => setOrderView({ open: false, order: null })}
+        fullWidth
+        maxWidth="md"
+      >
         <DialogTitle sx={{ fontWeight: 900 }}>Lab Order</DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2}>
             <Typography sx={{ fontWeight: 900 }}>
-              Patient: {orderView.order?.patient?.full_name || orderView.order?.patient?.user?.full_name || "—"}
+              Patient:{" "}
+              {orderView.order?.patient?.full_name ||
+                orderView.order?.patient?.user?.full_name ||
+                "—"}
             </Typography>
-            <Typography color="text.secondary">Created: {formatDateTime(orderView.order?.createdAt)}</Typography>
+            <Typography color="text.secondary">
+              Created: {formatDateTime(orderView.order?.createdAt)}
+            </Typography>
 
-            <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
-              <Stack direction={{ xs: "column", md: "row" }} spacing={1} alignItems={{ md: "center" }} justifyContent="space-between">
+            <Box
+              sx={{
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 2,
+                p: 2,
+              }}
+            >
+              <Stack
+                direction={{ xs: "column", md: "row" }}
+                spacing={1}
+                alignItems={{ md: "center" }}
+                justifyContent="space-between"
+              >
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Typography sx={{ fontWeight: 900 }}>Payment</Typography>
                   {orderBillingLoading ? (
@@ -892,20 +1224,32 @@ export default function LaboratoryManagement() {
                   ) : (
                     <Chip
                       size="small"
-                      label={orderBilling?.paid ? "paid" : orderBilling?.exists ? orderBilling?.status || "unpaid" : "unbilled"}
+                      label={
+                        orderBilling?.paid
+                          ? "paid"
+                          : orderBilling?.exists
+                            ? orderBilling?.status || "unpaid"
+                            : "unbilled"
+                      }
                       color={orderBilling?.paid ? "success" : "default"}
                       variant={orderBilling?.paid ? "filled" : "outlined"}
                       sx={{ fontWeight: 800 }}
                     />
                   )}
                 </Stack>
-                <Button variant="outlined" onClick={() => payForLabOrder(orderView.order)} disabled={orderBillingLoading || orderBilling?.paid} sx={{ fontWeight: 900 }}>
+                <Button
+                  variant="outlined"
+                  onClick={() => payForLabOrder(orderView.order)}
+                  disabled={orderBillingLoading || orderBilling?.paid}
+                  sx={{ fontWeight: 900 }}
+                >
                   Pay now (test)
                 </Button>
               </Stack>
               {orderBilling?.exists ? (
                 <Typography color="text.secondary" sx={{ mt: 1 }}>
-                  Total: {orderBilling.total_amount} • Paid: {orderBilling.paid_amount} • Balance: {orderBilling.balance}
+                  Total: {orderBilling.total_amount} • Paid:{" "}
+                  {orderBilling.paid_amount} • Balance: {orderBilling.balance}
                 </Typography>
               ) : (
                 <Typography color="text.secondary" sx={{ mt: 1 }}>
@@ -921,7 +1265,11 @@ export default function LaboratoryManagement() {
 
             <FormControl size="small" sx={{ maxWidth: 240 }}>
               <InputLabel>Status</InputLabel>
-              <Select label="Status" value={orderStatusDraft} onChange={(e) => setOrderStatusDraft(e.target.value)}>
+              <Select
+                label="Status"
+                value={orderStatusDraft}
+                onChange={(e) => setOrderStatusDraft(e.target.value)}
+              >
                 <MenuItem value="pending">pending</MenuItem>
                 <MenuItem value="in_progress">in_progress</MenuItem>
                 <MenuItem value="completed">completed</MenuItem>
@@ -947,9 +1295,19 @@ export default function LaboratoryManagement() {
                   <TableRow key={it.id} hover>
                     <TableCell>{it.labTest?.test_name || "—"}</TableCell>
                     <TableCell>{it.labTest?.test_code || "—"}</TableCell>
-                    <TableCell>{it.result?.result_value ? it.result.result_value : <Chip size="small" label="pending" variant="outlined" />}</TableCell>
+                    <TableCell>
+                      {it.result?.result_value ? (
+                        it.result.result_value
+                      ) : (
+                        <Chip size="small" label="pending" variant="outlined" />
+                      )}
+                    </TableCell>
                     <TableCell align="right">
-                      <Button size="small" variant="outlined" onClick={() => openEnterResult(it.id, it.result)}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => openEnterResult(it.id, it.result)}
+                      >
                         {it.result ? "Update result" : "Enter result"}
                       </Button>
                     </TableCell>
@@ -958,7 +1316,9 @@ export default function LaboratoryManagement() {
                 {!(orderView.order?.items || []).length && (
                   <TableRow>
                     <TableCell colSpan={4}>
-                      <Typography color="text.secondary">No tests on this order.</Typography>
+                      <Typography color="text.secondary">
+                        No tests on this order.
+                      </Typography>
                     </TableCell>
                   </TableRow>
                 )}
@@ -967,35 +1327,96 @@ export default function LaboratoryManagement() {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button variant="outlined" onClick={() => setOrderView({ open: false, order: null })}>
+          <Button
+            variant="outlined"
+            onClick={() => setOrderView({ open: false, order: null })}
+          >
             Close
           </Button>
           {isAdmin && (
-            <Button variant="outlined" color="error" onClick={() => deleteOrder(orderView.order)} disabled={!orderView.order?.id}>
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={() => deleteOrder(orderView.order)}
+              disabled={!orderView.order?.id}
+            >
               Delete
             </Button>
           )}
-          <Button variant="contained" onClick={saveOrderStatus} disabled={orderStatusSaving} sx={{ fontWeight: 900 }}>
+          <Button
+            variant="contained"
+            onClick={saveOrderStatus}
+            disabled={orderStatusSaving}
+            sx={{ fontWeight: 900 }}
+          >
             {orderStatusSaving ? "Saving…" : "Save status"}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Lab test create/edit */}
-      <Dialog open={testDialog.open} onClose={() => setTestDialog({ open: false, mode: "create", id: null })} fullWidth maxWidth="sm">
-        <DialogTitle sx={{ fontWeight: 900 }}>{testDialog.mode === "create" ? "Create Lab Test" : "Edit Lab Test"}</DialogTitle>
+      <Dialog
+        open={testDialog.open}
+        onClose={() => setTestDialog({ open: false, mode: "create", id: null })}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle sx={{ fontWeight: 900 }}>
+          {testDialog.mode === "create" ? "Create Lab Test" : "Edit Lab Test"}
+        </DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField label="Test name" fullWidth value={testForm.test_name} onChange={(e) => setTestForm((p) => ({ ...p, test_name: e.target.value }))} />
-            <TextField label="Test code" fullWidth value={testForm.test_code} onChange={(e) => setTestForm((p) => ({ ...p, test_code: e.target.value }))} />
-            <TextField label="Price (optional)" type="number" inputProps={{ step: "0.01", min: "0" }} fullWidth value={testForm.price} onChange={(e) => setTestForm((p) => ({ ...p, price: e.target.value }))} />
-            {!isAdmin && <Alert severity="info">Only admins can create/edit lab tests.</Alert>}
+            <TextField
+              label="Test name"
+              fullWidth
+              value={testForm.test_name}
+              onChange={(e) =>
+                setTestForm((p) => ({ ...p, test_name: e.target.value }))
+              }
+            />
+            <TextField
+              label="Test code"
+              fullWidth
+              value={testForm.test_code}
+              onChange={(e) =>
+                setTestForm((p) => ({ ...p, test_code: e.target.value }))
+              }
+            />
+            <TextField
+              label="Price (optional)"
+              type="number"
+              inputProps={{ step: "0.01", min: "0" }}
+              fullWidth
+              value={testForm.price}
+              onChange={(e) =>
+                setTestForm((p) => ({ ...p, price: e.target.value }))
+              }
+            />
+            {!isAdmin && (
+              <Alert severity="info">
+                Only admins can create/edit lab tests.
+              </Alert>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setTestDialog({ open: false, mode: "create", id: null })}>Cancel</Button>
+          <Button
+            onClick={() =>
+              setTestDialog({ open: false, mode: "create", id: null })
+            }
+          >
+            Cancel
+          </Button>
           {isAdmin && (
-            <Button variant="contained" onClick={saveTest} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: theme.palette.primary.dark }, fontWeight: 900 }}>
+            <Button
+              variant="contained"
+              onClick={saveTest}
+              sx={{
+                bgcolor: theme.palette.primary.main,
+                "&:hover": { bgcolor: theme.palette.primary.dark },
+                fontWeight: 900,
+              }}
+            >
               Save
             </Button>
           )}
@@ -1003,29 +1424,77 @@ export default function LaboratoryManagement() {
       </Dialog>
 
       {/* Enter/Update result */}
-      <Dialog open={resultDialog.open} onClose={() => setResultDialog({ open: false, lab_order_item_id: null })} fullWidth maxWidth="sm">
+      <Dialog
+        open={resultDialog.open}
+        onClose={() =>
+          setResultDialog({ open: false, lab_order_item_id: null })
+        }
+        fullWidth
+        maxWidth="sm"
+      >
         <DialogTitle sx={{ fontWeight: 900 }}>Lab Result</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField label="Result value" fullWidth value={resultForm.result_value} onChange={(e) => setResultForm((p) => ({ ...p, result_value: e.target.value }))} />
-            <TextField label="Reference range (optional)" fullWidth value={resultForm.reference_range} onChange={(e) => setResultForm((p) => ({ ...p, reference_range: e.target.value }))} />
-            <TextField label="Interpretation (optional)" fullWidth multiline minRows={3} value={resultForm.interpretation} onChange={(e) => setResultForm((p) => ({ ...p, interpretation: e.target.value }))} />
+            <TextField
+              label="Result value"
+              fullWidth
+              value={resultForm.result_value}
+              onChange={(e) =>
+                setResultForm((p) => ({ ...p, result_value: e.target.value }))
+              }
+            />
+            <TextField
+              label="Reference range (optional)"
+              fullWidth
+              value={resultForm.reference_range}
+              onChange={(e) =>
+                setResultForm((p) => ({
+                  ...p,
+                  reference_range: e.target.value,
+                }))
+              }
+            />
+            <TextField
+              label="Interpretation (optional)"
+              fullWidth
+              multiline
+              minRows={3}
+              value={resultForm.interpretation}
+              onChange={(e) =>
+                setResultForm((p) => ({ ...p, interpretation: e.target.value }))
+              }
+            />
             <TextField
               label="Result date (optional)"
               type="datetime-local"
               InputLabelProps={{ shrink: true }}
               fullWidth
               value={resultForm.result_date}
-              onChange={(e) => setResultForm((p) => ({ ...p, result_date: e.target.value }))}
+              onChange={(e) =>
+                setResultForm((p) => ({ ...p, result_date: e.target.value }))
+              }
             />
-            <Alert severity="info">Technician is saved automatically from the logged-in staff account (if available).</Alert>
+            <Alert severity="info">
+              Technician is saved automatically from the logged-in staff account
+              (if available).
+            </Alert>
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button variant="outlined" onClick={() => setResultDialog({ open: false, lab_order_item_id: null })}>
+          <Button
+            variant="outlined"
+            onClick={() =>
+              setResultDialog({ open: false, lab_order_item_id: null })
+            }
+          >
             Cancel
           </Button>
-          <Button variant="contained" onClick={saveResult} disabled={resultSaving} sx={{ fontWeight: 900 }}>
+          <Button
+            variant="contained"
+            onClick={saveResult}
+            disabled={resultSaving}
+            sx={{ fontWeight: 900 }}
+          >
             {resultSaving ? "Saving…" : "Save"}
           </Button>
         </DialogActions>
@@ -1033,4 +1502,3 @@ export default function LaboratoryManagement() {
     </Box>
   );
 }
-

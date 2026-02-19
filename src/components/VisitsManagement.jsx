@@ -92,7 +92,8 @@ async function fetchJson(url, { method = "GET", body, token } = {}) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const message = data?.message || data?.error || `Request failed (${res.status})`;
+    const message =
+      data?.message || data?.error || `Request failed (${res.status})`;
     const err = new Error(message);
     err.status = res.status;
     err.data = data;
@@ -126,8 +127,13 @@ export default function VisitsManagement() {
   const isAdmin = roleName === "admin";
 
   const isAssignedDoctor = (apptLike) => {
-    const doctorUserId = apptLike?.doctor?.user?.id || apptLike?.appointment?.doctor?.user?.id;
-    return Boolean(doctorUserId && currentUser?.id && String(doctorUserId) === String(currentUser.id));
+    const doctorUserId =
+      apptLike?.doctor?.user?.id || apptLike?.appointment?.doctor?.user?.id;
+    return Boolean(
+      doctorUserId &&
+      currentUser?.id &&
+      String(doctorUserId) === String(currentUser.id),
+    );
   };
 
   const [tab, setTab] = useState(0); // 0 appointments, 1 consultations
@@ -158,7 +164,9 @@ export default function VisitsManagement() {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
-  const [appointmentDate, setAppointmentDate] = useState(() => toLocalDateTimeInputValue());
+  const [appointmentDate, setAppointmentDate] = useState(() =>
+    toLocalDateTimeInputValue(),
+  );
   const [statusFilter, setStatusFilter] = useState("");
 
   const [patientOptions, setPatientOptions] = useState([]);
@@ -171,7 +179,11 @@ export default function VisitsManagement() {
   // Record consultation dialog
   const [recordOpen, setRecordOpen] = useState(false);
   const [recordForAppointment, setRecordForAppointment] = useState(null);
-  const [recordForm, setRecordForm] = useState({ symptoms: "", diagnosis: "", notes: "" });
+  const [recordForm, setRecordForm] = useState({
+    symptoms: "",
+    diagnosis: "",
+    notes: "",
+  });
 
   // Appointment view/status dialog
   const [apptViewOpen, setApptViewOpen] = useState(false);
@@ -189,7 +201,11 @@ export default function VisitsManagement() {
 
   const [consEditOpen, setConsEditOpen] = useState(false);
   const [consEditSaving, setConsEditSaving] = useState(false);
-  const [consEditForm, setConsEditForm] = useState({ symptoms: "", diagnosis: "", notes: "" });
+  const [consEditForm, setConsEditForm] = useState({
+    symptoms: "",
+    diagnosis: "",
+    notes: "",
+  });
 
   const [labOpen, setLabOpen] = useState(false);
   const [labSaving, setLabSaving] = useState(false);
@@ -201,11 +217,17 @@ export default function VisitsManagement() {
   const [rxSaving, setRxSaving] = useState(false);
   const [medications, setMedications] = useState([]);
   const [medicationsLoading, setMedicationsLoading] = useState(false);
-  const [rxItems, setRxItems] = useState([{ medication: null, dosage: "", frequency: "", duration: "" }]);
+  const [rxItems, setRxItems] = useState([
+    { medication: null, dosage: "", frequency: "", duration: "" },
+  ]);
 
   const requireTokenGuard = () => {
     if (!token) {
-      Swal.fire({ icon: "error", title: "Not logged in", text: "Please sign in again." });
+      Swal.fire({
+        icon: "error",
+        title: "Not logged in",
+        text: "Please sign in again.",
+      });
       setTimeout(() => (window.location.href = "/"), 500);
       return false;
     }
@@ -232,7 +254,9 @@ export default function VisitsManagement() {
         ...(search ? { search } : {}),
         ...(statusFilter ? { status: statusFilter } : {}),
       });
-      const data = await fetchJson(`${API.appointments}?${qs.toString()}`, { token });
+      const data = await fetchJson(`${API.appointments}?${qs.toString()}`, {
+        token,
+      });
       if (reqId !== apptReqId.current) return;
       setAppointments(data.data || []);
       setApptTotal(data.pagination?.total ?? (data.data?.length || 0));
@@ -253,8 +277,14 @@ export default function VisitsManagement() {
       const page = consPage + 1;
       const limit = consRowsPerPage;
       const search = consSearch.trim();
-      const qs = new URLSearchParams({ page: String(page), limit: String(limit), ...(search ? { search } : {}) });
-      const data = await fetchJson(`${API.consultations}?${qs.toString()}`, { token });
+      const qs = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+        ...(search ? { search } : {}),
+      });
+      const data = await fetchJson(`${API.consultations}?${qs.toString()}`, {
+        token,
+      });
       if (reqId !== consReqId.current) return;
       setConsultations(data.data || []);
       setConsTotal(data.pagination?.total ?? (data.data?.length || 0));
@@ -300,8 +330,14 @@ export default function VisitsManagement() {
     if (!requireTokenGuard()) return;
     setPatientLoading(true);
     try {
-      const qs = new URLSearchParams({ page: "1", limit: "10", ...(q ? { search: q } : {}) });
-      const data = await fetchJson(`${API.patients}?${qs.toString()}`, { token });
+      const qs = new URLSearchParams({
+        page: "1",
+        limit: "10",
+        ...(q ? { search: q } : {}),
+      });
+      const data = await fetchJson(`${API.patients}?${qs.toString()}`, {
+        token,
+      });
       setPatientOptions(data.data || []);
     } catch (e) {
       // ignore
@@ -314,7 +350,11 @@ export default function VisitsManagement() {
     if (!requireTokenGuard()) return;
     setDoctorLoading(true);
     try {
-      const qs = new URLSearchParams({ page: "1", limit: "10", ...(q ? { search: q } : {}) });
+      const qs = new URLSearchParams({
+        page: "1",
+        limit: "10",
+        ...(q ? { search: q } : {}),
+      });
       const data = await fetchJson(`${API.staff}?${qs.toString()}`, { token });
       setDoctorOptions(data.data || []);
     } catch (e) {
@@ -328,8 +368,14 @@ export default function VisitsManagement() {
     if (!requireTokenGuard()) return;
     setServiceLoading(true);
     try {
-      const qs = new URLSearchParams({ page: "1", limit: "20", ...(q ? { search: q } : {}) });
-      const data = await fetchJson(`${API.services}?${qs.toString()}`, { token });
+      const qs = new URLSearchParams({
+        page: "1",
+        limit: "20",
+        ...(q ? { search: q } : {}),
+      });
+      const data = await fetchJson(`${API.services}?${qs.toString()}`, {
+        token,
+      });
       setServiceOptions(data.data || []);
     } catch (e) {
       // ignore
@@ -340,7 +386,11 @@ export default function VisitsManagement() {
 
   const openCreateWalkInPatientPage = () => {
     if (!isAdmin) {
-      Swal.fire({ icon: "info", title: "Admins only", text: "Only admins can create walk-in patients." });
+      Swal.fire({
+        icon: "info",
+        title: "Admins only",
+        text: "Only admins can create walk-in patients.",
+      });
       return;
     }
     navigate("/appointments/walk-in-patient");
@@ -387,8 +437,18 @@ export default function VisitsManagement() {
 
   const createAppointment = async () => {
     if (!requireTokenGuard()) return;
-    if (!selectedPatient?.id) return Swal.fire({ icon: "warning", title: "Select patient", text: "Please select a patient." });
-    if (!selectedDoctor?.id) return Swal.fire({ icon: "warning", title: "Select doctor", text: "Please select a doctor." });
+    if (!selectedPatient?.id)
+      return Swal.fire({
+        icon: "warning",
+        title: "Select patient",
+        text: "Please select a patient.",
+      });
+    if (!selectedDoctor?.id)
+      return Swal.fire({
+        icon: "warning",
+        title: "Select doctor",
+        text: "Please select a doctor.",
+      });
 
     const payload = {
       patient_id: selectedPatient.id,
@@ -399,12 +459,18 @@ export default function VisitsManagement() {
     };
 
     try {
-      const created = await fetchJson(API.appointments, { method: "POST", token, body: payload });
+      const created = await fetchJson(API.appointments, {
+        method: "POST",
+        token,
+        body: payload,
+      });
       const appt = created.data;
 
       setCreateApptOpen(false);
       if (walkIn && appt?.id) {
-        const full = await fetchJson(`${API.appointments}/${appt.id}`, { token });
+        const full = await fetchJson(`${API.appointments}/${appt.id}`, {
+          token,
+        });
         const payNow = await Swal.fire({
           icon: "info",
           title: "Payment required",
@@ -417,7 +483,10 @@ export default function VisitsManagement() {
         if (payNow.isConfirmed) {
           const paid = await payForAppointment(full.data);
           if (paid) {
-            await fetchJson(`${API.appointments}/${appt.id}/confirm`, { method: "PATCH", token });
+            await fetchJson(`${API.appointments}/${appt.id}/confirm`, {
+              method: "PATCH",
+              token,
+            });
             const result = await Swal.fire({
               icon: "success",
               title: "Walk-in appointment confirmed",
@@ -428,15 +497,26 @@ export default function VisitsManagement() {
               reverseButtons: true,
             });
             if (result.isConfirmed) {
-              const refreshed = await fetchJson(`${API.appointments}/${appt.id}`, { token });
+              const refreshed = await fetchJson(
+                `${API.appointments}/${appt.id}`,
+                { token },
+              );
               openRecordConsultation(refreshed.data);
             }
           }
         } else {
-          Swal.fire({ icon: "success", title: "Created", text: "Appointment created as pending (unpaid)." });
+          Swal.fire({
+            icon: "success",
+            title: "Created",
+            text: "Appointment created as pending (unpaid).",
+          });
         }
       } else {
-        Swal.fire({ icon: "success", title: "Success", text: "Appointment created." });
+        Swal.fire({
+          icon: "success",
+          title: "Success",
+          text: "Appointment created.",
+        });
       }
       await loadAppointments();
     } catch (e) {
@@ -460,8 +540,15 @@ export default function VisitsManagement() {
     });
     if (!result.isConfirmed) return;
     try {
-      await fetchJson(`${API.appointments}/${appt.id}`, { method: "DELETE", token });
-      Swal.fire({ icon: "success", title: "Deleted", text: "Appointment deleted." });
+      await fetchJson(`${API.appointments}/${appt.id}`, {
+        method: "DELETE",
+        token,
+      });
+      Swal.fire({
+        icon: "success",
+        title: "Deleted",
+        text: "Appointment deleted.",
+      });
       await loadAppointments();
     } catch (e) {
       Swal.fire({ icon: "error", title: "Failed", text: e.message });
@@ -472,15 +559,26 @@ export default function VisitsManagement() {
     if (!requireTokenGuard()) return;
     if (!appt?.id) return;
     if (!isAdmin && !isAssignedDoctor(appt)) {
-      Swal.fire({ icon: "warning", title: "Not allowed", text: "Only the assigned doctor (or admin) can record a consultation." });
+      Swal.fire({
+        icon: "warning",
+        title: "Not allowed",
+        text: "Only the assigned doctor (or admin) can record a consultation.",
+      });
       return;
     }
     try {
       // Backend enforces one consultation per appointment.
-      const existing = await fetchJson(`${API.consultations}/appointment/${appt.id}`, { token });
+      const existing = await fetchJson(
+        `${API.consultations}/appointment/${appt.id}`,
+        { token },
+      );
       const c = existing?.data;
       if (c?.id) {
-        await Swal.fire({ icon: "info", title: "Consultation already exists", text: "Opening the existing consultation instead." });
+        await Swal.fire({
+          icon: "info",
+          title: "Consultation already exists",
+          text: "Opening the existing consultation instead.",
+        });
         openViewConsultation({ id: c.id });
         return;
       }
@@ -529,15 +627,26 @@ export default function VisitsManagement() {
     if (!requireTokenGuard()) return;
     if (!apptView?.id) return;
     if (!isAdmin && !isAssignedDoctor(apptView)) {
-      return Swal.fire({ icon: "warning", title: "Not allowed", text: "Only the assigned doctor (or admin) can update this appointment status." });
+      return Swal.fire({
+        icon: "warning",
+        title: "Not allowed",
+        text: "Only the assigned doctor (or admin) can update this appointment status.",
+      });
     }
     const current = apptView.status;
     const allowed = allowedNextStatuses(current);
     if (!allowed.includes(apptStatusDraft)) {
-      return Swal.fire({ icon: "warning", title: "Invalid status", text: `Allowed: ${allowed.join(", ") || "none"}` });
+      return Swal.fire({
+        icon: "warning",
+        title: "Invalid status",
+        text: `Allowed: ${allowed.join(", ") || "none"}`,
+      });
     }
 
-    if ((apptStatusDraft === "confirmed" || apptStatusDraft === "completed") && !apptBilling?.paid) {
+    if (
+      (apptStatusDraft === "confirmed" || apptStatusDraft === "completed") &&
+      !apptBilling?.paid
+    ) {
       const ask = await Swal.fire({
         icon: "warning",
         title: "Payment required",
@@ -556,8 +665,17 @@ export default function VisitsManagement() {
 
     setApptStatusSaving(true);
     try {
-      await fetchJson(`${API.appointments}/${apptView.id}/status`, { method: "PATCH", token, body: { status: apptStatusDraft } });
-      Swal.fire({ icon: "success", title: "Updated", timer: 900, showConfirmButton: false });
+      await fetchJson(`${API.appointments}/${apptView.id}/status`, {
+        method: "PATCH",
+        token,
+        body: { status: apptStatusDraft },
+      });
+      Swal.fire({
+        icon: "success",
+        title: "Updated",
+        timer: 900,
+        showConfirmButton: false,
+      });
       setApptViewOpen(false);
       await loadAppointments();
     } catch (e) {
@@ -587,8 +705,14 @@ export default function VisitsManagement() {
     if (!requireTokenGuard()) return;
     setApptBillingLoading(true);
     try {
-      const qs = new URLSearchParams({ item_type: "appointment", reference_id: String(appointmentId) });
-      const data = await fetchJson(`${API.billing}/by-reference?${qs.toString()}`, { token });
+      const qs = new URLSearchParams({
+        item_type: "appointment",
+        reference_id: String(appointmentId),
+      });
+      const data = await fetchJson(
+        `${API.billing}/by-reference?${qs.toString()}`,
+        { token },
+      );
       setApptBilling(data?.data || null);
     } catch {
       setApptBilling(null);
@@ -602,11 +726,18 @@ export default function VisitsManagement() {
     if (!appt?.id) return false;
     const patientId = appt?.patient?.id || appt?.patient_id;
     if (!patientId) {
-      Swal.fire({ icon: "error", title: "Missing patient", text: "Cannot generate a bill without patient_id." });
+      Swal.fire({
+        icon: "error",
+        title: "Missing patient",
+        text: "Cannot generate a bill without patient_id.",
+      });
       return false;
     }
 
-    const defaultAmount = appt?.service?.price != null && appt?.service?.price !== "" ? String(appt.service.price) : "0";
+    const defaultAmount =
+      appt?.service?.price != null && appt?.service?.price !== ""
+        ? String(appt.service.price)
+        : "0";
     const ask = await Swal.fire({
       icon: "question",
       title: "Take payment (test)",
@@ -627,20 +758,35 @@ export default function VisitsManagement() {
     const amount = Number(ask.value);
 
     try {
-      const billRes = await fetchJson(`${API.billing}/generate`, { method: "POST", token, body: { patient_id: patientId, consultation_id: null } });
+      const billRes = await fetchJson(`${API.billing}/generate`, {
+        method: "POST",
+        token,
+        body: { patient_id: patientId, consultation_id: null },
+      });
       const billId = billRes?.data?.id;
       await fetchJson(`${API.billing}/${billId}/items`, {
         method: "POST",
         token,
-        body: { items: [{ item_type: "appointment", reference_id: appt.id, amount }] },
+        body: {
+          items: [{ item_type: "appointment", reference_id: appt.id, amount }],
+        },
       });
       await fetchJson(`${API.payments}/process`, {
         method: "POST",
         token,
-        body: { bill_id: billId, amount_paid: amount, payment_method: "cash", payment_date: new Date().toISOString() },
+        body: {
+          bill_id: billId,
+          amount_paid: amount,
+          payment_method: "cash",
+          payment_date: new Date().toISOString(),
+        },
       });
       await loadAppointmentBilling(appt.id);
-      Swal.fire({ icon: "success", title: "Paid", text: "Payment recorded (test)." });
+      Swal.fire({
+        icon: "success",
+        title: "Paid",
+        text: "Payment recorded (test).",
+      });
       return true;
     } catch (e) {
       Swal.fire({ icon: "error", title: "Payment failed", text: e.message });
@@ -667,9 +813,17 @@ export default function VisitsManagement() {
   const openEditConsultation = () => {
     if (!consView?.id) return;
     if (!isAdmin && !isAssignedDoctor(consView)) {
-      return Swal.fire({ icon: "warning", title: "Not allowed", text: "Only the assigned doctor (or admin) can update this consultation." });
+      return Swal.fire({
+        icon: "warning",
+        title: "Not allowed",
+        text: "Only the assigned doctor (or admin) can update this consultation.",
+      });
     }
-    setConsEditForm({ symptoms: consView.symptoms || "", diagnosis: consView.diagnosis || "", notes: consView.notes || "" });
+    setConsEditForm({
+      symptoms: consView.symptoms || "",
+      diagnosis: consView.diagnosis || "",
+      notes: consView.notes || "",
+    });
     setConsEditOpen(true);
   };
 
@@ -687,11 +841,18 @@ export default function VisitsManagement() {
           notes: consEditForm.notes || null,
         },
       });
-      Swal.fire({ icon: "success", title: "Saved", timer: 900, showConfirmButton: false });
+      Swal.fire({
+        icon: "success",
+        title: "Saved",
+        timer: 900,
+        showConfirmButton: false,
+      });
       setConsEditOpen(false);
       await loadConsultations();
       // reload view
-      const data = await fetchJson(`${API.consultations}/${consView.id}`, { token });
+      const data = await fetchJson(`${API.consultations}/${consView.id}`, {
+        token,
+      });
       setConsView(data?.data || null);
     } catch (e) {
       Swal.fire({ icon: "error", title: "Failed", text: e.message });
@@ -705,7 +866,9 @@ export default function VisitsManagement() {
     setLabTestsLoading(true);
     try {
       const qs = new URLSearchParams({ page: "1", limit: "200" });
-      const data = await fetchJson(`${API.labTests}?${qs.toString()}`, { token });
+      const data = await fetchJson(`${API.labTests}?${qs.toString()}`, {
+        token,
+      });
       setLabTests(data.data || []);
     } catch {
       setLabTests([]);
@@ -719,7 +882,9 @@ export default function VisitsManagement() {
     setMedicationsLoading(true);
     try {
       const qs = new URLSearchParams({ page: "1", limit: "200" });
-      const data = await fetchJson(`${API.medications}?${qs.toString()}`, { token });
+      const data = await fetchJson(`${API.medications}?${qs.toString()}`, {
+        token,
+      });
       setMedications(data.data || []);
     } catch {
       setMedications([]);
@@ -730,7 +895,11 @@ export default function VisitsManagement() {
 
   const openLabDialog = async () => {
     if (!isAdmin && !isAssignedDoctor(consView)) {
-      Swal.fire({ icon: "warning", title: "Not allowed", text: "Only the assigned doctor (or admin) can initiate lab tests for this consultation." });
+      Swal.fire({
+        icon: "warning",
+        title: "Not allowed",
+        text: "Only the assigned doctor (or admin) can initiate lab tests for this consultation.",
+      });
       return;
     }
     setSelectedLabTests([]);
@@ -743,8 +912,18 @@ export default function VisitsManagement() {
     if (!consView?.id) return;
     const appt = consView?.appointment;
     const patientId = appt?.patient?.id;
-    if (!patientId) return Swal.fire({ icon: "warning", title: "Missing patient", text: "Patient not found on this consultation." });
-    if (!selectedLabTests.length) return Swal.fire({ icon: "warning", title: "Select tests", text: "Choose at least one lab test." });
+    if (!patientId)
+      return Swal.fire({
+        icon: "warning",
+        title: "Missing patient",
+        text: "Patient not found on this consultation.",
+      });
+    if (!selectedLabTests.length)
+      return Swal.fire({
+        icon: "warning",
+        title: "Select tests",
+        text: "Choose at least one lab test.",
+      });
 
     setLabSaving(true);
     try {
@@ -757,7 +936,12 @@ export default function VisitsManagement() {
           items: selectedLabTests.map((t) => ({ lab_test_id: t.id })),
         },
       });
-      Swal.fire({ icon: "success", title: "Lab order created", timer: 1000, showConfirmButton: false });
+      Swal.fire({
+        icon: "success",
+        title: "Lab order created",
+        timer: 1000,
+        showConfirmButton: false,
+      });
       setLabOpen(false);
     } catch (e) {
       Swal.fire({ icon: "error", title: "Failed", text: e.message });
@@ -768,7 +952,11 @@ export default function VisitsManagement() {
 
   const openRxDialog = async () => {
     if (!isAdmin && !isAssignedDoctor(consView)) {
-      Swal.fire({ icon: "warning", title: "Not allowed", text: "Only the assigned doctor (or admin) can prescribe for this consultation." });
+      Swal.fire({
+        icon: "warning",
+        title: "Not allowed",
+        text: "Only the assigned doctor (or admin) can prescribe for this consultation.",
+      });
       return;
     }
     setRxItems([{ medication: null, dosage: "", frequency: "", duration: "" }]);
@@ -781,7 +969,12 @@ export default function VisitsManagement() {
     if (!consView?.id) return;
     const appt = consView?.appointment;
     const patientId = appt?.patient?.id;
-    if (!patientId) return Swal.fire({ icon: "warning", title: "Missing patient", text: "Patient not found on this consultation." });
+    if (!patientId)
+      return Swal.fire({
+        icon: "warning",
+        title: "Missing patient",
+        text: "Patient not found on this consultation.",
+      });
 
     const items = rxItems
       .filter((i) => i.medication?.id)
@@ -791,7 +984,12 @@ export default function VisitsManagement() {
         frequency: i.frequency || null,
         duration: i.duration || null,
       }));
-    if (!items.length) return Swal.fire({ icon: "warning", title: "Add medications", text: "Choose at least one medication." });
+    if (!items.length)
+      return Swal.fire({
+        icon: "warning",
+        title: "Add medications",
+        text: "Choose at least one medication.",
+      });
 
     setRxSaving(true);
     try {
@@ -804,7 +1002,12 @@ export default function VisitsManagement() {
           items,
         },
       });
-      Swal.fire({ icon: "success", title: "Prescription created", timer: 1000, showConfirmButton: false });
+      Swal.fire({
+        icon: "success",
+        title: "Prescription created",
+        timer: 1000,
+        showConfirmButton: false,
+      });
       setRxOpen(false);
     } catch (e) {
       Swal.fire({ icon: "error", title: "Failed", text: e.message });
@@ -828,7 +1031,11 @@ export default function VisitsManagement() {
         },
       });
       setRecordOpen(false);
-      Swal.fire({ icon: "success", title: "Saved", text: "Consultation recorded." });
+      Swal.fire({
+        icon: "success",
+        title: "Saved",
+        text: "Consultation recorded.",
+      });
       await loadConsultations();
     } catch (e) {
       Swal.fire({ icon: "error", title: "Failed", text: e.message });
@@ -837,9 +1044,29 @@ export default function VisitsManagement() {
 
   return (
     <Box sx={{ width: "100%" }}>
-      <Card elevation={0} sx={{ mb: 3, borderRadius: 3, border: "1px solid", borderColor: "divider", overflow: "hidden" }}>
-        <Box sx={{ p: { xs: 2.5, md: 3 }, color: "white", background: heroGradient }}>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }} justifyContent="space-between">
+      <Card
+        elevation={0}
+        sx={{
+          mb: 3,
+          borderRadius: 3,
+          border: "1px solid",
+          borderColor: "divider",
+          overflow: "hidden",
+        }}
+      >
+        <Box
+          sx={{
+            p: { xs: 2.5, md: 3 },
+            color: "white",
+            background: heroGradient,
+          }}
+        >
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={2}
+            alignItems={{ md: "center" }}
+            justifyContent="space-between"
+          >
             <Box>
               <Stack direction="row" spacing={1} alignItems="center">
                 <EventNoteIcon />
@@ -858,7 +1085,10 @@ export default function VisitsManagement() {
                     loadAppointments();
                     loadConsultations();
                   }}
-                  sx={{ color: "white", border: "1px solid rgba(255,255,255,0.25)" }}
+                  sx={{
+                    color: "white",
+                    border: "1px solid rgba(255,255,255,0.25)",
+                  }}
                 >
                   <RefreshIcon />
                 </IconButton>
@@ -886,7 +1116,10 @@ export default function VisitsManagement() {
                     borderColor: "rgba(255,255,255,0.55)",
                     color: "white",
                     fontWeight: 800,
-                    "&:hover": { borderColor: "rgba(255,255,255,0.85)", bgcolor: "rgba(255,255,255,0.08)" },
+                    "&:hover": {
+                      borderColor: "rgba(255,255,255,0.85)",
+                      bgcolor: "rgba(255,255,255,0.08)",
+                    },
                   }}
                 >
                   Create Walk-in Patient
@@ -897,15 +1130,37 @@ export default function VisitsManagement() {
         </Box>
 
         <CardContent sx={{ p: 0 }}>
-          <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ px: 2, "& .MuiTabs-indicator": { backgroundColor: theme.palette.primary.main } }}>
-            <Tab icon={<EventNoteIcon />} iconPosition="start" label="Appointments" />
-            <Tab icon={<NoteAddIcon />} iconPosition="start" label="Consultations" />
+          <Tabs
+            value={tab}
+            onChange={(_, v) => setTab(v)}
+            sx={{
+              px: 2,
+              "& .MuiTabs-indicator": {
+                backgroundColor: theme.palette.primary.main,
+              },
+            }}
+          >
+            <Tab
+              icon={<EventNoteIcon />}
+              iconPosition="start"
+              label="Appointments"
+            />
+            <Tab
+              icon={<NoteAddIcon />}
+              iconPosition="start"
+              label="Consultations"
+            />
           </Tabs>
           <Divider />
 
           {tab === 0 && (
             <Box sx={{ p: 2 }}>
-              <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems={{ md: "center" }} sx={{ mb: 2 }}>
+              <Stack
+                direction={{ xs: "column", md: "row" }}
+                spacing={1.5}
+                alignItems={{ md: "center" }}
+                sx={{ mb: 2 }}
+              >
                 <TextField
                   value={apptSearch}
                   onChange={(e) => setApptSearch(e.target.value)}
@@ -918,11 +1173,19 @@ export default function VisitsManagement() {
                   onFocus={() => setApptSearchLocked(false)}
                   onClick={() => setApptSearchLocked(false)}
                   InputProps={{ readOnly: apptSearchLocked }}
-                  inputProps={{ autoComplete: "off", "data-lpignore": "true", "data-1p-ignore": "true" }}
+                  inputProps={{
+                    autoComplete: "off",
+                    "data-lpignore": "true",
+                    "data-1p-ignore": "true",
+                  }}
                 />
                 <FormControl size="small" sx={{ minWidth: 180 }}>
                   <InputLabel>Status</InputLabel>
-                  <Select value={statusFilter} label="Status" onChange={(e) => setStatusFilter(e.target.value)}>
+                  <Select
+                    value={statusFilter}
+                    label="Status"
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                  >
                     <MenuItem value="">All</MenuItem>
                     <MenuItem value="pending">pending</MenuItem>
                     <MenuItem value="confirmed">confirmed</MenuItem>
@@ -932,11 +1195,19 @@ export default function VisitsManagement() {
                 </FormControl>
               </Stack>
 
-              <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
+              <TableContainer
+                sx={{
+                  borderRadius: 2,
+                  border: "1px solid",
+                  borderColor: "divider",
+                }}
+              >
                 <Table size="small">
                   <TableHead>
                     <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: 64 }}>
+                        No
+                      </TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Patient</TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Doctor</TableCell>
@@ -950,48 +1221,94 @@ export default function VisitsManagement() {
                     {apptLoading ? (
                       <TableRow>
                         <TableCell colSpan={6}>
-                          <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
+                          <Stack
+                            direction="row"
+                            spacing={1}
+                            alignItems="center"
+                            sx={{ py: 2 }}
+                          >
                             <CircularProgress size={18} />
-                            <Typography color="text.secondary">Loading appointments…</Typography>
+                            <Typography color="text.secondary">
+                              Loading appointments…
+                            </Typography>
                           </Stack>
                         </TableCell>
                       </TableRow>
                     ) : appointments.length ? (
                       appointments.map((a, idx) => (
                         <TableRow key={a.id} hover>
-                          <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{apptPage * apptRowsPerPage + idx + 1}</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>{formatDateTime(a.appointment_date)}</TableCell>
+                          <TableCell
+                            sx={{ color: "text.secondary", fontWeight: 700 }}
+                          >
+                            {apptPage * apptRowsPerPage + idx + 1}
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>
+                            {formatDateTime(a.appointment_date)}
+                          </TableCell>
                           <TableCell>
-                            {a.patient?.full_name || a.patient?.user?.full_name || "—"}
-                            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                              {a.patient?.phone || a.patient?.email || a.patient?.user?.phone || a.patient?.user?.email || ""}
+                            {a.patient?.full_name ||
+                              a.patient?.user?.full_name ||
+                              "—"}
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              sx={{ display: "block" }}
+                            >
+                              {a.patient?.phone ||
+                                a.patient?.email ||
+                                a.patient?.user?.phone ||
+                                a.patient?.user?.email ||
+                                ""}
                             </Typography>
                           </TableCell>
-                          <TableCell>{a.doctor?.user?.full_name || a.doctor?.staff_type || "—"}</TableCell>
+                          <TableCell>
+                            {a.doctor?.user?.full_name ||
+                              a.doctor?.staff_type ||
+                              "—"}
+                          </TableCell>
                           <TableCell>
                             <Chip
                               size="small"
                               label={a.status}
-                              color={a.status === "confirmed" ? "success" : a.status === "cancelled" ? "error" : "default"}
-                              variant={a.status === "confirmed" ? "filled" : "outlined"}
+                              color={
+                                a.status === "confirmed"
+                                  ? "success"
+                                  : a.status === "cancelled"
+                                    ? "error"
+                                    : "default"
+                              }
+                              variant={
+                                a.status === "confirmed" ? "filled" : "outlined"
+                              }
                             />
                           </TableCell>
                           <TableCell align="right">
                             <Tooltip title="View">
-                              <IconButton onClick={() => openViewAppointment(a)} size="small">
+                              <IconButton
+                                onClick={() => openViewAppointment(a)}
+                                size="small"
+                              >
                                 <VisibilityIcon fontSize="inherit" />
                               </IconButton>
                             </Tooltip>
                             <Tooltip title="Record consultation">
                               <span>
-                                <IconButton onClick={() => openRecordConsultation(a)} size="small" disabled={!isAdmin && !isAssignedDoctor(a)}>
+                                <IconButton
+                                  onClick={() => openRecordConsultation(a)}
+                                  size="small"
+                                  disabled={!isAdmin && !isAssignedDoctor(a)}
+                                >
                                   <NoteAddIcon fontSize="inherit" />
                                 </IconButton>
                               </span>
                             </Tooltip>
                             {isAdmin && (
                               <Tooltip title="Delete">
-                                <IconButton onClick={() => deleteAppointment(a)} size="small" color="error">
+                                <IconButton
+                                  onClick={() => deleteAppointment(a)}
+                                  size="small"
+                                  color="error"
+                                >
                                   <DeleteIcon fontSize="inherit" />
                                 </IconButton>
                               </Tooltip>
@@ -1041,15 +1358,27 @@ export default function VisitsManagement() {
                 onFocus={() => setConsSearchLocked(false)}
                 onClick={() => setConsSearchLocked(false)}
                 InputProps={{ readOnly: consSearchLocked }}
-                inputProps={{ autoComplete: "off", "data-lpignore": "true", "data-1p-ignore": "true" }}
+                inputProps={{
+                  autoComplete: "off",
+                  "data-lpignore": "true",
+                  "data-1p-ignore": "true",
+                }}
                 sx={{ mb: 2 }}
               />
 
-              <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
+              <TableContainer
+                sx={{
+                  borderRadius: 2,
+                  border: "1px solid",
+                  borderColor: "divider",
+                }}
+              >
                 <Table size="small">
                   <TableHead>
                     <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: 64 }}>
+                        No
+                      </TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Created</TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Patient</TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Doctor</TableCell>
@@ -1063,20 +1392,43 @@ export default function VisitsManagement() {
                     {consLoading ? (
                       <TableRow>
                         <TableCell colSpan={6}>
-                          <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
+                          <Stack
+                            direction="row"
+                            spacing={1}
+                            alignItems="center"
+                            sx={{ py: 2 }}
+                          >
                             <CircularProgress size={18} />
-                            <Typography color="text.secondary">Loading consultations…</Typography>
+                            <Typography color="text.secondary">
+                              Loading consultations…
+                            </Typography>
                           </Stack>
                         </TableCell>
                       </TableRow>
                     ) : consultations.length ? (
                       consultations.map((c, idx) => (
                         <TableRow key={c.id} hover>
-                          <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{consPage * consRowsPerPage + idx + 1}</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>{formatDateTime(c.createdAt)}</TableCell>
-                          <TableCell>{c.appointment?.patient?.full_name || c.appointment?.patient?.user?.full_name || "—"}</TableCell>
-                          <TableCell>{c.appointment?.doctor?.user?.full_name || "—"}</TableCell>
-                          <TableCell>{c.diagnosis ? String(c.diagnosis).slice(0, 32) : "—"}</TableCell>
+                          <TableCell
+                            sx={{ color: "text.secondary", fontWeight: 700 }}
+                          >
+                            {consPage * consRowsPerPage + idx + 1}
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>
+                            {formatDateTime(c.createdAt)}
+                          </TableCell>
+                          <TableCell>
+                            {c.appointment?.patient?.full_name ||
+                              c.appointment?.patient?.user?.full_name ||
+                              "—"}
+                          </TableCell>
+                          <TableCell>
+                            {c.appointment?.doctor?.user?.full_name || "—"}
+                          </TableCell>
+                          <TableCell>
+                            {c.diagnosis
+                              ? String(c.diagnosis).slice(0, 32)
+                              : "—"}
+                          </TableCell>
                           <TableCell align="right">
                             <Tooltip title="View">
                               <IconButton
@@ -1120,12 +1472,22 @@ export default function VisitsManagement() {
       </Card>
 
       {/* Create appointment */}
-      <Dialog open={createApptOpen} onClose={() => setCreateApptOpen(false)} fullWidth maxWidth="sm">
+      <Dialog
+        open={createApptOpen}
+        onClose={() => setCreateApptOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
         <DialogTitle sx={{ fontWeight: 900 }}>New Appointment</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <FormControlLabel
-              control={<Switch checked={walkIn} onChange={(e) => setWalkIn(e.target.checked)} />}
+              control={
+                <Switch
+                  checked={walkIn}
+                  onChange={(e) => setWalkIn(e.target.checked)}
+                />
+              }
               label="Walk-in (create & auto-confirm)"
             />
 
@@ -1134,10 +1496,18 @@ export default function VisitsManagement() {
               value={selectedPatient}
               onChange={(_, v) => setSelectedPatient(v)}
               loading={patientLoading}
-              getOptionLabel={(p) => `${p.full_name || p.user?.full_name || "—"} • ${p.phone || p.email || p.user?.phone || p.user?.email || ""}`}
+              getOptionLabel={(p) =>
+                `${p.full_name || p.user?.full_name || "—"} • ${p.phone || p.email || p.user?.phone || p.user?.email || ""}`
+              }
               isOptionEqualToValue={(opt, val) => opt.id === val.id}
               onInputChange={(_, v) => searchPatients(v)}
-              renderInput={(params) => <TextField {...params} label="Patient" placeholder="Search patient…" />}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Patient"
+                  placeholder="Search patient…"
+                />
+              )}
             />
 
             <Autocomplete
@@ -1145,10 +1515,18 @@ export default function VisitsManagement() {
               value={selectedDoctor}
               onChange={(_, v) => setSelectedDoctor(v)}
               loading={doctorLoading}
-              getOptionLabel={(d) => `${d.user?.full_name || "—"} • ${d.staff_type || "staff"}${d.specialization ? ` • ${d.specialization}` : ""}`}
+              getOptionLabel={(d) =>
+                `${d.user?.full_name || "—"} • ${d.staff_type || "staff"}${d.specialization ? ` • ${d.specialization}` : ""}`
+              }
               isOptionEqualToValue={(opt, val) => opt.id === val.id}
               onInputChange={(_, v) => searchDoctors(v)}
-              renderInput={(params) => <TextField {...params} label="Staff" placeholder="Search staff…" />}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Staff"
+                  placeholder="Search staff…"
+                />
+              )}
             />
 
             <Autocomplete
@@ -1161,7 +1539,13 @@ export default function VisitsManagement() {
               }
               isOptionEqualToValue={(opt, val) => opt.id === val.id}
               onInputChange={(_, v) => searchServices(v)}
-              renderInput={(params) => <TextField {...params} label="Service (optional)" placeholder="Search service…" />}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Service (optional)"
+                  placeholder="Search service…"
+                />
+              )}
             />
 
             <TextField
@@ -1176,27 +1560,41 @@ export default function VisitsManagement() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setCreateApptOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={createAppointment} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: theme.palette.primary.dark } }}>
+          <Button
+            variant="contained"
+            onClick={createAppointment}
+            sx={{
+              bgcolor: theme.palette.primary.main,
+              "&:hover": { bgcolor: theme.palette.primary.dark },
+            }}
+          >
             Save
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Record consultation */}
-      <Dialog open={recordOpen} onClose={() => setRecordOpen(false)} fullWidth maxWidth="sm">
+      <Dialog
+        open={recordOpen}
+        onClose={() => setRecordOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
         <DialogTitle sx={{ fontWeight: 900 }}>Record Consultation</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Chip
               label={`Appointment: ${recordForAppointment?.patient?.full_name || recordForAppointment?.patient?.user?.full_name || ""} • ${formatDateTime(
-                recordForAppointment?.appointment_date
+                recordForAppointment?.appointment_date,
               )}`}
               sx={{ bgcolor: "rgba(0, 137, 123, 0.08)", fontWeight: 800 }}
             />
             <TextField
               label="Symptoms"
               value={recordForm.symptoms}
-              onChange={(e) => setRecordForm((p) => ({ ...p, symptoms: e.target.value }))}
+              onChange={(e) =>
+                setRecordForm((p) => ({ ...p, symptoms: e.target.value }))
+              }
               fullWidth
               multiline
               minRows={2}
@@ -1204,7 +1602,9 @@ export default function VisitsManagement() {
             <TextField
               label="Diagnosis"
               value={recordForm.diagnosis}
-              onChange={(e) => setRecordForm((p) => ({ ...p, diagnosis: e.target.value }))}
+              onChange={(e) =>
+                setRecordForm((p) => ({ ...p, diagnosis: e.target.value }))
+              }
               fullWidth
               multiline
               minRows={2}
@@ -1212,7 +1612,9 @@ export default function VisitsManagement() {
             <TextField
               label="Notes"
               value={recordForm.notes}
-              onChange={(e) => setRecordForm((p) => ({ ...p, notes: e.target.value }))}
+              onChange={(e) =>
+                setRecordForm((p) => ({ ...p, notes: e.target.value }))
+              }
               fullWidth
               multiline
               minRows={3}
@@ -1221,18 +1623,35 @@ export default function VisitsManagement() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setRecordOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={recordConsultation} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: theme.palette.primary.dark } }}>
+          <Button
+            variant="contained"
+            onClick={recordConsultation}
+            sx={{
+              bgcolor: theme.palette.primary.main,
+              "&:hover": { bgcolor: theme.palette.primary.dark },
+            }}
+          >
             Save
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Appointment view + status */}
-      <Dialog open={apptViewOpen} onClose={() => setApptViewOpen(false)} fullWidth maxWidth="sm">
+      <Dialog
+        open={apptViewOpen}
+        onClose={() => setApptViewOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
         <DialogTitle sx={{ fontWeight: 900 }}>Appointment</DialogTitle>
         <DialogContent dividers>
           {apptViewLoading ? (
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              sx={{ py: 2 }}
+            >
               <CircularProgress size={18} />
               <Typography color="text.secondary">Loading…</Typography>
             </Stack>
@@ -1241,21 +1660,45 @@ export default function VisitsManagement() {
           ) : (
             <Stack spacing={2} sx={{ mt: 1 }}>
               {!isAdmin && !isAssignedDoctor(apptView) && (
-                <Alert severity="info">You can view this appointment, but only the assigned doctor (or admin) can update its status.</Alert>
+                <Alert severity="info">
+                  You can view this appointment, but only the assigned doctor
+                  (or admin) can update its status.
+                </Alert>
               )}
               <Typography sx={{ fontWeight: 900 }}>
-                {apptView.patient?.full_name || apptView.patient?.user?.full_name || "Patient"} • {formatDateTime(apptView.appointment_date)}
+                {apptView.patient?.full_name ||
+                  apptView.patient?.user?.full_name ||
+                  "Patient"}{" "}
+                • {formatDateTime(apptView.appointment_date)}
               </Typography>
               <Typography color="text.secondary">
-                Doctor: {apptView.doctor?.user?.full_name || apptView.doctor?.staff_type || "—"}
+                Doctor:{" "}
+                {apptView.doctor?.user?.full_name ||
+                  apptView.doctor?.staff_type ||
+                  "—"}
               </Typography>
               <Typography color="text.secondary">
                 Service: {apptView.service?.name || "—"}
-                {apptView.service?.price != null && apptView.service?.price !== "" ? ` • ${apptView.service.price}` : ""}
+                {apptView.service?.price != null &&
+                apptView.service?.price !== ""
+                  ? ` • ${apptView.service.price}`
+                  : ""}
               </Typography>
 
-              <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
-                <Stack direction={{ xs: "column", md: "row" }} spacing={1} alignItems={{ md: "center" }} justifyContent="space-between">
+              <Box
+                sx={{
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 2,
+                  p: 2,
+                }}
+              >
+                <Stack
+                  direction={{ xs: "column", md: "row" }}
+                  spacing={1}
+                  alignItems={{ md: "center" }}
+                  justifyContent="space-between"
+                >
                   <Stack direction="row" spacing={1} alignItems="center">
                     <Typography sx={{ fontWeight: 900 }}>Payment</Typography>
                     {apptBillingLoading ? (
@@ -1263,20 +1706,32 @@ export default function VisitsManagement() {
                     ) : (
                       <Chip
                         size="small"
-                        label={apptBilling?.paid ? "paid" : apptBilling?.exists ? apptBilling?.status || "unpaid" : "unbilled"}
+                        label={
+                          apptBilling?.paid
+                            ? "paid"
+                            : apptBilling?.exists
+                              ? apptBilling?.status || "unpaid"
+                              : "unbilled"
+                        }
                         color={apptBilling?.paid ? "success" : "default"}
                         variant={apptBilling?.paid ? "filled" : "outlined"}
                         sx={{ fontWeight: 800 }}
                       />
                     )}
                   </Stack>
-                  <Button variant="outlined" onClick={() => payForAppointment(apptView)} disabled={apptBillingLoading || apptBilling?.paid} sx={{ fontWeight: 900 }}>
+                  <Button
+                    variant="outlined"
+                    onClick={() => payForAppointment(apptView)}
+                    disabled={apptBillingLoading || apptBilling?.paid}
+                    sx={{ fontWeight: 900 }}
+                  >
                     Pay now (test)
                   </Button>
                 </Stack>
                 {apptBilling?.exists ? (
                   <Typography color="text.secondary" sx={{ mt: 1 }}>
-                    Total: {apptBilling.total_amount} • Paid: {apptBilling.paid_amount} • Balance: {apptBilling.balance}
+                    Total: {apptBilling.total_amount} • Paid:{" "}
+                    {apptBilling.paid_amount} • Balance: {apptBilling.balance}
                   </Typography>
                 ) : (
                   <Typography color="text.secondary" sx={{ mt: 1 }}>
@@ -1285,7 +1740,8 @@ export default function VisitsManagement() {
                 )}
                 {!apptBilling?.paid && (
                   <Alert severity="warning" sx={{ mt: 1 }}>
-                    Appointment confirmation/completion is blocked until payment is recorded.
+                    Appointment confirmation/completion is blocked until payment
+                    is recorded.
                   </Alert>
                 )}
               </Box>
@@ -1293,7 +1749,10 @@ export default function VisitsManagement() {
               <FormControl
                 fullWidth
                 size="small"
-                disabled={["completed", "cancelled"].includes(apptView.status) || (!isAdmin && !isAssignedDoctor(apptView))}
+                disabled={
+                  ["completed", "cancelled"].includes(apptView.status) ||
+                  (!isAdmin && !isAssignedDoctor(apptView))
+                }
               >
                 <InputLabel>Status</InputLabel>
                 <Select
@@ -1313,7 +1772,9 @@ export default function VisitsManagement() {
               </FormControl>
 
               {["completed", "cancelled"].includes(apptView.status) && (
-                <Alert severity="info">This appointment is {apptView.status} and cannot be changed.</Alert>
+                <Alert severity="info">
+                  This appointment is {apptView.status} and cannot be changed.
+                </Alert>
               )}
             </Stack>
           )}
@@ -1340,11 +1801,21 @@ export default function VisitsManagement() {
       </Dialog>
 
       {/* Consultation view */}
-      <Dialog open={consViewOpen} onClose={() => setConsViewOpen(false)} fullWidth maxWidth="md">
+      <Dialog
+        open={consViewOpen}
+        onClose={() => setConsViewOpen(false)}
+        fullWidth
+        maxWidth="md"
+      >
         <DialogTitle sx={{ fontWeight: 900 }}>Consultation</DialogTitle>
         <DialogContent dividers>
           {consViewLoading ? (
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              sx={{ py: 2 }}
+            >
               <CircularProgress size={18} />
               <Typography color="text.secondary">Loading…</Typography>
             </Stack>
@@ -1353,39 +1824,81 @@ export default function VisitsManagement() {
           ) : (
             <Stack spacing={2}>
               {!isAdmin && !isAssignedDoctor(consView) && (
-                <Alert severity="info">You can view this consultation, but only the assigned doctor (or admin) can update it, prescribe, or initiate lab tests.</Alert>
+                <Alert severity="info">
+                  You can view this consultation, but only the assigned doctor
+                  (or admin) can update it, prescribe, or initiate lab tests.
+                </Alert>
               )}
               <Typography sx={{ fontWeight: 900 }}>
-                {consView.appointment?.patient?.full_name || consView.appointment?.patient?.user?.full_name || "Patient"} •{" "}
-                {formatDateTime(consView.createdAt)}
+                {consView.appointment?.patient?.full_name ||
+                  consView.appointment?.patient?.user?.full_name ||
+                  "Patient"}{" "}
+                • {formatDateTime(consView.createdAt)}
               </Typography>
-              <Typography color="text.secondary">Doctor: {consView.appointment?.doctor?.user?.full_name || "—"}</Typography>
+              <Typography color="text.secondary">
+                Doctor: {consView.appointment?.doctor?.user?.full_name || "—"}
+              </Typography>
 
-              <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
-                <Typography sx={{ fontWeight: 900, mb: 0.5 }}>Symptoms</Typography>
-                <Typography color="text.secondary" sx={{ whiteSpace: "pre-wrap" }}>
+              <Box
+                sx={{
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 2,
+                  p: 2,
+                }}
+              >
+                <Typography sx={{ fontWeight: 900, mb: 0.5 }}>
+                  Symptoms
+                </Typography>
+                <Typography
+                  color="text.secondary"
+                  sx={{ whiteSpace: "pre-wrap" }}
+                >
                   {consView.symptoms || "—"}
                 </Typography>
                 <Divider sx={{ my: 1.5 }} />
-                <Typography sx={{ fontWeight: 900, mb: 0.5 }}>Diagnosis</Typography>
-                <Typography color="text.secondary" sx={{ whiteSpace: "pre-wrap" }}>
+                <Typography sx={{ fontWeight: 900, mb: 0.5 }}>
+                  Diagnosis
+                </Typography>
+                <Typography
+                  color="text.secondary"
+                  sx={{ whiteSpace: "pre-wrap" }}
+                >
                   {consView.diagnosis || "—"}
                 </Typography>
                 <Divider sx={{ my: 1.5 }} />
                 <Typography sx={{ fontWeight: 900, mb: 0.5 }}>Notes</Typography>
-                <Typography color="text.secondary" sx={{ whiteSpace: "pre-wrap" }}>
+                <Typography
+                  color="text.secondary"
+                  sx={{ whiteSpace: "pre-wrap" }}
+                >
                   {consView.notes || "—"}
                 </Typography>
               </Box>
 
               <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
-                <Button startIcon={<EditIcon />} variant="outlined" onClick={openEditConsultation} disabled={!isAdmin && !isAssignedDoctor(consView)}>
+                <Button
+                  startIcon={<EditIcon />}
+                  variant="outlined"
+                  onClick={openEditConsultation}
+                  disabled={!isAdmin && !isAssignedDoctor(consView)}
+                >
                   Update consultation
                 </Button>
-                <Button startIcon={<ScienceIcon />} variant="outlined" onClick={openLabDialog} disabled={!isAdmin && !isAssignedDoctor(consView)}>
+                <Button
+                  startIcon={<ScienceIcon />}
+                  variant="outlined"
+                  onClick={openLabDialog}
+                  disabled={!isAdmin && !isAssignedDoctor(consView)}
+                >
                   Initiate lab test
                 </Button>
-                <Button startIcon={<PharmacyIcon />} variant="outlined" onClick={openRxDialog} disabled={!isAdmin && !isAssignedDoctor(consView)}>
+                <Button
+                  startIcon={<PharmacyIcon />}
+                  variant="outlined"
+                  onClick={openRxDialog}
+                  disabled={!isAdmin && !isAssignedDoctor(consView)}
+                >
                   Prescribe
                 </Button>
               </Stack>
@@ -1393,41 +1906,89 @@ export default function VisitsManagement() {
           )}
         </DialogContent>
         <DialogActions>
-          <Button variant="contained" onClick={() => setConsViewOpen(false)} sx={{ fontWeight: 900 }}>
+          <Button
+            variant="contained"
+            onClick={() => setConsViewOpen(false)}
+            sx={{ fontWeight: 900 }}
+          >
             Close
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Edit consultation */}
-      <Dialog open={consEditOpen} onClose={() => setConsEditOpen(false)} fullWidth maxWidth="sm">
+      <Dialog
+        open={consEditOpen}
+        onClose={() => setConsEditOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
         <DialogTitle sx={{ fontWeight: 900 }}>Update Consultation</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField label="Symptoms" fullWidth multiline minRows={2} value={consEditForm.symptoms} onChange={(e) => setConsEditForm((p) => ({ ...p, symptoms: e.target.value }))} />
-            <TextField label="Diagnosis" fullWidth multiline minRows={2} value={consEditForm.diagnosis} onChange={(e) => setConsEditForm((p) => ({ ...p, diagnosis: e.target.value }))} />
-            <TextField label="Notes" fullWidth multiline minRows={2} value={consEditForm.notes} onChange={(e) => setConsEditForm((p) => ({ ...p, notes: e.target.value }))} />
+            <TextField
+              label="Symptoms"
+              fullWidth
+              multiline
+              minRows={2}
+              value={consEditForm.symptoms}
+              onChange={(e) =>
+                setConsEditForm((p) => ({ ...p, symptoms: e.target.value }))
+              }
+            />
+            <TextField
+              label="Diagnosis"
+              fullWidth
+              multiline
+              minRows={2}
+              value={consEditForm.diagnosis}
+              onChange={(e) =>
+                setConsEditForm((p) => ({ ...p, diagnosis: e.target.value }))
+              }
+            />
+            <TextField
+              label="Notes"
+              fullWidth
+              multiline
+              minRows={2}
+              value={consEditForm.notes}
+              onChange={(e) =>
+                setConsEditForm((p) => ({ ...p, notes: e.target.value }))
+              }
+            />
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button variant="outlined" onClick={() => setConsEditOpen(false)}>
             Cancel
           </Button>
-          <Button variant="contained" onClick={saveConsultationEdits} disabled={consEditSaving} sx={{ fontWeight: 900 }}>
+          <Button
+            variant="contained"
+            onClick={saveConsultationEdits}
+            disabled={consEditSaving}
+            sx={{ fontWeight: 900 }}
+          >
             {consEditSaving ? "Saving…" : "Save"}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Lab order */}
-      <Dialog open={labOpen} onClose={() => setLabOpen(false)} fullWidth maxWidth="sm">
+      <Dialog
+        open={labOpen}
+        onClose={() => setLabOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
         <DialogTitle sx={{ fontWeight: 900 }}>Initiate Lab Test</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             {labTestsLoading ? (
               <Stack direction="row" spacing={1} alignItems="center">
                 <CircularProgress size={18} />
-                <Typography color="text.secondary">Loading lab tests…</Typography>
+                <Typography color="text.secondary">
+                  Loading lab tests…
+                </Typography>
               </Stack>
             ) : null}
             <Autocomplete
@@ -1435,58 +1996,133 @@ export default function VisitsManagement() {
               options={labTests}
               value={selectedLabTests}
               onChange={(_, v) => setSelectedLabTests(v)}
-              getOptionLabel={(t) => `${t.test_name || "Test"}${t.test_code ? ` (${t.test_code})` : ""}`}
+              getOptionLabel={(t) =>
+                `${t.test_name || "Test"}${t.test_code ? ` (${t.test_code})` : ""}`
+              }
               isOptionEqualToValue={(opt, val) => opt.id === val.id}
-              renderInput={(params) => <TextField {...params} label="Lab tests" placeholder="Select tests…" />}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Lab tests"
+                  placeholder="Select tests…"
+                />
+              )}
             />
-            <Alert severity="info">This creates a lab order linked to the consultation.</Alert>
+            <Alert severity="info">
+              This creates a lab order linked to the consultation.
+            </Alert>
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button variant="outlined" onClick={() => setLabOpen(false)}>
             Cancel
           </Button>
-          <Button variant="contained" onClick={createLabOrder} disabled={labSaving} sx={{ fontWeight: 900 }}>
+          <Button
+            variant="contained"
+            onClick={createLabOrder}
+            disabled={labSaving}
+            sx={{ fontWeight: 900 }}
+          >
             {labSaving ? "Creating…" : "Create lab order"}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Prescription */}
-      <Dialog open={rxOpen} onClose={() => setRxOpen(false)} fullWidth maxWidth="md">
+      <Dialog
+        open={rxOpen}
+        onClose={() => setRxOpen(false)}
+        fullWidth
+        maxWidth="md"
+      >
         <DialogTitle sx={{ fontWeight: 900 }}>Prescription</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             {medicationsLoading ? (
               <Stack direction="row" spacing={1} alignItems="center">
                 <CircularProgress size={18} />
-                <Typography color="text.secondary">Loading medications…</Typography>
+                <Typography color="text.secondary">
+                  Loading medications…
+                </Typography>
               </Stack>
             ) : null}
 
             {rxItems.map((it, idx) => (
-              <Box key={idx} sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
+              <Box
+                key={idx}
+                sx={{
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 2,
+                  p: 2,
+                }}
+              >
                 <Stack spacing={1.5}>
                   <Autocomplete
                     options={medications}
                     value={it.medication}
                     onChange={(_, v) =>
-                      setRxItems((prev) => prev.map((p, i) => (i === idx ? { ...p, medication: v } : p)))
+                      setRxItems((prev) =>
+                        prev.map((p, i) =>
+                          i === idx ? { ...p, medication: v } : p,
+                        ),
+                      )
                     }
                     getOptionLabel={(m) => m?.name || "—"}
                     isOptionEqualToValue={(opt, val) => opt.id === val.id}
-                    renderInput={(params) => <TextField {...params} label="Medication" placeholder="Select medication…" />}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Medication"
+                        placeholder="Select medication…"
+                      />
+                    )}
                   />
                   <Stack direction={{ xs: "column", md: "row" }} spacing={1.5}>
-                    <TextField label="Dosage (optional)" fullWidth value={it.dosage} onChange={(e) => setRxItems((prev) => prev.map((p, i) => (i === idx ? { ...p, dosage: e.target.value } : p)))} />
-                    <TextField label="Frequency (optional)" fullWidth value={it.frequency} onChange={(e) => setRxItems((prev) => prev.map((p, i) => (i === idx ? { ...p, frequency: e.target.value } : p)))} />
-                    <TextField label="Duration (optional)" fullWidth value={it.duration} onChange={(e) => setRxItems((prev) => prev.map((p, i) => (i === idx ? { ...p, duration: e.target.value } : p)))} />
+                    <TextField
+                      label="Dosage (optional)"
+                      fullWidth
+                      value={it.dosage}
+                      onChange={(e) =>
+                        setRxItems((prev) =>
+                          prev.map((p, i) =>
+                            i === idx ? { ...p, dosage: e.target.value } : p,
+                          ),
+                        )
+                      }
+                    />
+                    <TextField
+                      label="Frequency (optional)"
+                      fullWidth
+                      value={it.frequency}
+                      onChange={(e) =>
+                        setRxItems((prev) =>
+                          prev.map((p, i) =>
+                            i === idx ? { ...p, frequency: e.target.value } : p,
+                          ),
+                        )
+                      }
+                    />
+                    <TextField
+                      label="Duration (optional)"
+                      fullWidth
+                      value={it.duration}
+                      onChange={(e) =>
+                        setRxItems((prev) =>
+                          prev.map((p, i) =>
+                            i === idx ? { ...p, duration: e.target.value } : p,
+                          ),
+                        )
+                      }
+                    />
                   </Stack>
                   <Stack direction="row" spacing={1} justifyContent="flex-end">
                     <Button
                       variant="outlined"
                       color="error"
-                      onClick={() => setRxItems((prev) => prev.filter((_, i) => i !== idx))}
+                      onClick={() =>
+                        setRxItems((prev) => prev.filter((_, i) => i !== idx))
+                      }
                       disabled={rxItems.length === 1}
                     >
                       Remove
@@ -1496,7 +2132,15 @@ export default function VisitsManagement() {
               </Box>
             ))}
 
-            <Button variant="outlined" onClick={() => setRxItems((p) => [...p, { medication: null, dosage: "", frequency: "", duration: "" }])}>
+            <Button
+              variant="outlined"
+              onClick={() =>
+                setRxItems((p) => [
+                  ...p,
+                  { medication: null, dosage: "", frequency: "", duration: "" },
+                ])
+              }
+            >
               Add medication
             </Button>
           </Stack>
@@ -1505,7 +2149,12 @@ export default function VisitsManagement() {
           <Button variant="outlined" onClick={() => setRxOpen(false)}>
             Cancel
           </Button>
-          <Button variant="contained" onClick={createPrescription} disabled={rxSaving} sx={{ fontWeight: 900 }}>
+          <Button
+            variant="contained"
+            onClick={createPrescription}
+            disabled={rxSaving}
+            sx={{ fontWeight: 900 }}
+          >
             {rxSaving ? "Creating…" : "Create prescription"}
           </Button>
         </DialogActions>
@@ -1513,4 +2162,3 @@ export default function VisitsManagement() {
     </Box>
   );
 }
-
