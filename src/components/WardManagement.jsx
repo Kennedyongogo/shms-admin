@@ -899,7 +899,7 @@ export default function WardManagement() {
                           <TableCell sx={{ fontWeight: 800 }}>RR</TableCell>
                           <TableCell sx={{ fontWeight: 800 }}>Pain</TableCell>
                           <TableCell sx={{ fontWeight: 800 }}>Notes</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>Nurse</TableCell>
+                          <TableCell sx={{ fontWeight: 800 }}>Recorded by</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
