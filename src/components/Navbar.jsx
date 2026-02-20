@@ -1,5 +1,5 @@
 import React, { cloneElement, useEffect, useState } from "react";
-import { EventNote, LocalHospital, LocalPharmacy, Logout, PeopleAlt, PersonalInjury, ReceiptLong, Science } from "@mui/icons-material";
+import { EventNote, Hotel, LocalHospital, LocalPharmacy, Logout, PeopleAlt, PersonalInjury, ReceiptLong, Science } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { styled, useTheme } from "@mui/material/styles";
 import MuiDrawer from "@mui/material/Drawer";
@@ -113,6 +113,7 @@ const Navbar = (props) => {
     { text: "Patients", icon: <PersonalInjury />, path: "/patients" },
     { text: "Laboratory", icon: <Science />, path: "/laboratory" },
     { text: "Pharmacy", icon: <LocalPharmacy />, path: "/pharmacy" },
+    { text: "Ward & Admissions", icon: <Hotel />, path: "/ward" },
     { text: "Billing & Payments", icon: <ReceiptLong />, path: "/billing" },
     { text: "Users & Roles", icon: <PeopleAlt />, path: "/users" },
   ];

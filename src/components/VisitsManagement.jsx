@@ -45,6 +45,7 @@ import {
   Edit as EditIcon,
   Science as ScienceIcon,
   LocalPharmacy as PharmacyIcon,
+  Hotel as AdmitIcon,
 } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
 import Swal from "sweetalert2";
@@ -60,6 +61,9 @@ const API = {
   medications: "/api/medications",
   prescriptions: "/api/prescriptions",
   billing: "/api/billing",
+  admissions: "/api/admissions",
+  beds: "/api/beds",
+  wards: "/api/wards",
 };
 
 const getToken = () => localStorage.getItem("token");
@@ -220,6 +224,14 @@ export default function VisitsManagement() {
   const [rxItems, setRxItems] = useState([
     { medication: null, dosage: "", frequency: "", duration: "" },
   ]);
+
+  const [admitOpen, setAdmitOpen] = useState(false);
+  const [admitSaving, setAdmitSaving] = useState(false);
+  const [admitBedId, setAdmitBedId] = useState("");
+  const [availableBeds, setAvailableBeds] = useState([]);
+  const [admitBedsLoading, setAdmitBedsLoading] = useState(false);
+  const [wardOptions, setWardOptions] = useState([]);
+  const [consViewHasAdmission, setConsViewHasAdmission] = useState(false);
 
   const requireTokenGuard = () => {
     if (!token) {
@@ -532,14 +544,20 @@ export default function VisitsManagement() {
     });
     if (!result.isConfirmed) return;
     try {
-      await fetchJson(`${API.appointments}/${appt.id}`, {
+      const data = await fetchJson(`${API.appointments}/${appt.id}`, {
         method: "DELETE",
         token,
       });
+      const deleted = data?.deleted ?? {};
+      const parts = [];
+      if (deleted.consultation) parts.push("consultation");
+      if (deleted.appointmentBills) parts.push("billing");
+      if (deleted.admissionsDeleted) parts.push(`${deleted.admissionsDeleted} admission(s)`);
+      const detail = parts.length ? ` (${parts.join(", ")})` : "";
       Swal.fire({
         icon: "success",
         title: "Deleted",
-        text: "Appointment deleted.",
+        text: `Appointment deleted.${detail}`,
       });
       await loadAppointments();
     } catch (e) {
@@ -725,9 +743,23 @@ export default function VisitsManagement() {
     setConsViewOpen(true);
     setConsViewLoading(true);
     setConsView(null);
+    setConsViewHasAdmission(false);
     try {
       const data = await fetchJson(`${API.consultations}/${c.id}`, { token });
-      setConsView(data?.data || null);
+      const consultation = data?.data || null;
+      setConsView(consultation);
+      const apptId = consultation?.appointment?.id;
+      if (apptId) {
+        try {
+          const admRes = await fetchJson(
+            `${API.admissions}?appointment_id=${apptId}&status=admitted&limit=1`,
+            { token }
+          );
+          setConsViewHasAdmission(Array.isArray(admRes?.data) && admRes.data.length > 0);
+        } catch {
+          setConsViewHasAdmission(false);
+        }
+      }
     } catch (e) {
       Swal.fire({ icon: "error", title: "Failed", text: e.message });
       setConsViewOpen(false);
@@ -939,6 +971,68 @@ export default function VisitsManagement() {
       Swal.fire({ icon: "error", title: "Failed", text: e.message });
     } finally {
       setRxSaving(false);
+    }
+  };
+
+  const openAdmitDialog = async () => {
+    if (!consView?.appointment) return;
+    setAdmitOpen(true);
+    setAdmitBedId("");
+    setAdmitBedsLoading(true);
+    try {
+      const [bedsRes, wardsRes] = await Promise.all([
+        fetchJson(`${API.beds}?limit=500`, { token }),
+        fetchJson(`${API.wards}?limit=500`, { token }),
+      ]);
+      const beds = bedsRes?.data || [];
+      setAvailableBeds(beds.filter((b) => b.status === "available"));
+      setWardOptions(wardsRes?.data || []);
+    } catch (e) {
+      setAvailableBeds([]);
+      setWardOptions([]);
+      Swal.fire({ icon: "error", title: "Failed to load beds", text: e.message });
+    } finally {
+      setAdmitBedsLoading(false);
+    }
+  };
+
+  const bedLabel = (b) => {
+    if (!b) return "—";
+    const wn = b.ward?.name ?? wardOptions.find((w) => w.id === b.ward_id)?.name ?? "";
+    return wn ? `${b.bed_number} (${wn})` : b.bed_number;
+  };
+
+  const createAdmission = async () => {
+    if (!consView?.appointment || !admitBedId) {
+      Swal.fire({ icon: "warning", title: "Select bed", text: "Choose an available bed to admit the patient." });
+      return;
+    }
+    const appt = consView.appointment;
+    const patientId = appt.patient?.id;
+    const doctorId = appt.doctor?.id;
+    if (!patientId || !doctorId) {
+      Swal.fire({ icon: "warning", title: "Missing data", text: "Patient or doctor not found on this consultation." });
+      return;
+    }
+    setAdmitSaving(true);
+    try {
+      await fetchJson(`${API.admissions}/admit`, {
+        method: "POST",
+        token,
+        body: {
+          appointment_id: appt.id,
+          patient_id: patientId,
+          doctor_id: doctorId,
+          bed_id: admitBedId,
+        },
+      });
+      Swal.fire({ icon: "success", title: "Patient admitted", timer: 1200, showConfirmButton: false });
+      setAdmitOpen(false);
+      setConsViewHasAdmission(true);
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Admit failed", text: e.message });
+    } finally {
+      setAdmitSaving(false);
     }
   };
 
@@ -1773,7 +1867,7 @@ export default function VisitsManagement() {
               {!isAdmin && !isAssignedDoctor(consView) && (
                 <Alert severity="info">
                   You can view this consultation, but only the assigned doctor
-                  (or admin) can update it, prescribe, or initiate lab tests.
+                  (or admin) can update it, prescribe, initiate lab tests, or admit patient.
                 </Alert>
               )}
               <Typography sx={{ fontWeight: 900 }}>
@@ -1823,7 +1917,7 @@ export default function VisitsManagement() {
                 </Typography>
               </Box>
 
-              <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={1} flexWrap="wrap">
                 <Button
                   startIcon={<EditIcon />}
                   variant="outlined"
@@ -1847,6 +1941,16 @@ export default function VisitsManagement() {
                   disabled={!isAdmin && !isAssignedDoctor(consView)}
                 >
                   Prescribe
+                </Button>
+                <Button
+                  startIcon={<AdmitIcon />}
+                  variant="outlined"
+                  onClick={openAdmitDialog}
+                  disabled={
+                    (!isAdmin && !isAssignedDoctor(consView)) || consViewHasAdmission
+                  }
+                >
+                  {consViewHasAdmission ? "Already admitted" : "Admit patient"}
                 </Button>
               </Stack>
             </Stack>
@@ -2103,6 +2207,60 @@ export default function VisitsManagement() {
             sx={{ fontWeight: 900 }}
           >
             {rxSaving ? "Creating…" : "Create prescription"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Admit patient (from consultation) */}
+      <Dialog
+        open={admitOpen}
+        onClose={() => setAdmitOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle sx={{ fontWeight: 900 }}>Admit Patient</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            {admitBedsLoading ? (
+              <Stack direction="row" spacing={1} alignItems="center">
+                <CircularProgress size={18} />
+                <Typography color="text.secondary">Loading available beds…</Typography>
+              </Stack>
+            ) : (
+              <>
+                <FormControl fullWidth size="small" required>
+                  <InputLabel>Bed (available only)</InputLabel>
+                  <Select
+                    value={admitBedId}
+                    label="Bed (available only)"
+                    onChange={(e) => setAdmitBedId(e.target.value)}
+                  >
+                    <MenuItem value="">Select bed</MenuItem>
+                    {availableBeds.map((b) => (
+                      <MenuItem key={b.id} value={b.id}>
+                        {bedLabel(b)}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                {availableBeds.length === 0 && (
+                  <Alert severity="info">No available beds. Add beds in Ward & Admissions.</Alert>
+                )}
+              </>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button variant="outlined" onClick={() => setAdmitOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={createAdmission}
+            disabled={admitSaving || !admitBedId || admitBedsLoading}
+            sx={{ fontWeight: 900 }}
+          >
+            {admitSaving ? "Admitting…" : "Admit"}
           </Button>
         </DialogActions>
       </Dialog>
