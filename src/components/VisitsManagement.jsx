@@ -60,7 +60,6 @@ const API = {
   medications: "/api/medications",
   prescriptions: "/api/prescriptions",
   billing: "/api/billing",
-  payments: "/api/payments",
 };
 
 const getToken = () => localStorage.getItem("token");
@@ -489,32 +488,14 @@ export default function VisitsManagement() {
         const payNow = await Swal.fire({
           icon: "info",
           title: "Payment required",
-          text: "Walk-in appointments must be paid before they can be confirmed. Do you want to take payment now?",
+          text: "Walk-in appointments must be paid before they can be confirmed. Open Billing to add the bill item and record payment.",
           showCancelButton: true,
-          confirmButtonText: "Pay now",
+          confirmButtonText: "Open billing",
           cancelButtonText: "Later",
           reverseButtons: true,
         });
         if (payNow.isConfirmed) {
-          const paid = await payForAppointment(full.data);
-          if (paid) {
-            const result = await Swal.fire({
-              icon: "success",
-              title: "Payment recorded",
-              text: "Payment has been recorded. The appointment will be confirmed automatically. Do you want to record the consultation now?",
-              showCancelButton: true,
-              confirmButtonText: "Record now",
-              cancelButtonText: "Later",
-              reverseButtons: true,
-            });
-            if (result.isConfirmed) {
-              const refreshed = await fetchJson(
-                `${API.appointments}/${appt.id}`,
-                { token },
-              );
-              openRecordConsultation(refreshed.data);
-            }
-          }
+          openBillingForAppointment(full.data);
         } else {
           Swal.fire({
             icon: "success",
@@ -583,31 +564,15 @@ export default function VisitsManagement() {
       const ask = await Swal.fire({
         icon: "warning",
         title: "Appointment not confirmed",
-        text: "You can only record a consultation after payment is made and the appointment is confirmed. Do you want to take payment now?",
+        text: "You can only record a consultation after payment is made and the appointment is confirmed. Open Billing to add the bill item and record payment.",
         showCancelButton: true,
-        confirmButtonText: "Pay now",
+        confirmButtonText: "Open billing",
         cancelButtonText: "Later",
         reverseButtons: true,
       });
       if (ask.isConfirmed) {
-        const paid = await payForAppointment(appt);
-        if (!paid) return;
-        try {
-          const refreshed = await fetchJson(`${API.appointments}/${appt.id}`, { token });
-          const updatedAppt = refreshed?.data;
-          if (updatedAppt?.status !== "confirmed" && updatedAppt?.status !== "completed") {
-            await Swal.fire({
-              icon: "info",
-              title: "Not confirmed yet",
-              text: "Payment was recorded, but the appointment is not confirmed yet. Please refresh and try again.",
-            });
-            return;
-          }
-          appt = updatedAppt;
-        } catch (e) {
-          Swal.fire({ icon: "error", title: "Failed", text: e.message });
-          return;
-        }
+        openBillingForAppointment(appt);
+        return;
       } else {
         return;
       }
@@ -739,91 +704,20 @@ export default function VisitsManagement() {
     }
   };
 
-  const payForAppointment = async (appt) => {
-    if (!requireTokenGuard()) return false;
-    if (!appt?.id) return false;
+  const openBillingForAppointment = (appt) => {
+    if (!appt?.id) return;
     const patientId = appt?.patient?.id || appt?.patient_id;
-    if (!patientId) {
-      Swal.fire({
-        icon: "error",
-        title: "Missing patient",
-        text: "Cannot generate a bill without patient_id.",
-      });
-      return false;
-    }
-
-    const defaultAmount =
-      appt?.service?.price != null && appt?.service?.price !== ""
-        ? String(appt.service.price)
-        : "0";
-    const ask = await Swal.fire({
-      icon: "question",
-      title: "Take payment (test)",
-      input: "text",
-      inputLabel: "Amount to charge",
-      inputValue: defaultAmount,
-      showCancelButton: true,
-      confirmButtonText: "Pay",
-      cancelButtonText: "Cancel",
-      reverseButtons: true,
-      inputValidator: (v) => {
-        const n = Number(v);
-        if (!Number.isFinite(n) || n < 0) return "Enter a valid amount";
-        return undefined;
+    const amount = appt?.service?.price != null && appt?.service?.price !== "" ? appt.service.price : null;
+    navigate("/billing", {
+      state: {
+        billingPrefill: {
+          item_type: "appointment",
+          reference_id: appt.id,
+          patient_id: patientId || null,
+          amount,
+        },
       },
     });
-    if (!ask.isConfirmed) return false;
-    const amount = Number(ask.value);
-
-    try {
-      // Prefer the auto-created bill (walk-in) by reference; fallback to generating one if missing.
-      const qs = new URLSearchParams({
-        item_type: "appointment",
-        reference_id: String(appt.id),
-      });
-      const billingRes = await fetchJson(
-        `${API.billing}/by-reference?${qs.toString()}`,
-        { token },
-      );
-      let billId = billingRes?.data?.bill_id || null;
-
-      if (!billId) {
-        const billRes = await fetchJson(`${API.billing}/generate`, {
-          method: "POST",
-          token,
-          body: { patient_id: patientId, consultation_id: null },
-        });
-        billId = billRes?.data?.id;
-        await fetchJson(`${API.billing}/${billId}/items`, {
-          method: "POST",
-          token,
-          body: {
-            items: [{ item_type: "appointment", reference_id: appt.id, amount }],
-          },
-        });
-      }
-
-      await fetchJson(`${API.payments}/process`, {
-        method: "POST",
-        token,
-        body: {
-          bill_id: billId,
-          amount_paid: amount,
-          payment_method: "cash",
-          payment_date: new Date().toISOString(),
-        },
-      });
-      await loadAppointmentBilling(appt.id);
-      Swal.fire({
-        icon: "success",
-        title: "Paid",
-        text: "Payment recorded (test).",
-      });
-      return true;
-    } catch (e) {
-      Swal.fire({ icon: "error", title: "Payment failed", text: e.message });
-      return false;
-    }
   };
 
   const openViewConsultation = async (c) => {
@@ -1076,15 +970,12 @@ export default function VisitsManagement() {
           title: "Payment required",
           text: e.message,
           showCancelButton: true,
-          confirmButtonText: "Pay now",
+          confirmButtonText: "Open billing",
           cancelButtonText: "Cancel",
           reverseButtons: true,
         });
         if (ask.isConfirmed) {
-          const paid = await payForAppointment(recordForAppointment);
-          if (paid) {
-            return openRecordConsultation(recordForAppointment);
-          }
+          openBillingForAppointment(recordForAppointment);
         }
         return;
       }

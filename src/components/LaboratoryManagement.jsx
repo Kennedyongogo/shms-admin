@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Alert,
   Box,
@@ -48,7 +49,6 @@ const API = {
   labTests: "/api/lab-tests",
   labResults: "/api/lab-results",
   billing: "/api/billing",
-  payments: "/api/payments",
 };
 
 const getToken = () => localStorage.getItem("token");
@@ -97,6 +97,7 @@ const fmt = (v) => (v == null || v === "" ? "—" : String(v));
 export default function LaboratoryManagement() {
   const theme = useTheme();
   const token = getToken();
+  const navigate = useNavigate();
   const roleName = getRoleName();
   const isAdmin = roleName === "admin";
 
@@ -172,6 +173,7 @@ export default function LaboratoryManagement() {
   const [resultDialog, setResultDialog] = useState({
     open: false,
     lab_order_item_id: null,
+    lab_order: null,
   });
   const [resultSaving, setResultSaving] = useState(false);
   const [resultForm, setResultForm] = useState({
@@ -343,19 +345,42 @@ export default function LaboratoryManagement() {
     if (!requireTokenGuard()) return;
     const o = orderView.order;
     if (!o?.id) return;
+    const current = o.status;
+    const paid = Boolean(orderBilling?.paid);
+    const allowedNonAdmin = new Set(["in_progress", ...(paid ? ["completed"] : [])]);
+    if (!isAdmin) {
+      if (!allowedNonAdmin.has(orderStatusDraft)) {
+        Swal.fire({
+          icon: "info",
+          title: "Not allowed",
+          text: paid
+            ? "You can only set lab order status to in_progress or completed."
+            : "You can only set lab order status to in_progress until payment is recorded.",
+        });
+        return;
+      }
+      // Mirror backend transition rules for lab tech
+      if (current === "pending" && orderStatusDraft !== "in_progress") {
+        Swal.fire({ icon: "info", title: "Not allowed", text: "From pending you can only move to in_progress." });
+        return;
+      }
+      if (current === "in_progress" && orderStatusDraft !== "completed") {
+        Swal.fire({ icon: "info", title: "Not allowed", text: "From in_progress you can only move to completed." });
+        return;
+      }
+    }
     if (orderStatusDraft === "completed" && !orderBilling?.paid) {
       const ask = await Swal.fire({
         icon: "warning",
         title: "Payment required",
         text: "You must record payment before marking a lab order as completed.",
         showCancelButton: true,
-        confirmButtonText: "Pay now",
+        confirmButtonText: "Open billing",
         cancelButtonText: "Cancel",
         reverseButtons: true,
       });
       if (ask.isConfirmed) {
-        await payForLabOrder(o);
-        await loadOrderBilling(o.id);
+        openBillingForLabOrder(o);
       }
       return;
     }
@@ -381,13 +406,12 @@ export default function LaboratoryManagement() {
           title: "Payment required",
           text: e.message,
           showCancelButton: true,
-          confirmButtonText: "Pay now",
+          confirmButtonText: "Open billing",
           cancelButtonText: "Cancel",
           reverseButtons: true,
         });
         if (ask.isConfirmed) {
-          await payForLabOrder(o);
-          await loadOrderBilling(o.id);
+          openBillingForLabOrder(o);
         }
         return;
       }
@@ -417,80 +441,23 @@ export default function LaboratoryManagement() {
     }
   };
 
-  const payForLabOrder = async (order) => {
-    if (!requireTokenGuard()) return false;
-    if (!order?.id) return false;
+  const openBillingForLabOrder = (order) => {
+    if (!order?.id) return;
     const patientId = order?.patient?.id || order?.patient_id;
-    if (!patientId) {
-      Swal.fire({
-        icon: "error",
-        title: "Missing patient",
-        text: "Cannot generate a bill without patient_id.",
-      });
-      return false;
-    }
-
     const computed = (order?.items || []).reduce(
       (sum, it) => sum + Number(it?.labTest?.price || 0),
       0,
     );
-    const ask = await Swal.fire({
-      icon: "question",
-      title: "Take payment (test)",
-      input: "text",
-      inputLabel: "Amount to charge",
-      inputValue: String(computed || 0),
-      showCancelButton: true,
-      confirmButtonText: "Pay",
-      cancelButtonText: "Cancel",
-      reverseButtons: true,
-      inputValidator: (v) => {
-        const n = Number(v);
-        if (!Number.isFinite(n) || n < 0) return "Enter a valid amount";
-        return undefined;
+    navigate("/billing", {
+      state: {
+        billingPrefill: {
+          item_type: "lab_order",
+          reference_id: order.id,
+          patient_id: patientId || null,
+          amount: computed || null,
+        },
       },
     });
-    if (!ask.isConfirmed) return false;
-    const amount = Number(ask.value);
-
-    try {
-      const billRes = await fetchJson(`${API.billing}/generate`, {
-        method: "POST",
-        token,
-        body: {
-          patient_id: patientId,
-          consultation_id: order?.consultation_id ?? null,
-        },
-      });
-      const billId = billRes?.data?.id;
-      await fetchJson(`${API.billing}/${billId}/items`, {
-        method: "POST",
-        token,
-        body: {
-          items: [{ item_type: "lab_order", reference_id: order.id, amount }],
-        },
-      });
-      await fetchJson(`${API.payments}/process`, {
-        method: "POST",
-        token,
-        body: {
-          bill_id: billId,
-          amount_paid: amount,
-          payment_method: "cash",
-          payment_date: new Date().toISOString(),
-        },
-      });
-      await loadOrderBilling(order.id);
-      Swal.fire({
-        icon: "success",
-        title: "Paid",
-        text: "Payment recorded (test).",
-      });
-      return true;
-    } catch (e) {
-      Swal.fire({ icon: "error", title: "Payment failed", text: e.message });
-      return false;
-    }
   };
 
   const openCreateTest = () => {
@@ -583,8 +550,12 @@ export default function LaboratoryManagement() {
     }
   };
 
-  const openEnterResult = (labOrderItemId, existingResult) => {
-    setResultDialog({ open: true, lab_order_item_id: labOrderItemId });
+  const openEnterResult = (labOrderItemId, existingResult, labOrder) => {
+    setResultDialog({
+      open: true,
+      lab_order_item_id: labOrderItemId,
+      lab_order: labOrder || existingResult?.labOrderItem?.labOrder || null,
+    });
     setResultForm({
       result_value: existingResult?.result_value || "",
       reference_range: existingResult?.reference_range || "",
@@ -619,10 +590,36 @@ export default function LaboratoryManagement() {
         timer: 900,
         showConfirmButton: false,
       });
-      setResultDialog({ open: false, lab_order_item_id: null });
+      setResultDialog({
+        open: false,
+        lab_order_item_id: null,
+        lab_order: null,
+      });
       await loadOrders();
       await loadResults();
     } catch (e) {
+      if (Number(e?.status) === 402 && e?.data?.code === "PAYMENT_REQUIRED") {
+        const ask = await Swal.fire({
+          icon: "warning",
+          title: "Payment required",
+          text: "Pay the lab order bill before entering results.",
+          showCancelButton: true,
+          confirmButtonText: "Open billing",
+          cancelButtonText: "Cancel",
+          reverseButtons: true,
+        });
+        if (ask.isConfirmed) {
+          const order = resultDialog.lab_order || null;
+          if (order?.id) openBillingForLabOrder(order);
+          else
+            Swal.fire({
+              icon: "info",
+              title: "Missing order",
+              text: "Open the lab order and use its Billing button.",
+            });
+        }
+        return;
+      }
       Swal.fire({ icon: "error", title: "Failed", text: e.message });
     } finally {
       setResultSaving(false);
@@ -1145,7 +1142,11 @@ export default function LaboratoryManagement() {
                               size="small"
                               variant="outlined"
                               onClick={() =>
-                                openEnterResult(r.lab_order_item_id, r)
+                                openEnterResult(
+                                  r.lab_order_item_id,
+                                  r,
+                                  r.labOrderItem?.labOrder,
+                                )
                               }
                             >
                               Update
@@ -1239,11 +1240,11 @@ export default function LaboratoryManagement() {
                 </Stack>
                 <Button
                   variant="outlined"
-                  onClick={() => payForLabOrder(orderView.order)}
+                  onClick={() => openBillingForLabOrder(orderView.order)}
                   disabled={orderBillingLoading || orderBilling?.paid}
                   sx={{ fontWeight: 900 }}
                 >
-                  Pay now (test)
+                  Open billing
                 </Button>
               </Stack>
               {orderBilling?.exists ? (
@@ -1258,7 +1259,8 @@ export default function LaboratoryManagement() {
               )}
               {!orderBilling?.paid && (
                 <Alert severity="warning" sx={{ mt: 1 }}>
-                  Lab order completion is blocked until payment is recorded.
+                  Lab order completion and entering results are blocked until
+                  payment is recorded.
                 </Alert>
               )}
             </Box>
@@ -1270,10 +1272,19 @@ export default function LaboratoryManagement() {
                 value={orderStatusDraft}
                 onChange={(e) => setOrderStatusDraft(e.target.value)}
               >
-                <MenuItem value="pending">pending</MenuItem>
-                <MenuItem value="in_progress">in_progress</MenuItem>
-                <MenuItem value="completed">completed</MenuItem>
-                <MenuItem value="cancelled">cancelled</MenuItem>
+                {(() => {
+                  const current = orderView.order?.status;
+                  const paid = Boolean(orderBilling?.paid);
+                  const base = isAdmin
+                    ? ["pending", "in_progress", "completed", "cancelled"]
+                    : ["in_progress", ...(paid ? ["completed"] : [])];
+                  const opts = Array.from(new Set([current, ...base].filter(Boolean)));
+                  return opts.map((s) => (
+                    <MenuItem key={s} value={s}>
+                      {s}
+                    </MenuItem>
+                  ));
+                })()}
               </Select>
             </FormControl>
 
@@ -1306,7 +1317,10 @@ export default function LaboratoryManagement() {
                       <Button
                         size="small"
                         variant="outlined"
-                        onClick={() => openEnterResult(it.id, it.result)}
+                        disabled={!orderBilling?.paid}
+                        onClick={() =>
+                          openEnterResult(it.id, it.result, orderView.order)
+                        }
                       >
                         {it.result ? "Update result" : "Enter result"}
                       </Button>
@@ -1427,7 +1441,11 @@ export default function LaboratoryManagement() {
       <Dialog
         open={resultDialog.open}
         onClose={() =>
-          setResultDialog({ open: false, lab_order_item_id: null })
+          setResultDialog({
+            open: false,
+            lab_order_item_id: null,
+            lab_order: null,
+          })
         }
         fullWidth
         maxWidth="sm"

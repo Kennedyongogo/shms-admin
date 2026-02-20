@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Alert,
   Box,
@@ -45,7 +46,6 @@ const API = {
   prescriptions: "/api/prescriptions",
   dispense: "/api/dispense",
   billing: "/api/billing",
-  payments: "/api/payments",
 };
 
 const getToken = () => localStorage.getItem("token");
@@ -92,6 +92,7 @@ const formatDateTime = (value) => {
 export default function PharmacyManagement() {
   const theme = useTheme();
   const token = getToken();
+  const navigate = useNavigate();
   const isAdmin = getRoleName() === "admin";
 
   const [tab, setTab] = useState(0); // 0 meds, 1 prescriptions, 2 dispense
@@ -428,78 +429,20 @@ export default function PharmacyManagement() {
     }
   };
 
-  const payForPrescription = async (prescription) => {
-    if (!requireTokenGuard()) return false;
-    if (!prescription?.id) return false;
+  const openBillingForPrescription = (prescription) => {
+    if (!prescription?.id) return;
     const patientId = prescription?.patient_id;
-    if (!patientId) {
-      showToast("error", "Cannot generate a bill without patient_id.");
-      return false;
-    }
-
-    const computed = (prescription?.items || []).reduce(
-      (sum, it) => sum + Number(it?.medication?.unit_price || 0),
-      0,
-    );
-    const ask = await Swal.fire({
-      icon: "question",
-      title: "Take payment (test)",
-      input: "text",
-      inputLabel: "Amount to charge",
-      inputValue: String(computed || 0),
-      showCancelButton: true,
-      confirmButtonText: "Pay",
-      cancelButtonText: "Cancel",
-      reverseButtons: true,
-      inputValidator: (v) => {
-        const n = Number(v);
-        if (!Number.isFinite(n) || n < 0) return "Enter a valid amount";
-        return undefined;
+    const computed = (prescription?.items || []).reduce((sum, it) => sum + Number(it?.medication?.unit_price || 0), 0);
+    navigate("/billing", {
+      state: {
+        billingPrefill: {
+          item_type: "prescription",
+          reference_id: prescription.id,
+          patient_id: patientId || null,
+          amount: computed || null,
+        },
       },
     });
-    if (!ask.isConfirmed) return false;
-    const amount = Number(ask.value);
-
-    try {
-      const billRes = await fetchJson(`${API.billing}/generate`, {
-        method: "POST",
-        token,
-        body: {
-          patient_id: patientId,
-          consultation_id: prescription?.consultation_id ?? null,
-        },
-      });
-      const billId = billRes?.data?.id;
-      await fetchJson(`${API.billing}/${billId}/items`, {
-        method: "POST",
-        token,
-        body: {
-          items: [
-            {
-              item_type: "prescription",
-              reference_id: prescription.id,
-              amount,
-            },
-          ],
-        },
-      });
-      await fetchJson(`${API.payments}/process`, {
-        method: "POST",
-        token,
-        body: {
-          bill_id: billId,
-          amount_paid: amount,
-          payment_method: "cash",
-          payment_date: new Date().toISOString(),
-        },
-      });
-      await loadPrescriptionBilling(prescription.id);
-      showToast("success", "Payment recorded (test).");
-      return true;
-    } catch (e) {
-      showToast("error", e.message);
-      return false;
-    }
   };
 
   const dispensePrescription = async () => {
@@ -513,13 +456,12 @@ export default function PharmacyManagement() {
         title: "Payment required",
         text: "You must record payment before dispensing.",
         showCancelButton: true,
-        confirmButtonText: "Pay now",
+        confirmButtonText: "Open billing",
         cancelButtonText: "Cancel",
         reverseButtons: true,
       });
       if (ask.isConfirmed) {
-        await payForPrescription(prescription);
-        await loadPrescriptionBilling(prescription.id);
+        openBillingForPrescription(prescription);
       }
       return;
     }
@@ -541,13 +483,12 @@ export default function PharmacyManagement() {
           title: "Payment required",
           text: e.message,
           showCancelButton: true,
-          confirmButtonText: "Pay now",
+          confirmButtonText: "Open billing",
           cancelButtonText: "Cancel",
           reverseButtons: true,
         });
         if (ask.isConfirmed) {
-          await payForPrescription(prescription);
-          await loadPrescriptionBilling(prescription.id);
+          openBillingForPrescription(prescription);
         }
         return;
       }
@@ -1252,11 +1193,11 @@ export default function PharmacyManagement() {
                   </Stack>
                   <Button
                     variant="outlined"
-                    onClick={() => payForPrescription(presView.prescription)}
+                    onClick={() => openBillingForPrescription(presView.prescription)}
                     disabled={presBillingLoading || presBilling?.paid}
                     sx={{ fontWeight: 900 }}
                   >
-                    Pay now (test)
+                    Open billing
                   </Button>
                 </Stack>
                 {presBilling?.exists ? (
