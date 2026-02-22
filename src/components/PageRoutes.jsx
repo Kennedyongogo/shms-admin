@@ -12,6 +12,8 @@ import PatientsManagement from "./PatientsManagement";
 import LaboratoryManagement from "./LaboratoryManagement";
 import BillingPaymentsManagement from "./BillingPaymentsManagement";
 import WardManagement from "./WardManagement";
+import RecordConsultationPage from "./RecordConsultationPage";
+import ConsultationViewPage from "./ConsultationViewPage";
 
 function PageRoutes() {
   const [user, setUser] = useState(null);
@@ -57,6 +59,8 @@ function PageRoutes() {
             <Route path="users" element={<AdminUsersManagement />} />
             <Route path="pharmacy" element={<PharmacyManagement />} />
             <Route path="appointments" element={<VisitsManagement />} />
+            <Route path="appointments/record-consultation" element={<RecordConsultationPage />} />
+            <Route path="appointments/consultation/:id" element={<ConsultationViewPage />} />
             <Route path="appointments/walk-in-patient" element={<WalkInPatientCreate />} />
             <Route path="patients" element={<PatientsManagement />} />
             <Route path="laboratory" element={<LaboratoryManagement />} />

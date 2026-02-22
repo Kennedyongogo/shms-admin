@@ -46,6 +46,8 @@ import {
   Science as ScienceIcon,
   LocalPharmacy as PharmacyIcon,
   Hotel as AdmitIcon,
+  Receipt as ReceiptIcon,
+  Payment as PaymentIcon,
 } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
 import Swal from "sweetalert2";
@@ -61,6 +63,7 @@ const API = {
   medications: "/api/medications",
   prescriptions: "/api/prescriptions",
   billing: "/api/billing",
+  payments: "/api/payments",
   admissions: "/api/admissions",
   beds: "/api/beds",
   wards: "/api/wards",
@@ -139,7 +142,7 @@ export default function VisitsManagement() {
     );
   };
 
-  const [tab, setTab] = useState(0); // 0 appointments, 1 consultations
+  const [tab, setTab] = useState(0); // 0 appointments, 1 consultations, 2 billing, 3 payment
 
   // Appointments list
   const apptReqId = useRef(0);
@@ -161,6 +164,26 @@ export default function VisitsManagement() {
   const [consSearch, setConsSearch] = useState("");
   const [consSearchLocked, setConsSearchLocked] = useState(true);
 
+  // Appointment Billing tab (bills with item_type=appointment only)
+  const mainBillsReqId = useRef(0);
+  const [mainBills, setMainBills] = useState([]);
+  const [mainBillsLoading, setMainBillsLoading] = useState(false);
+  const [mainBillsPage, setMainBillsPage] = useState(0);
+  const [mainBillsRowsPerPage, setMainBillsRowsPerPage] = useState(10);
+  const [mainBillsTotal, setMainBillsTotal] = useState(0);
+  const [mainBillView, setMainBillView] = useState({ open: false, bill: null, loading: false });
+  const [mainBillPayAmount, setMainBillPayAmount] = useState("");
+  const [mainBillPayMethod, setMainBillPayMethod] = useState("cash");
+  const [mainBillPaySaving, setMainBillPaySaving] = useState(false);
+
+  // Appointment Payment tab (payments for appointment bills only)
+  const mainPaymentsReqId = useRef(0);
+  const [mainPayments, setMainPayments] = useState([]);
+  const [mainPaymentsLoading, setMainPaymentsLoading] = useState(false);
+  const [mainPaymentsPage, setMainPaymentsPage] = useState(0);
+  const [mainPaymentsRowsPerPage, setMainPaymentsRowsPerPage] = useState(10);
+  const [mainPaymentsTotal, setMainPaymentsTotal] = useState(0);
+
   // Create appointment dialog (walk-in supported)
   const [createApptOpen, setCreateApptOpen] = useState(false);
   const [walkIn, setWalkIn] = useState(true);
@@ -180,15 +203,6 @@ export default function VisitsManagement() {
   const [serviceOptions, setServiceOptions] = useState([]);
   const [serviceLoading, setServiceLoading] = useState(false);
 
-  // Record consultation dialog
-  const [recordOpen, setRecordOpen] = useState(false);
-  const [recordForAppointment, setRecordForAppointment] = useState(null);
-  const [recordForm, setRecordForm] = useState({
-    symptoms: "",
-    diagnosis: "",
-    notes: "",
-  });
-
   // Appointment view/status dialog
   const [apptViewOpen, setApptViewOpen] = useState(false);
   const [apptViewLoading, setApptViewLoading] = useState(false);
@@ -197,6 +211,10 @@ export default function VisitsManagement() {
   const [apptStatusSaving, setApptStatusSaving] = useState(false);
   const [apptBilling, setApptBilling] = useState(null);
   const [apptBillingLoading, setApptBillingLoading] = useState(false);
+  const [apptViewInnerTab, setApptViewInnerTab] = useState(0); // 0 Details, 1 Billing & payment
+  const [apptBillItemAmount, setApptBillItemAmount] = useState("");
+  const [apptBillItemNote, setApptBillItemNote] = useState("");
+  const [apptBillItemSaving, setApptBillItemSaving] = useState(false);
 
   // Consultation view + actions
   const [consViewOpen, setConsViewOpen] = useState(false);
@@ -309,6 +327,100 @@ export default function VisitsManagement() {
     }
   };
 
+  const loadMainBills = async () => {
+    if (!requireTokenGuard()) return;
+    const reqId = ++mainBillsReqId.current;
+    setMainBillsLoading(true);
+    try {
+      const qs = new URLSearchParams({
+        page: String(mainBillsPage + 1),
+        limit: String(mainBillsRowsPerPage),
+        item_type: "appointment",
+      });
+      const data = await fetchJson(`${API.billing}?${qs.toString()}`, { token });
+      if (reqId !== mainBillsReqId.current) return;
+      setMainBills(data.data || []);
+      setMainBillsTotal(data.pagination?.total ?? (data.data?.length || 0));
+    } catch (e) {
+      if (reqId !== mainBillsReqId.current) return;
+      Swal.fire({ icon: "error", title: "Failed", text: e.message });
+      setMainBills([]);
+    } finally {
+      if (reqId === mainBillsReqId.current) setMainBillsLoading(false);
+    }
+  };
+
+  const loadMainPayments = async () => {
+    if (!requireTokenGuard()) return;
+    const reqId = ++mainPaymentsReqId.current;
+    setMainPaymentsLoading(true);
+    try {
+      const qs = new URLSearchParams({
+        page: String(mainPaymentsPage + 1),
+        limit: String(mainPaymentsRowsPerPage),
+        for_appointment: "1",
+      });
+      const data = await fetchJson(`${API.payments}?${qs.toString()}`, { token });
+      if (reqId !== mainPaymentsReqId.current) return;
+      setMainPayments(data.data || []);
+      setMainPaymentsTotal(data.pagination?.total ?? (data.data?.length || 0));
+    } catch (e) {
+      if (reqId !== mainPaymentsReqId.current) return;
+      Swal.fire({ icon: "error", title: "Failed", text: e.message });
+      setMainPayments([]);
+    } finally {
+      if (reqId === mainPaymentsReqId.current) setMainPaymentsLoading(false);
+    }
+  };
+
+  const openMainBillView = async (billId) => {
+    if (!billId) return;
+    setMainBillView({ open: true, bill: null, loading: true });
+    try {
+      const data = await fetchJson(`${API.billing}/${billId}`, { token });
+      const b = data?.data || null;
+      setMainBillView({ open: true, bill: b, loading: false });
+      const total = Number(b?.total_amount || 0);
+      const paid = Number(b?.paid_amount || 0);
+      const balance = Math.max(0, total - paid);
+      setMainBillPayAmount(String(balance > 0 ? balance : total));
+      setMainBillPayMethod("cash");
+    } catch (e) {
+      setMainBillView({ open: false, bill: null, loading: false });
+      Swal.fire({ icon: "error", title: "Failed", text: e.message });
+    }
+  };
+
+  const recordPaymentForMainBill = async () => {
+    const b = mainBillView.bill;
+    if (!b?.id) return;
+    const amountRaw = Number(mainBillPayAmount);
+    if (!Number.isFinite(amountRaw) || amountRaw <= 0) {
+      Swal.fire({ icon: "warning", title: "Invalid amount", text: "Enter a positive amount." });
+      return;
+    }
+    setMainBillPaySaving(true);
+    try {
+      await fetchJson(`${API.payments}/process`, {
+        method: "POST",
+        token,
+        body: {
+          bill_id: b.id,
+          amount_paid: amountRaw,
+          payment_method: mainBillPayMethod || "cash",
+          payment_date: new Date().toISOString(),
+        },
+      });
+      await openMainBillView(b.id);
+      await loadMainBills();
+      Swal.fire({ icon: "success", title: "Paid", text: "Payment recorded." });
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Payment failed", text: e.message });
+    } finally {
+      setMainBillPaySaving(false);
+    }
+  };
+
   useEffect(() => {
     loadAppointments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -318,6 +430,16 @@ export default function VisitsManagement() {
     loadConsultations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [consPage, consRowsPerPage]);
+
+  useEffect(() => {
+    if (tab === 2) loadMainBills();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, mainBillsPage, mainBillsRowsPerPage]);
+
+  useEffect(() => {
+    if (tab === 3) loadMainPayments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, mainPaymentsPage, mainPaymentsRowsPerPage]);
 
   // Debounced search
   useEffect(() => {
@@ -609,7 +731,7 @@ export default function VisitsManagement() {
           title: "Consultation already exists",
           text: "Opening the existing consultation instead.",
         });
-        openViewConsultation({ id: c.id });
+        navigate("/appointments/consultation/" + c.id);
         return;
       }
     } catch (e) {
@@ -620,22 +742,45 @@ export default function VisitsManagement() {
       }
     }
 
-    setRecordForAppointment(appt);
-    setRecordForm({ symptoms: "", diagnosis: "", notes: "" });
-    setRecordOpen(true);
+    navigate("/appointments/record-consultation", { state: { appointment: appt } });
+  };
+
+  const loadAppointmentBilling = async (appointmentId) => {
+    if (!requireTokenGuard()) return;
+    setApptBillingLoading(true);
+    try {
+      const qs = new URLSearchParams({
+        item_type: "appointment",
+        reference_id: String(appointmentId),
+      });
+      const data = await fetchJson(
+        `${API.billing}/by-reference?${qs.toString()}`,
+        { token },
+      );
+      setApptBilling(data?.data || null);
+    } catch {
+      setApptBilling(null);
+    } finally {
+      setApptBillingLoading(false);
+    }
   };
 
   const openViewAppointment = async (appt) => {
     if (!requireTokenGuard()) return;
     setApptViewOpen(true);
+    setApptViewInnerTab(0);
     setApptViewLoading(true);
     setApptView(null);
     setApptStatusDraft("");
+    setApptBilling(null);
+    setApptBillItemAmount("");
+    setApptBillItemNote("");
     try {
       const data = await fetchJson(`${API.appointments}/${appt.id}`, { token });
       const full = data?.data || null;
       setApptView(full);
       setApptStatusDraft(full?.status || "");
+      if (full?.id) loadAppointmentBilling(full.id);
     } catch (e) {
       Swal.fire({ icon: "error", title: "Failed", text: e.message });
       setApptViewOpen(false);
@@ -702,40 +847,171 @@ export default function VisitsManagement() {
     }
   };
 
-  const loadAppointmentBilling = async (appointmentId) => {
-    if (!requireTokenGuard()) return;
-    setApptBillingLoading(true);
+  const openBillingForAppointment = (appt) => {
+    if (!appt?.id) return;
+    setTab(2); // Switch to Billing tab on this page (Appointments | Consultations | Billing | Payment)
+  };
+
+  const payForAppointment = async (appt) => {
+    if (!requireTokenGuard()) return false;
+    if (!appt?.id) return false;
+    const patientId = appt?.patient?.id || appt?.patient_id;
+    if (!patientId) {
+      Swal.fire({ icon: "error", title: "Missing patient", text: "Cannot record payment without patient." });
+      return false;
+    }
+    const defaultAmount =
+      appt?.service?.price != null && appt?.service?.price !== ""
+        ? String(appt.service.price)
+        : String(apptBilling?.balance ?? apptBilling?.total_amount ?? appt?.bill_amount ?? "0");
+    const ask = await Swal.fire({
+      icon: "question",
+      title: "Record payment",
+      html: `
+        <label for="swal-amount" style="display:block; text-align:left; margin-bottom:4px;">Amount to pay</label>
+        <input id="swal-amount" class="swal2-input" type="number" min="0" step="0.01" value="${defaultAmount}" style="margin-bottom:12px" />
+        <label for="swal-method" style="display:block; text-align:left; margin-bottom:4px;">Payment method</label>
+        <select id="swal-method" class="swal2-input" style="width:100%; margin:0; box-sizing:border-box;">
+          <option value="cash">Cash</option>
+          <option value="mpesa">M-Pesa</option>
+          <option value="card">Card</option>
+          <option value="bank_transfer">Bank transfer</option>
+          <option value="other">Other</option>
+        </select>
+      `,
+      showCancelButton: true,
+      confirmButtonText: "Record payment",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+      preConfirm: () => {
+        const raw = document.getElementById("swal-amount")?.value;
+        const n = Number(raw);
+        if (!Number.isFinite(n) || n < 0) {
+          Swal.showValidationMessage("Enter a valid amount");
+          return undefined;
+        }
+        const method = document.getElementById("swal-method")?.value || "cash";
+        return { amount: n, payment_method: method };
+      },
+    });
+    if (!ask.isConfirmed || !ask.value) return false;
+    const { amount, payment_method } = ask.value;
+
     try {
       const qs = new URLSearchParams({
         item_type: "appointment",
-        reference_id: String(appointmentId),
+        reference_id: String(appt.id),
       });
-      const data = await fetchJson(
+      const billingRes = await fetchJson(
         `${API.billing}/by-reference?${qs.toString()}`,
         { token },
       );
-      setApptBilling(data?.data || null);
-    } catch {
-      setApptBilling(null);
-    } finally {
-      setApptBillingLoading(false);
+      let billId = billingRes?.data?.bill_id ?? null;
+
+      if (!billId) {
+        const billRes = await fetchJson(`${API.billing}/generate`, {
+          method: "POST",
+          token,
+          body: { patient_id: patientId },
+        });
+        billId = billRes?.data?.id;
+        if (billId) {
+          await fetchJson(`${API.billing}/${billId}/items`, {
+            method: "POST",
+            token,
+            body: {
+              items: [{ item_type: "appointment", reference_id: appt.id, amount: amount || 0 }],
+            },
+          });
+        }
+      }
+
+      if (!billId) {
+        Swal.fire({ icon: "error", title: "Failed", text: "Could not get or create bill." });
+        return false;
+      }
+
+      await fetchJson(`${API.payments}/process`, {
+        method: "POST",
+        token,
+        body: {
+          bill_id: billId,
+          amount_paid: amount,
+          payment_method: payment_method || "cash",
+          payment_date: new Date().toISOString(),
+        },
+      });
+      Swal.fire({ icon: "success", title: "Payment recorded", text: "Appointment will be confirmed automatically if the bill is fully paid." });
+      return true;
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Payment failed", text: e?.message ?? "Something went wrong." });
+      return false;
     }
   };
 
-  const openBillingForAppointment = (appt) => {
-    if (!appt?.id) return;
-    const patientId = appt?.patient?.id || appt?.patient_id;
-    const amount = appt?.service?.price != null && appt?.service?.price !== "" ? appt.service.price : null;
-    navigate("/billing", {
-      state: {
-        billingPrefill: {
-          item_type: "appointment",
-          reference_id: appt.id,
-          patient_id: patientId || null,
-          amount,
+  const createBillForAppointment = async () => {
+    if (!requireTokenGuard() || !apptView?.id) return;
+    const patientId = apptView?.patient?.id || apptView?.patient_id;
+    if (!patientId) {
+      Swal.fire({ icon: "warning", title: "Missing patient", text: "Cannot create bill without patient." });
+      return;
+    }
+    const amount = Number(apptView?.service?.price ?? apptView?.bill_amount ?? 0);
+    if (!Number.isFinite(amount) || amount < 0) {
+      Swal.fire({ icon: "warning", title: "Invalid amount", text: "Set a valid amount (e.g. from service or enter in next step)." });
+      return;
+    }
+    try {
+      const billRes = await fetchJson(`${API.billing}/generate`, {
+        method: "POST",
+        token,
+        body: { patient_id: patientId },
+      });
+      const billId = billRes?.data?.id;
+      if (!billId) throw new Error("No bill id returned");
+      await fetchJson(`${API.billing}/${billId}/items`, {
+        method: "POST",
+        token,
+        body: {
+          items: [{ item_type: "appointment", reference_id: String(apptView.id), amount }],
         },
-      },
-    });
+      });
+      await loadAppointmentBilling(apptView.id);
+      setApptBillItemAmount("");
+      setApptBillItemNote("");
+      Swal.fire({ icon: "success", title: "Bill created", text: "You can add more items and record payment below." });
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Failed", text: e.message });
+    }
+  };
+
+  const addAppointmentBillItem = async () => {
+    if (!requireTokenGuard() || !apptBilling?.bill_id || !apptView?.id) return;
+    const amount = Number(apptBillItemAmount);
+    if (!Number.isFinite(amount) || amount < 0) {
+      Swal.fire({ icon: "warning", title: "Invalid amount", text: "Enter a valid amount." });
+      return;
+    }
+    setApptBillItemSaving(true);
+    try {
+      await fetchJson(`${API.billing}/${apptBilling.bill_id}/items`, {
+        method: "POST",
+        token,
+        body: {
+          items: [
+            { item_type: "service", reference_id: (apptBillItemNote || "").trim() || null, amount },
+          ],
+        },
+      });
+      await loadAppointmentBilling(apptView.id);
+      setApptBillItemAmount("");
+      setApptBillItemNote("");
+      Swal.fire({ icon: "success", title: "Item added", timer: 900, showConfirmButton: false });
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Failed", text: e.message });
+    } finally {
+      setApptBillItemSaving(false);
+    }
   };
 
   const openViewConsultation = async (c) => {
@@ -1036,55 +1312,6 @@ export default function VisitsManagement() {
     }
   };
 
-  const recordConsultation = async () => {
-    if (!requireTokenGuard()) return;
-    if (!recordForAppointment?.id) return;
-    try {
-      await fetchJson(`${API.consultations}/record`, {
-        method: "POST",
-        token,
-        body: {
-          appointment_id: recordForAppointment.id,
-          symptoms: recordForm.symptoms || null,
-          diagnosis: recordForm.diagnosis || null,
-          notes: recordForm.notes || null,
-        },
-      });
-      setRecordOpen(false);
-      Swal.fire({
-        icon: "success",
-        title: "Saved",
-        text: "Consultation recorded.",
-      });
-      await loadConsultations();
-    } catch (e) {
-      if (Number(e?.status) === 402 && e?.data?.code === "PAYMENT_REQUIRED") {
-        const ask = await Swal.fire({
-          icon: "warning",
-          title: "Payment required",
-          text: e.message,
-          showCancelButton: true,
-          confirmButtonText: "Open billing",
-          cancelButtonText: "Cancel",
-          reverseButtons: true,
-        });
-        if (ask.isConfirmed) {
-          openBillingForAppointment(recordForAppointment);
-        }
-        return;
-      }
-      if (Number(e?.status) === 409 && e?.data?.code === "APPOINTMENT_NOT_CONFIRMED") {
-        Swal.fire({
-          icon: "info",
-          title: "Not confirmed",
-          text: "This appointment is not confirmed yet. Record payment first, then try again.",
-        });
-        return;
-      }
-      Swal.fire({ icon: "error", title: "Failed", text: e.message });
-    }
-  };
-
   return (
     <Box sx={{ width: "100%" }}>
       <Card
@@ -1149,6 +1376,8 @@ export default function VisitsManagement() {
                   onClick={() => {
                     loadAppointments();
                     loadConsultations();
+                    if (tab === 2) loadMainBills();
+                    if (tab === 3) loadMainPayments();
                   }}
                   sx={{
                     color: "white",
@@ -1218,6 +1447,16 @@ export default function VisitsManagement() {
               icon={<NoteAddIcon />}
               iconPosition="start"
               label="Consultations"
+            />
+            <Tab
+              icon={<ReceiptIcon />}
+              iconPosition="start"
+              label="Billing"
+            />
+            <Tab
+              icon={<PaymentIcon />}
+              iconPosition="start"
+              label="Payment"
             />
           </Tabs>
           <Divider />
@@ -1510,7 +1749,7 @@ export default function VisitsManagement() {
                           <TableCell align="right">
                             <Tooltip title="View">
                               <IconButton
-                                onClick={() => openViewConsultation(c)}
+                                onClick={() => navigate("/appointments/consultation/" + c.id)}
                                 size="small"
                               >
                                 <VisibilityIcon fontSize="inherit" />
@@ -1546,8 +1785,224 @@ export default function VisitsManagement() {
               />
             </Box>
           )}
+
+          {tab === 2 && (
+            <Box sx={{ p: 2 }}>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
+                Bills for appointments only. Lab order bills are in Laboratory → Billing.
+              </Typography>
+              <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
+                      <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>Patient</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>Total</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>Paid</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>Balance</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>Status</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>Created</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800 }}>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {mainBillsLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={8} sx={{ py: 4 }}>
+                          <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
+                            <CircularProgress size={18} />
+                            <Typography color="text.secondary">Loading bills…</Typography>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    ) : mainBills.length ? (
+                      mainBills.map((b, idx) => {
+                        const patientName = b?.patient?.full_name || b?.patient?.user?.full_name || "—";
+                        const total = Number(b?.total_amount ?? 0);
+                        const paidAmt = Number(b?.paid_amount ?? 0);
+                        const balance = Math.max(0, total - paidAmt);
+                        const status = b?.paid ? "paid" : (b?.status || "unpaid");
+                        return (
+                          <TableRow key={b.id} hover>
+                            <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>
+                              {mainBillsPage * mainBillsRowsPerPage + idx + 1}
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>{patientName}</TableCell>
+                            <TableCell>{total.toFixed(2)}</TableCell>
+                            <TableCell>{paidAmt.toFixed(2)}</TableCell>
+                            <TableCell>{balance.toFixed(2)}</TableCell>
+                            <TableCell>
+                              <Chip size="small" label={status} color={status === "paid" ? "success" : status === "partial" ? "warning" : "default"} />
+                            </TableCell>
+                            <TableCell>{formatDateTime(b.createdAt)}</TableCell>
+                            <TableCell align="right">
+                              <Button size="small" variant="outlined" onClick={() => openMainBillView(b.id)} sx={{ mr: 0.5 }}>View</Button>
+                              {balance > 0 && (
+                                <Button size="small" variant="contained" onClick={() => openMainBillView(b.id)}>Record payment</Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={8}>
+                          <Typography sx={{ py: 2 }} color="text.secondary">No appointment bills yet.</Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <TablePagination
+                component="div"
+                count={mainBillsTotal}
+                page={mainBillsPage}
+                onPageChange={(_, p) => setMainBillsPage(p)}
+                rowsPerPage={mainBillsRowsPerPage}
+                onRowsPerPageChange={(e) => { setMainBillsRowsPerPage(parseInt(e.target.value, 10)); setMainBillsPage(0); }}
+                rowsPerPageOptions={[5, 10, 25, 50]}
+              />
+            </Box>
+          )}
+
+          {tab === 3 && (
+            <Box sx={{ p: 2 }}>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
+                Payments recorded for appointment bills.
+              </Typography>
+              <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
+                      <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>Patient</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>Amount</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>Method</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>Bill</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {mainPaymentsLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} sx={{ py: 4 }}>
+                          <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
+                            <CircularProgress size={18} />
+                            <Typography color="text.secondary">Loading payments…</Typography>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    ) : mainPayments.length ? (
+                      mainPayments.map((p, idx) => {
+                        const patientName = p?.bill?.patient?.full_name || p?.bill?.patient?.user?.full_name || "—";
+                        return (
+                          <TableRow key={p.id} hover>
+                            <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>
+                              {mainPaymentsPage * mainPaymentsRowsPerPage + idx + 1}
+                            </TableCell>
+                            <TableCell>{formatDateTime(p.payment_date || p.createdAt)}</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>{patientName}</TableCell>
+                            <TableCell>{Number(p.amount_paid ?? 0).toFixed(2)}</TableCell>
+                            <TableCell>{p.payment_method || "—"}</TableCell>
+                            <TableCell sx={{ fontSize: "0.85rem", color: "text.secondary" }}>
+                              {p.bill_id ? `#${String(p.bill_id).slice(0, 8)}` : "—"}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6}>
+                          <Typography sx={{ py: 2 }} color="text.secondary">No payments for appointments yet. Record payment from the Billing tab.</Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <TablePagination
+                component="div"
+                count={mainPaymentsTotal}
+                page={mainPaymentsPage}
+                onPageChange={(_, p) => setMainPaymentsPage(p)}
+                rowsPerPage={mainPaymentsRowsPerPage}
+                onRowsPerPageChange={(e) => { setMainPaymentsRowsPerPage(parseInt(e.target.value, 10)); setMainPaymentsPage(0); }}
+                rowsPerPageOptions={[5, 10, 25, 50]}
+              />
+            </Box>
+          )}
         </CardContent>
       </Card>
+
+      {/* Appointment bill view & record payment */}
+      <Dialog
+        open={mainBillView.open}
+        onClose={() => setMainBillView({ open: false, bill: null, loading: false })}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle sx={{ fontWeight: 900 }}>Appointment bill</DialogTitle>
+        <DialogContent dividers>
+          {mainBillView.loading ? (
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
+              <CircularProgress size={18} />
+              <Typography color="text.secondary">Loading…</Typography>
+            </Stack>
+          ) : mainBillView.bill ? (
+            <Stack spacing={2}>
+              <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
+                <Typography variant="subtitle2" color="text.secondary">Bill #{mainBillView.bill.id?.slice(0, 8)}</Typography>
+                <Typography sx={{ fontWeight: 800 }}>
+                  Patient: {mainBillView.bill.patient?.full_name || mainBillView.bill.patient?.user?.full_name || "—"}
+                </Typography>
+                <Typography>
+                  Total: {Number(mainBillView.bill.total_amount ?? 0).toFixed(2)} • Paid: {Number(mainBillView.bill.paid_amount ?? 0).toFixed(2)} • Balance: {Number(mainBillView.bill.balance ?? 0).toFixed(2)}
+                </Typography>
+                <Chip
+                  size="small"
+                  label={mainBillView.bill.paid ? "paid" : (mainBillView.bill.status || "unpaid")}
+                  color={mainBillView.bill.paid ? "success" : "default"}
+                  sx={{ mt: 0.5 }}
+                />
+              </Box>
+              {Number(mainBillView.bill.balance ?? 0) > 0 && (
+                <>
+                  <Divider />
+                  <Typography sx={{ fontWeight: 800 }}>Record payment</Typography>
+                  <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }}>
+                    <TextField
+                      size="small"
+                      label="Amount"
+                      type="number"
+                      value={mainBillPayAmount}
+                      onChange={(e) => setMainBillPayAmount(e.target.value)}
+                      inputProps={{ min: 0, step: 0.01 }}
+                      sx={{ width: { xs: "100%", sm: 140 } }}
+                    />
+                    <FormControl size="small" sx={{ minWidth: { xs: "100%", sm: 160 } }}>
+                      <InputLabel>Method</InputLabel>
+                      <Select value={mainBillPayMethod} label="Method" onChange={(e) => setMainBillPayMethod(e.target.value)}>
+                        <MenuItem value="cash">Cash</MenuItem>
+                        <MenuItem value="card">Card</MenuItem>
+                        <MenuItem value="mobile">Mobile</MenuItem>
+                        <MenuItem value="insurance">Insurance</MenuItem>
+                        <MenuItem value="other">Other</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <Button variant="contained" onClick={recordPaymentForMainBill} disabled={mainBillPaySaving} sx={{ fontWeight: 800 }}>
+                      {mainBillPaySaving ? "Recording…" : "Record payment"}
+                    </Button>
+                  </Stack>
+                </>
+              )}
+            </Stack>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setMainBillView({ open: false, bill: null, loading: false })}>Close</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Create appointment */}
       <Dialog
@@ -1675,70 +2130,7 @@ export default function VisitsManagement() {
         </DialogActions>
       </Dialog>
 
-      {/* Record consultation */}
-      <Dialog
-        open={recordOpen}
-        onClose={() => setRecordOpen(false)}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle sx={{ fontWeight: 900 }}>Record Consultation</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <Chip
-              label={`Appointment: ${recordForAppointment?.patient?.full_name || recordForAppointment?.patient?.user?.full_name || ""} • ${formatDateTime(
-                recordForAppointment?.appointment_date,
-              )}`}
-              sx={{ bgcolor: "rgba(0, 137, 123, 0.08)", fontWeight: 800 }}
-            />
-            <TextField
-              label="Symptoms"
-              value={recordForm.symptoms}
-              onChange={(e) =>
-                setRecordForm((p) => ({ ...p, symptoms: e.target.value }))
-              }
-              fullWidth
-              multiline
-              minRows={2}
-            />
-            <TextField
-              label="Diagnosis"
-              value={recordForm.diagnosis}
-              onChange={(e) =>
-                setRecordForm((p) => ({ ...p, diagnosis: e.target.value }))
-              }
-              fullWidth
-              multiline
-              minRows={2}
-            />
-            <TextField
-              label="Notes"
-              value={recordForm.notes}
-              onChange={(e) =>
-                setRecordForm((p) => ({ ...p, notes: e.target.value }))
-              }
-              fullWidth
-              multiline
-              minRows={3}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setRecordOpen(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={recordConsultation}
-            sx={{
-              bgcolor: theme.palette.primary.main,
-              "&:hover": { bgcolor: theme.palette.primary.dark },
-            }}
-          >
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Appointment view + status */}
+      {/* Appointment view + status + Billing tab */}
       <Dialog
         open={apptViewOpen}
         onClose={() => setApptViewOpen(false)}
@@ -1760,64 +2152,155 @@ export default function VisitsManagement() {
           ) : !apptView ? (
             <Typography color="text.secondary">No data.</Typography>
           ) : (
-            <Stack spacing={2} sx={{ mt: 1 }}>
-              {!isAdmin && !isAssignedDoctor(apptView) && (
-                <Alert severity="info">
-                  You can view this appointment, but only the assigned doctor
-                  (or admin) can update its status.
-                </Alert>
-              )}
-              <Typography sx={{ fontWeight: 900 }}>
-                {apptView.patient?.full_name ||
-                  apptView.patient?.user?.full_name ||
-                  "Patient"}{" "}
-                • {formatDateTime(apptView.appointment_date)}
-              </Typography>
-              <Typography color="text.secondary">
-                Doctor:{" "}
-                {apptView.doctor?.user?.full_name ||
-                  apptView.doctor?.staff_type ||
-                  "—"}
-              </Typography>
-              <Typography color="text.secondary">
-                Service: {apptView.service?.name || "—"}
-                {apptView.service?.price != null &&
-                apptView.service?.price !== ""
-                  ? ` • ${apptView.service.price}`
-                  : ""}
-              </Typography>
-
-              <FormControl
-                fullWidth
-                size="small"
-                disabled={
-                  ["completed", "cancelled"].includes(apptView.status) ||
-                  (!isAdmin && !isAssignedDoctor(apptView))
-                }
+            <>
+              <Tabs
+                value={apptViewInnerTab}
+                onChange={(_, v) => setApptViewInnerTab(v)}
+                sx={{
+                  mb: 2,
+                  minHeight: 40,
+                  "& .MuiTabs-indicator": { backgroundColor: theme.palette.primary.main },
+                }}
               >
-                <InputLabel>Status</InputLabel>
-                <Select
-                  label="Status"
-                  value={apptStatusDraft || apptView.status}
-                  onChange={(e) => setApptStatusDraft(e.target.value)}
-                >
-                  {[apptView.status, ...allowedNextStatuses(apptView.status)]
-                    .filter(Boolean)
-                    .filter((v, i, arr) => arr.indexOf(v) === i)
-                    .map((s) => (
-                      <MenuItem key={s} value={s}>
-                        {s}
-                      </MenuItem>
-                    ))}
-                </Select>
-              </FormControl>
+                <Tab icon={<EventNoteIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Details" />
+                <Tab icon={<ReceiptIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Billing & payment" />
+              </Tabs>
 
-              {["completed", "cancelled"].includes(apptView.status) && (
-                <Alert severity="info">
-                  This appointment is {apptView.status} and cannot be changed.
-                </Alert>
+              {apptViewInnerTab === 0 && (
+                <Stack spacing={2} sx={{ mt: 1 }}>
+                  {!isAdmin && !isAssignedDoctor(apptView) && (
+                    <Alert severity="info">
+                      You can view this appointment, but only the assigned doctor (or admin) can update its status.
+                    </Alert>
+                  )}
+                  <Typography sx={{ fontWeight: 900 }}>
+                    {apptView.patient?.full_name || apptView.patient?.user?.full_name || "Patient"} • {formatDateTime(apptView.appointment_date)}
+                  </Typography>
+                  <Typography color="text.secondary">
+                    Doctor: {apptView.doctor?.user?.full_name || apptView.doctor?.staff_type || "—"}
+                  </Typography>
+                  <Typography color="text.secondary">
+                    Service: {apptView.service?.name || "—"}
+                    {apptView.service?.price != null && apptView.service?.price !== "" ? ` • ${apptView.service.price}` : ""}
+                  </Typography>
+                  <FormControl
+                    fullWidth
+                    size="small"
+                    disabled={["completed", "cancelled"].includes(apptView.status) || (!isAdmin && !isAssignedDoctor(apptView))}
+                  >
+                    <InputLabel>Status</InputLabel>
+                    <Select
+                      label="Status"
+                      value={apptStatusDraft || apptView.status}
+                      onChange={(e) => setApptStatusDraft(e.target.value)}
+                    >
+                      {[apptView.status, ...allowedNextStatuses(apptView.status)]
+                        .filter(Boolean)
+                        .filter((v, i, arr) => arr.indexOf(v) === i)
+                        .map((s) => (
+                          <MenuItem key={s} value={s}>{s}</MenuItem>
+                        ))}
+                    </Select>
+                  </FormControl>
+                  {["completed", "cancelled"].includes(apptView.status) && (
+                    <Alert severity="info">This appointment is {apptView.status} and cannot be changed.</Alert>
+                  )}
+                </Stack>
               )}
-            </Stack>
+
+              {apptViewInnerTab === 1 && (
+                <Stack spacing={2} sx={{ mt: 1 }}>
+                  <Typography variant="subtitle2" color="text.secondary">
+                    Bill and payment for this appointment. Record payment and add charges here.
+                  </Typography>
+                  {apptBillingLoading ? (
+                    <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
+                      <CircularProgress size={18} />
+                      <Typography color="text.secondary">Loading billing…</Typography>
+                    </Stack>
+                  ) : !apptBilling?.bill_id ? (
+                    <Stack spacing={1.5}>
+                      <Alert severity="info">
+                        No bill for this appointment yet. Walk-in appointments get a bill when created; otherwise create one below.
+                      </Alert>
+                      <Button
+                        variant="contained"
+                        onClick={createBillForAppointment}
+                        disabled={!(apptView?.patient?.id || apptView?.patient_id)}
+                        startIcon={<ReceiptIcon />}
+                        sx={{ fontWeight: 800 }}
+                      >
+                        Create bill for this appointment
+                      </Button>
+                    </Stack>
+                  ) : (
+                    <>
+                      <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
+                        <Stack spacing={0.5}>
+                          <Typography variant="subtitle2" color="text.secondary">Bill #{apptBilling.bill_id}</Typography>
+                          <Typography sx={{ fontWeight: 800 }}>
+                            Total: {Number(apptBilling.total_amount ?? 0).toFixed(2)} • Paid: {Number(apptBilling.paid_amount ?? 0).toFixed(2)} • Balance: {Number(apptBilling.balance ?? 0).toFixed(2)}
+                          </Typography>
+                          <Chip
+                            size="small"
+                            label={apptBilling.status || "unpaid"}
+                            color={apptBilling.status === "paid" ? "success" : apptBilling.status === "partial" ? "warning" : "default"}
+                            sx={{ alignSelf: "flex-start", mt: 0.5 }}
+                          />
+                        </Stack>
+                      </Box>
+
+                      {apptBilling.status !== "paid" && Number(apptBilling.balance ?? 0) > 0 && (
+                        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }} sx={{ flexWrap: "wrap" }}>
+                          <TextField
+                            size="small"
+                            label="Amount"
+                            type="number"
+                            value={apptBillItemAmount}
+                            onChange={(e) => setApptBillItemAmount(e.target.value)}
+                            inputProps={{ min: 0, step: 0.01 }}
+                            sx={{ width: { xs: "100%", sm: 130 } }}
+                          />
+                          <TextField
+                            size="small"
+                            label="Note (optional)"
+                            placeholder="e.g. extra service"
+                            value={apptBillItemNote}
+                            onChange={(e) => setApptBillItemNote(e.target.value)}
+                            sx={{ flex: { xs: "none", sm: "1 1 180px" }, minWidth: 0 }}
+                          />
+                          <Button
+                            variant="outlined"
+                            onClick={addAppointmentBillItem}
+                            disabled={apptBillItemSaving}
+                            sx={{ fontWeight: 800, flexShrink: 0 }}
+                          >
+                            {apptBillItemSaving ? "Adding…" : "Add billing item"}
+                          </Button>
+                        </Stack>
+                      )}
+
+                      {(apptBilling.status !== "paid" || Number(apptBilling.balance ?? 0) > 0) && (
+                        <Button
+                          variant="contained"
+                          startIcon={<PaymentIcon />}
+                          onClick={async () => {
+                            const paid = await payForAppointment(apptView);
+                            if (paid && apptView?.id) {
+                              await loadAppointments();
+                              setApptViewOpen(false);
+                            }
+                          }}
+                          sx={{ fontWeight: 800 }}
+                        >
+                          Record payment
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </Stack>
+              )}
+            </>
           )}
         </DialogContent>
         <DialogActions>

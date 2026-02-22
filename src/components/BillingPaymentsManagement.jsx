@@ -101,13 +101,15 @@ function isUuidLike(value) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value).trim());
 }
 
-export default function BillingPaymentsManagement() {
+export default function BillingPaymentsManagement({ embedded = false, singleTab = null }) {
+  // singleTab: 0 = billing only, 1 = payments only, null = show both (inner tabs)
   const theme = useTheme();
   const token = getToken();
   const location = useLocation();
   const navigate = useNavigate();
 
   const [tab, setTab] = useState(0); // 0 billing, 1 payments
+  const effectiveTab = singleTab !== null && singleTab !== undefined ? singleTab : tab;
 
   // Bills (paginated)
   const billsReqId = useRef(0);
@@ -269,14 +271,14 @@ export default function BillingPaymentsManagement() {
   };
 
   useEffect(() => {
-    if (tab === 0) loadBills();
+    if (tab === 0 || singleTab === 0) loadBills();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, billsPage, billsRowsPerPage, billsSearch, billsStatus]);
+  }, [tab, singleTab, billsPage, billsRowsPerPage, billsSearch, billsStatus]);
 
   useEffect(() => {
-    if (tab === 1) loadPayments();
+    if (tab === 1 || singleTab === 1) loadPayments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, paymentsPage, paymentsRowsPerPage, paymentsSearch, paymentsMethod]);
+  }, [tab, singleTab, paymentsPage, paymentsRowsPerPage, paymentsSearch, paymentsMethod]);
 
   const openBillById = async (billId) => {
     if (!billId) return;
@@ -305,7 +307,7 @@ export default function BillingPaymentsManagement() {
 
   useEffect(() => {
     const prefill = location?.state?.billingPrefill;
-    if (!prefill || !token) return;
+    if (!prefill || !token || embedded) return;
     setTab(0);
 
     (async () => {
@@ -422,52 +424,23 @@ export default function BillingPaymentsManagement() {
     }
   };
 
-  return (
-    <Card sx={{ borderRadius: 3, overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.08)" }}>
-      <Box
-        sx={{
-          p: 2.5,
-          background: heroGradient,
-          color: "white",
-        }}
-      >
-        <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }} justifyContent="space-between">
-          <Stack spacing={0.5}>
-            <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: 0.2 }}>
-              Billing & Payments
-            </Typography>
-          </Stack>
-          <Button
-            variant="outlined"
-            startIcon={<RefreshIcon />}
-            onClick={() => {
-              if (tab === 0) loadBills();
-              if (tab === 1) loadPayments();
-            }}
-            sx={{
-              borderColor: "rgba(255,255,255,0.55)",
-              color: "white",
-              fontWeight: 800,
-              "&:hover": { borderColor: "rgba(255,255,255,0.85)", bgcolor: "rgba(255,255,255,0.08)" },
-            }}
+  const tabsAndContent = (
+    <>
+      {singleTab == null && (
+        <>
+          <Tabs
+            value={tab}
+            onChange={(_, v) => setTab(v)}
+            sx={{ px: 2, "& .MuiTabs-indicator": { backgroundColor: theme.palette.primary.main } }}
           >
-            Refresh
-          </Button>
-        </Stack>
-      </Box>
+            <Tab icon={<ReceiptLongIcon />} iconPosition="start" label="Billing" />
+            <Tab icon={<PaymentsIcon />} iconPosition="start" label="Payments" />
+          </Tabs>
+          <Divider />
+        </>
+      )}
 
-      <CardContent sx={{ p: 0 }}>
-        <Tabs
-          value={tab}
-          onChange={(_, v) => setTab(v)}
-          sx={{ px: 2, "& .MuiTabs-indicator": { backgroundColor: theme.palette.primary.main } }}
-        >
-          <Tab icon={<ReceiptLongIcon />} iconPosition="start" label="Billing" />
-          <Tab icon={<PaymentsIcon />} iconPosition="start" label="Payments" />
-        </Tabs>
-        <Divider />
-
-        {tab === 0 && (
+      {effectiveTab === 0 && (
           <Box sx={{ p: 2 }}>
             <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems={{ md: "center" }} sx={{ mb: 2 }}>
               <TextField
@@ -498,35 +471,6 @@ export default function BillingPaymentsManagement() {
                   <MenuItem value="cancelled">Cancelled</MenuItem>
                 </Select>
               </FormControl>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={async () => {
-                  const ask = await Swal.fire({
-                    icon: "question",
-                    title: "Create bill",
-                    input: "text",
-                    inputLabel: "Patient ID",
-                    inputPlaceholder: "patient_id (UUID)",
-                    showCancelButton: true,
-                    confirmButtonText: "Create",
-                    cancelButtonText: "Cancel",
-                    reverseButtons: true,
-                    inputValidator: (v) => (!String(v || "").trim() ? "patient_id is required" : undefined),
-                  });
-                  if (!ask.isConfirmed) return;
-                  try {
-                    const bill = await createBill({ patient_id: String(ask.value).trim() });
-                    await loadBills();
-                    if (bill?.id) await openBillById(bill.id);
-                  } catch (e) {
-                    Swal.fire({ icon: "error", title: "Failed", text: e.message });
-                  }
-                }}
-                sx={{ fontWeight: 900, minWidth: { xs: "100%", md: 160 } }}
-              >
-                New Bill
-              </Button>
             </Stack>
 
             <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
@@ -620,7 +564,7 @@ export default function BillingPaymentsManagement() {
           </Box>
         )}
 
-        {tab === 1 && (
+        {effectiveTab === 1 && (
           <Box sx={{ p: 2 }}>
             <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems={{ md: "center" }} sx={{ mb: 2 }}>
               <TextField
@@ -669,7 +613,6 @@ export default function BillingPaymentsManagement() {
                     <TableCell sx={{ fontWeight: 900, width: 64 }}>No</TableCell>
                     <TableCell sx={{ fontWeight: 900 }}>Date</TableCell>
                     <TableCell sx={{ fontWeight: 900 }}>Patient</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Bill</TableCell>
                     <TableCell sx={{ fontWeight: 900 }}>Amount</TableCell>
                     <TableCell sx={{ fontWeight: 900 }}>Method</TableCell>
                   </TableRow>
@@ -677,7 +620,7 @@ export default function BillingPaymentsManagement() {
                 <TableBody>
                   {paymentsLoading ? (
                     <TableRow>
-                      <TableCell colSpan={6} sx={{ py: 4 }}>
+                      <TableCell colSpan={5} sx={{ py: 4 }}>
                         <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
                           <CircularProgress size={18} />
                           <Typography color="text.secondary">Loading payments…</Typography>
@@ -700,18 +643,6 @@ export default function BillingPaymentsManagement() {
                               {bill?.patient?.phone || bill?.patient?.email || bill?.patient?.user?.phone || bill?.patient?.user?.email || ""}
                             </Typography>
                           </TableCell>
-                          <TableCell>
-                            <Typography sx={{ fontWeight: 800 }}>
-                              {bill?.appointment_id ? "Appointment bill" : bill?.consultation_id ? "Consultation bill" : "Bill"}{" "}
-                              {bill?.total_amount != null ? `• ${money(bill.total_amount)}` : ""}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                              Ref: {shortId(p.bill_id)}
-                            </Typography>
-                            <Button size="small" variant="text" onClick={() => openBillById(p.bill_id)} sx={{ px: 0, mt: 0.5, fontWeight: 800 }}>
-                              View bill
-                            </Button>
-                          </TableCell>
                           <TableCell>{money(p.amount_paid)}</TableCell>
                           <TableCell>{p.payment_method}</TableCell>
                         </TableRow>
@@ -719,7 +650,7 @@ export default function BillingPaymentsManagement() {
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} sx={{ py: 3 }}>
+                      <TableCell colSpan={5} sx={{ py: 3 }}>
                         <Typography color="text.secondary">No payments found.</Typography>
                       </TableCell>
                     </TableRow>
@@ -742,8 +673,11 @@ export default function BillingPaymentsManagement() {
             />
           </Box>
         )}
-      </CardContent>
+      </>
+  );
 
+  const billViewDialog = (
+      <>
       {/* Bill view (payments are initiated here) */}
       <Dialog open={billView.open} onClose={() => setBillView({ open: false, loading: false, bill: null })} fullWidth maxWidth="md">
         <DialogTitle sx={{ fontWeight: 900 }}>Bill</DialogTitle>
@@ -769,11 +703,6 @@ export default function BillingPaymentsManagement() {
                     Reference: {shortId(billView.bill.id)}
                   </Typography>
                 </Box>
-                <Stack direction="row" spacing={1}>
-                  <Button variant="outlined" onClick={() => markBillPaidById(billView.bill.id)} disabled={billView.bill.paid} sx={{ fontWeight: 900 }}>
-                    Mark paid
-                  </Button>
-                </Stack>
               </Stack>
 
               <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
@@ -797,53 +726,6 @@ export default function BillingPaymentsManagement() {
                     <Typography sx={{ fontWeight: 900 }}>{money(billView.bill.balance)}</Typography>
                   </Box>
                 </Stack>
-              </Box>
-
-              <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
-                <Stack direction={{ xs: "column", md: "row" }} spacing={1} alignItems={{ md: "center" }} justifyContent="space-between">
-                  <Typography sx={{ fontWeight: 900 }}>Advanced</Typography>
-                  <FormControlLabel
-                    control={<Switch checked={showAdvanced} onChange={(e) => setShowAdvanced(e.target.checked)} />}
-                    label="Show manual bill item editor"
-                  />
-                </Stack>
-                {showAdvanced ? (
-                  <>
-                    <Divider sx={{ my: 1.5 }} />
-                    <Typography sx={{ fontWeight: 900, mb: 1 }}>Add bill item</Typography>
-                    <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems={{ md: "center" }}>
-                      <FormControl size="small" sx={{ minWidth: 220 }}>
-                        <InputLabel>Item type</InputLabel>
-                        <Select label="Item type" value={itemForm.item_type} onChange={(e) => setItemForm((p) => ({ ...p, item_type: e.target.value }))}>
-                          <MenuItem value="appointment">appointment</MenuItem>
-                          <MenuItem value="lab_order">lab_order</MenuItem>
-                          <MenuItem value="prescription">prescription</MenuItem>
-                          <MenuItem value="service">service</MenuItem>
-                          <MenuItem value="other">other</MenuItem>
-                        </Select>
-                      </FormControl>
-                      <TextField
-                        size="small"
-                        label="Reference (ID or note)"
-                        fullWidth
-                        value={itemForm.reference_id}
-                        onChange={(e) => setItemForm((p) => ({ ...p, reference_id: e.target.value }))}
-                        placeholder="optional: paste an ID OR type a short note"
-                      />
-                      <TextField size="small" label="Amount" value={itemForm.amount} onChange={(e) => setItemForm((p) => ({ ...p, amount: e.target.value }))} inputMode="decimal" sx={{ maxWidth: 220 }} />
-                      <Button variant="contained" onClick={addItemToBill} disabled={itemSaving} sx={{ fontWeight: 900, minWidth: 140 }}>
-                        {itemSaving ? "Adding…" : "Add item"}
-                      </Button>
-                    </Stack>
-                    <Alert severity="info" sx={{ mt: 1 }}>
-                      Only use this if you need to manually add/adjust charges. Most items are auto-created by the system.
-                    </Alert>
-                  </>
-                ) : (
-                  <Typography color="text.secondary" sx={{ mt: 1 }}>
-                    Hidden by default to keep billing simple.
-                  </Typography>
-                )}
               </Box>
 
               <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
@@ -942,24 +824,7 @@ export default function BillingPaymentsManagement() {
               </Box>
 
               <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
-                <Stack direction={{ xs: "column", md: "row" }} spacing={1} justifyContent="space-between" alignItems={{ md: "center" }} sx={{ mb: 1 }}>
-                  <Typography sx={{ fontWeight: 900 }}>Payments</Typography>
-                  <Stack direction={{ xs: "column", md: "row" }} spacing={1} alignItems={{ md: "center" }}>
-                    <TextField size="small" label="Amount" value={payForm.amount} onChange={(e) => setPayForm((p) => ({ ...p, amount: e.target.value }))} inputMode="decimal" sx={{ maxWidth: 200 }} />
-                    <FormControl size="small" sx={{ minWidth: 160 }}>
-                      <InputLabel>Method</InputLabel>
-                      <Select label="Method" value={payForm.method} onChange={(e) => setPayForm((p) => ({ ...p, method: e.target.value }))}>
-                        <MenuItem value="cash">cash</MenuItem>
-                        <MenuItem value="mpesa">mpesa</MenuItem>
-                        <MenuItem value="card">card</MenuItem>
-                        <MenuItem value="test">test</MenuItem>
-                      </Select>
-                    </FormControl>
-                    <Button variant="contained" onClick={takePaymentForOpenBill} disabled={paySaving || billView.bill.paid} sx={{ fontWeight: 900, minWidth: 160 }}>
-                      {paySaving ? "Processing…" : "Record payment"}
-                    </Button>
-                  </Stack>
-                </Stack>
+                <Typography sx={{ fontWeight: 900, mb: 1 }}>Payments</Typography>
                 <Table size="small">
                   <TableHead>
                     <TableRow>
@@ -998,6 +863,26 @@ export default function BillingPaymentsManagement() {
           </Button>
         </DialogActions>
       </Dialog>
+      </>
+  );
+
+  return embedded ? (
+    <Box sx={{ p: 0 }}>
+      {tabsAndContent}
+      {billViewDialog}
+    </Box>
+  ) : (
+    <Card sx={{ borderRadius: 3, overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.08)" }}>
+      <Box sx={{ p: 2.5, background: heroGradient, color: "white" }}>
+        <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }} justifyContent="space-between">
+          <Stack spacing={0.5}>
+            <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: 0.2 }}>Billing & Payments</Typography>
+          </Stack>
+          <Button variant="outlined" startIcon={<RefreshIcon />} onClick={() => { if (tab === 0) loadBills(); if (tab === 1) loadPayments(); }} sx={{ borderColor: "rgba(255,255,255,0.55)", color: "white", fontWeight: 800, "&:hover": { borderColor: "rgba(255,255,255,0.85)", bgcolor: "rgba(255,255,255,0.08)" } }}>Refresh</Button>
+        </Stack>
+      </Box>
+      <CardContent sx={{ p: 0 }}>{tabsAndContent}</CardContent>
+      {billViewDialog}
     </Card>
   );
 }

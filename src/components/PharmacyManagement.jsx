@@ -12,7 +12,11 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  FormControl,
   IconButton,
+  InputLabel,
+  MenuItem,
+  Select,
   Stack,
   Tab,
   Tabs,
@@ -37,6 +41,8 @@ import {
   LocalPharmacy as LocalPharmacyIcon,
   ReceiptLong as ReceiptLongIcon,
   Inventory as InventoryIcon,
+  Payment as PaymentIcon,
+  Receipt as ReceiptIcon,
 } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
 import Swal from "sweetalert2";
@@ -46,6 +52,7 @@ const API = {
   prescriptions: "/api/prescriptions",
   dispense: "/api/dispense",
   billing: "/api/billing",
+  payments: "/api/payments",
 };
 
 const getToken = () => localStorage.getItem("token");
@@ -95,7 +102,7 @@ export default function PharmacyManagement() {
   const navigate = useNavigate();
   const isAdmin = getRoleName() === "admin";
 
-  const [tab, setTab] = useState(0); // 0 meds, 1 prescriptions, 2 dispense
+  const [tab, setTab] = useState(0); // 0 meds, 1 prescriptions, 2 dispense, 3 billing, 4 payment
   const [toast, setToast] = useState({
     open: false,
     severity: "success",
@@ -144,6 +151,29 @@ export default function PharmacyManagement() {
   const [presBilling, setPresBilling] = useState(null);
   const [presBillingLoading, setPresBillingLoading] = useState(false);
   const [presDispensing, setPresDispensing] = useState(false);
+  const [presBillItemAmount, setPresBillItemAmount] = useState("");
+  const [presBillItemSaving, setPresBillItemSaving] = useState(false);
+  const [presPayAmount, setPresPayAmount] = useState("");
+  const [presPayMethod, setPresPayMethod] = useState("cash");
+  const [presPaySaving, setPresPaySaving] = useState(false);
+
+  // Pharmacy Billing tab (bills with item_type=prescription only)
+  const [pharmBills, setPharmBills] = useState([]);
+  const [pharmBillsLoading, setPharmBillsLoading] = useState(false);
+  const [pharmBillsPage, setPharmBillsPage] = useState(0);
+  const [pharmBillsRowsPerPage, setPharmBillsRowsPerPage] = useState(10);
+  const [pharmBillsTotal, setPharmBillsTotal] = useState(0);
+  const [pharmBillView, setPharmBillView] = useState({ open: false, bill: null, loading: false });
+  const [pharmBillPayAmount, setPharmBillPayAmount] = useState("");
+  const [pharmBillPayMethod, setPharmBillPayMethod] = useState("cash");
+  const [pharmBillPaySaving, setPharmBillPaySaving] = useState(false);
+
+  // Pharmacy Payment tab (payments for prescription bills only)
+  const [pharmPayments, setPharmPayments] = useState([]);
+  const [pharmPaymentsLoading, setPharmPaymentsLoading] = useState(false);
+  const [pharmPaymentsPage, setPharmPaymentsPage] = useState(0);
+  const [pharmPaymentsRowsPerPage, setPharmPaymentsRowsPerPage] = useState(10);
+  const [pharmPaymentsTotal, setPharmPaymentsTotal] = useState(0);
 
   // Dispense records
   const dispReqId = useRef(0);
@@ -281,6 +311,14 @@ export default function PharmacyManagement() {
     loadDispenses();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispPage, dispRowsPerPage]);
+  useEffect(() => {
+    if (tab === 3) loadPharmBills();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, pharmBillsPage, pharmBillsRowsPerPage]);
+  useEffect(() => {
+    if (tab === 4) loadPharmPayments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, pharmPaymentsPage, pharmPaymentsRowsPerPage]);
 
   // Debounced search
   useEffect(() => {
@@ -399,10 +437,15 @@ export default function PharmacyManagement() {
     if (!requireTokenGuard()) return;
     setPresView({ open: true, prescription: null, loading: true });
     setPresBilling(null);
+    setPresBillItemAmount("");
+    setPresPayAmount("");
     try {
       const data = await fetchJson(`${API.prescriptions}/${p.id}`, { token });
-      setPresView({ open: true, prescription: data.data, loading: false });
-      if (data?.data?.id) loadPrescriptionBilling(data.data.id);
+      const prescription = data.data;
+      setPresView({ open: true, prescription, loading: false });
+      const computed = (prescription?.items || []).reduce((sum, it) => sum + Number(it?.medication?.unit_price || 0), 0);
+      if (computed > 0) setPresBillItemAmount(String(computed));
+      if (prescription?.id) loadPrescriptionBilling(prescription.id);
     } catch (e) {
       setPresView({ open: false, prescription: null, loading: false });
       showToast("error", e.message);
@@ -421,7 +464,9 @@ export default function PharmacyManagement() {
         `${API.billing}/by-reference?${qs.toString()}`,
         { token },
       );
-      setPresBilling(data?.data || null);
+      const billing = data?.data || null;
+      setPresBilling(billing);
+      if (billing?.balance != null) setPresPayAmount(String(billing.balance));
     } catch {
       setPresBilling(null);
     } finally {
@@ -431,18 +476,184 @@ export default function PharmacyManagement() {
 
   const openBillingForPrescription = (prescription) => {
     if (!prescription?.id) return;
-    const patientId = prescription?.patient_id;
-    const computed = (prescription?.items || []).reduce((sum, it) => sum + Number(it?.medication?.unit_price || 0), 0);
-    navigate("/billing", {
-      state: {
-        billingPrefill: {
-          item_type: "prescription",
-          reference_id: prescription.id,
-          patient_id: patientId || null,
-          amount: computed || null,
+    setTab(3);
+    loadPharmBills();
+  };
+
+  const loadPharmBills = async () => {
+    if (!requireTokenGuard()) return;
+    setPharmBillsLoading(true);
+    try {
+      const qs = new URLSearchParams({
+        page: String(pharmBillsPage + 1),
+        limit: String(pharmBillsRowsPerPage),
+        item_type: "prescription",
+      });
+      const data = await fetchJson(`${API.billing}?${qs.toString()}`, { token });
+      setPharmBills(data.data || []);
+      setPharmBillsTotal(data.pagination?.total ?? (data.data?.length || 0));
+    } catch (e) {
+      showToast("error", e.message);
+      setPharmBills([]);
+    } finally {
+      setPharmBillsLoading(false);
+    }
+  };
+
+  const loadPharmPayments = async () => {
+    if (!requireTokenGuard()) return;
+    setPharmPaymentsLoading(true);
+    try {
+      const qs = new URLSearchParams({
+        page: String(pharmPaymentsPage + 1),
+        limit: String(pharmPaymentsRowsPerPage),
+        for_prescription: "1",
+      });
+      const data = await fetchJson(`${API.payments}?${qs.toString()}`, { token });
+      setPharmPayments(data.data || []);
+      setPharmPaymentsTotal(data.pagination?.total ?? (data.data?.length || 0));
+    } catch (e) {
+      showToast("error", e.message);
+      setPharmPayments([]);
+    } finally {
+      setPharmPaymentsLoading(false);
+    }
+  };
+
+  const openPharmBillView = async (billId) => {
+    if (!billId) return;
+    setPharmBillView({ open: true, bill: null, loading: true });
+    try {
+      const data = await fetchJson(`${API.billing}/${billId}`, { token });
+      const b = data?.data || null;
+      setPharmBillView({ open: true, bill: b, loading: false });
+      const total = Number(b?.total_amount || 0);
+      const paid = Number(b?.paid_amount || 0);
+      const balance = Math.max(0, total - paid);
+      setPharmBillPayAmount(String(balance > 0 ? balance : total));
+      setPharmBillPayMethod("cash");
+    } catch (e) {
+      setPharmBillView({ open: false, bill: null, loading: false });
+      showToast("error", e.message);
+    }
+  };
+
+  const recordPaymentForPharmBill = async () => {
+    const b = pharmBillView.bill;
+    if (!b?.id) return;
+    const amountRaw = Number(pharmBillPayAmount);
+    if (!Number.isFinite(amountRaw) || amountRaw <= 0) {
+      Swal.fire({ icon: "warning", title: "Invalid amount", text: "Enter a positive amount." });
+      return;
+    }
+    setPharmBillPaySaving(true);
+    try {
+      await fetchJson(`${API.payments}/process`, {
+        method: "POST",
+        token,
+        body: {
+          bill_id: b.id,
+          amount_paid: amountRaw,
+          payment_method: pharmBillPayMethod || "cash",
+          payment_date: new Date().toISOString(),
         },
-      },
-    });
+      });
+      await openPharmBillView(b.id);
+      await loadPharmBills();
+      showToast("success", "Payment recorded.");
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Payment failed", text: e.message });
+    } finally {
+      setPharmBillPaySaving(false);
+    }
+  };
+
+  const createBillForPrescription = async () => {
+    const prescription = presView.prescription;
+    if (!requireTokenGuard() || !prescription?.id || !prescription?.patient_id) return;
+    const computed = (prescription?.items || []).reduce((sum, it) => sum + Number(it?.medication?.unit_price || 0), 0);
+    const amount = Number(presBillItemAmount) || computed || 0;
+    if (amount <= 0) {
+      Swal.fire({ icon: "warning", title: "Invalid amount", text: "Enter a positive amount or ensure prescription has medications with prices." });
+      return;
+    }
+    setPresBillItemSaving(true);
+    try {
+      const billRes = await fetchJson(`${API.billing}/generate`, {
+        method: "POST",
+        token,
+        body: { patient_id: prescription.patient_id },
+      });
+      const billId = billRes?.data?.id;
+      if (!billId) throw new Error("Could not create bill.");
+      await fetchJson(`${API.billing}/${billId}/items`, {
+        method: "POST",
+        token,
+        body: { items: [{ item_type: "prescription", reference_id: String(prescription.id), amount }] },
+      });
+      await loadPrescriptionBilling(prescription.id);
+      setPresBillItemAmount("");
+      showToast("success", "Bill created. You can add more items and record payment below.");
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Failed", text: e.message });
+    } finally {
+      setPresBillItemSaving(false);
+    }
+  };
+
+  const addPrescriptionBillItem = async () => {
+    const prescription = presView.prescription;
+    if (!requireTokenGuard() || !presBilling?.bill_id || !prescription?.id) return;
+    const amount = Number(presBillItemAmount);
+    if (!Number.isFinite(amount) || amount < 0) {
+      Swal.fire({ icon: "warning", title: "Invalid amount", text: "Enter a non-negative amount." });
+      return;
+    }
+    setPresBillItemSaving(true);
+    try {
+      await fetchJson(`${API.billing}/${presBilling.bill_id}/items`, {
+        method: "POST",
+        token,
+        body: { items: [{ item_type: "prescription", reference_id: String(prescription.id), amount }] },
+      });
+      await loadPrescriptionBilling(prescription.id);
+      setPresBillItemAmount("");
+      showToast("success", "Bill item added.");
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Failed", text: e.message });
+    } finally {
+      setPresBillItemSaving(false);
+    }
+  };
+
+  const recordPaymentForPrescription = async () => {
+    const prescription = presView.prescription;
+    if (!requireTokenGuard() || !presBilling?.bill_id) return;
+    const amountRaw = Number(presPayAmount);
+    if (!Number.isFinite(amountRaw) || amountRaw <= 0) {
+      Swal.fire({ icon: "warning", title: "Invalid amount", text: "Enter a positive amount." });
+      return;
+    }
+    setPresPaySaving(true);
+    try {
+      await fetchJson(`${API.payments}/process`, {
+        method: "POST",
+        token,
+        body: {
+          bill_id: presBilling.bill_id,
+          amount_paid: amountRaw,
+          payment_method: presPayMethod || "cash",
+          payment_date: new Date().toISOString(),
+        },
+      });
+      await loadPrescriptionBilling(prescription?.id);
+      setPresPayAmount("");
+      showToast("success", "Payment recorded.");
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Payment failed", text: e.message });
+    } finally {
+      setPresPaySaving(false);
+    }
   };
 
   const dispensePrescription = async () => {
@@ -541,6 +752,8 @@ export default function PharmacyManagement() {
                     loadMedications();
                     loadPrescriptions();
                     loadDispenses();
+                    if (tab === 3) loadPharmBills();
+                    if (tab === 4) loadPharmPayments();
                   }}
                   sx={{
                     color: "white",
@@ -595,6 +808,16 @@ export default function PharmacyManagement() {
               icon={<LocalPharmacyIcon />}
               iconPosition="start"
               label="Dispense Records"
+            />
+            <Tab
+              icon={<ReceiptIcon />}
+              iconPosition="start"
+              label="Billing"
+            />
+            <Tab
+              icon={<PaymentIcon />}
+              iconPosition="start"
+              label="Payment"
             />
           </Tabs>
           <Divider />
@@ -993,8 +1216,219 @@ export default function PharmacyManagement() {
               />
             </Box>
           )}
+
+          {tab === 3 && (
+            <Box sx={{ p: 2 }}>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
+                Bills for prescriptions (pharmacy) only.
+              </Typography>
+              <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
+                      <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>Patient</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>Total</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>Paid</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>Balance</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>Status</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>Created</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800 }}>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {pharmBillsLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={8} sx={{ py: 4 }}>
+                          <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
+                            <CircularProgress size={18} />
+                            <Typography color="text.secondary">Loading bills…</Typography>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    ) : pharmBills.length ? (
+                      pharmBills.map((b, idx) => {
+                        const patientName = b?.patient?.full_name || b?.patient?.user?.full_name || "—";
+                        const total = Number(b?.total_amount ?? 0);
+                        const paidAmt = Number(b?.paid_amount ?? 0);
+                        const balance = Math.max(0, total - paidAmt);
+                        const status = b?.paid ? "paid" : (b?.status || "unpaid");
+                        return (
+                          <TableRow key={b.id} hover>
+                            <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>
+                              {pharmBillsPage * pharmBillsRowsPerPage + idx + 1}
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>{patientName}</TableCell>
+                            <TableCell>{total.toFixed(2)}</TableCell>
+                            <TableCell>{paidAmt.toFixed(2)}</TableCell>
+                            <TableCell>{balance.toFixed(2)}</TableCell>
+                            <TableCell>
+                              <Chip size="small" label={status} color={status === "paid" ? "success" : status === "partial" ? "warning" : "default"} />
+                            </TableCell>
+                            <TableCell>{formatDateTime(b.createdAt)}</TableCell>
+                            <TableCell align="right">
+                              <Button size="small" variant="outlined" onClick={() => openPharmBillView(b.id)} sx={{ mr: 0.5 }}>View</Button>
+                              {balance > 0 && (
+                                <Button size="small" variant="contained" onClick={() => openPharmBillView(b.id)}>Record payment</Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={8}>
+                          <Typography sx={{ py: 2 }} color="text.secondary">No prescription bills yet.</Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <TablePagination
+                component="div"
+                count={pharmBillsTotal}
+                page={pharmBillsPage}
+                onPageChange={(_, p) => setPharmBillsPage(p)}
+                rowsPerPage={pharmBillsRowsPerPage}
+                onRowsPerPageChange={(e) => { setPharmBillsRowsPerPage(parseInt(e.target.value, 10)); setPharmBillsPage(0); }}
+                rowsPerPageOptions={[5, 10, 25, 50]}
+              />
+            </Box>
+          )}
+
+          {tab === 4 && (
+            <Box sx={{ p: 2 }}>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
+                Payments recorded for prescription (pharmacy) bills.
+              </Typography>
+              <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
+                      <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>Patient</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>Amount</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>Method</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>Bill</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {pharmPaymentsLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} sx={{ py: 4 }}>
+                          <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
+                            <CircularProgress size={18} />
+                            <Typography color="text.secondary">Loading payments…</Typography>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    ) : pharmPayments.length ? (
+                      pharmPayments.map((p, idx) => {
+                        const patientName = p?.bill?.patient?.full_name || p?.bill?.patient?.user?.full_name || "—";
+                        return (
+                          <TableRow key={p.id} hover>
+                            <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>
+                              {pharmPaymentsPage * pharmPaymentsRowsPerPage + idx + 1}
+                            </TableCell>
+                            <TableCell>{formatDateTime(p.payment_date || p.createdAt)}</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>{patientName}</TableCell>
+                            <TableCell>{Number(p.amount_paid ?? 0).toFixed(2)}</TableCell>
+                            <TableCell>{p.payment_method || "—"}</TableCell>
+                            <TableCell sx={{ fontSize: "0.85rem", color: "text.secondary" }}>
+                              {p.bill_id ? `#${String(p.bill_id).slice(0, 8)}` : "—"}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6}>
+                          <Typography sx={{ py: 2 }} color="text.secondary">No payments for prescriptions yet. Record payment from the Billing tab or in View prescription.</Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <TablePagination
+                component="div"
+                count={pharmPaymentsTotal}
+                page={pharmPaymentsPage}
+                onPageChange={(_, p) => setPharmPaymentsPage(p)}
+                rowsPerPage={pharmPaymentsRowsPerPage}
+                onRowsPerPageChange={(e) => { setPharmPaymentsRowsPerPage(parseInt(e.target.value, 10)); setPharmPaymentsPage(0); }}
+                rowsPerPageOptions={[5, 10, 25, 50]}
+              />
+            </Box>
+          )}
         </CardContent>
       </Card>
+
+      {/* Pharmacy bill view & record payment */}
+      <Dialog
+        open={pharmBillView.open}
+        onClose={() => setPharmBillView({ open: false, bill: null, loading: false })}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle sx={{ fontWeight: 900 }}>Prescription bill</DialogTitle>
+        <DialogContent dividers>
+          {pharmBillView.loading ? (
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
+              <CircularProgress size={18} />
+              <Typography color="text.secondary">Loading…</Typography>
+            </Stack>
+          ) : pharmBillView.bill ? (
+            <Stack spacing={2}>
+              <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
+                <Typography variant="subtitle2" color="text.secondary">Bill #{pharmBillView.bill.id?.slice(0, 8)}</Typography>
+                <Typography sx={{ fontWeight: 800 }}>
+                  Patient: {pharmBillView.bill.patient?.full_name || pharmBillView.bill.patient?.user?.full_name || "—"}
+                </Typography>
+                <Typography>
+                  Total: {Number(pharmBillView.bill.total_amount ?? 0).toFixed(2)} • Paid: {Number(pharmBillView.bill.paid_amount ?? 0).toFixed(2)} • Balance: {Number(pharmBillView.bill.balance ?? 0).toFixed(2)}
+                </Typography>
+                <Chip
+                  size="small"
+                  label={pharmBillView.bill.paid ? "paid" : (pharmBillView.bill.status || "unpaid")}
+                  color={pharmBillView.bill.paid ? "success" : "default"}
+                  sx={{ mt: 0.5 }}
+                />
+              </Box>
+              {Number(pharmBillView.bill.balance ?? 0) > 0 && (
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }}>
+                  <TextField
+                    size="small"
+                    label="Amount"
+                    type="number"
+                    value={pharmBillPayAmount}
+                    onChange={(e) => setPharmBillPayAmount(e.target.value)}
+                    inputProps={{ min: 0, step: 0.01 }}
+                    sx={{ width: { xs: "100%", sm: 130 } }}
+                  />
+                  <FormControl size="small" sx={{ minWidth: 120 }}>
+                    <InputLabel>Method</InputLabel>
+                    <Select value={pharmBillPayMethod} label="Method" onChange={(e) => setPharmBillPayMethod(e.target.value)}>
+                      <MenuItem value="cash">Cash</MenuItem>
+                      <MenuItem value="card">Card</MenuItem>
+                      <MenuItem value="mobile">Mobile</MenuItem>
+                      <MenuItem value="other">Other</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <Button variant="contained" onClick={recordPaymentForPharmBill} disabled={pharmBillPaySaving} sx={{ fontWeight: 800 }}>
+                    {pharmBillPaySaving ? "Recording…" : "Record payment"}
+                  </Button>
+                </Stack>
+              )}
+            </Stack>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPharmBillView({ open: false, bill: null, loading: false })}>Close</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Medication view */}
       <Dialog
@@ -1165,53 +1599,107 @@ export default function PharmacyManagement() {
                   mb: 2,
                 }}
               >
-                <Stack
-                  direction={{ xs: "column", md: "row" }}
-                  spacing={1}
-                  alignItems={{ md: "center" }}
-                  justifyContent="space-between"
-                >
+                <Typography sx={{ fontWeight: 900, mb: 1 }}>Billing & payment</Typography>
+                {presBillingLoading ? (
                   <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography sx={{ fontWeight: 900 }}>Payment</Typography>
-                    {presBillingLoading ? (
-                      <Chip size="small" label="Checking…" />
-                    ) : (
+                    <CircularProgress size={18} />
+                    <Typography color="text.secondary">Checking billing…</Typography>
+                  </Stack>
+                ) : !presBilling?.exists ? (
+                  <Stack spacing={1.5}>
+                    <Alert severity="info">No bill for this prescription yet. Create one to add items and record payment.</Alert>
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }}>
+                      <TextField
+                        size="small"
+                        label="Amount"
+                        type="number"
+                        value={presBillItemAmount}
+                        onChange={(e) => setPresBillItemAmount(e.target.value)}
+                        inputProps={{ min: 0, step: 0.01 }}
+                        sx={{ width: { xs: "100%", sm: 140 } }}
+                      />
+                      <Button
+                        variant="contained"
+                        onClick={createBillForPrescription}
+                        disabled={presBillItemSaving}
+                        startIcon={<ReceiptIcon />}
+                        sx={{ fontWeight: 800 }}
+                      >
+                        {presBillItemSaving ? "Creating…" : "Create bill"}
+                      </Button>
+                    </Stack>
+                  </Stack>
+                ) : (
+                  <>
+                    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" sx={{ mb: 1 }}>
+                      <Typography color="text.secondary">
+                        Total: {Number(presBilling.total_amount ?? 0).toFixed(2)} • Paid: {Number(presBilling.paid_amount ?? 0).toFixed(2)} • Balance: {Number(presBilling.balance ?? 0).toFixed(2)}
+                      </Typography>
                       <Chip
                         size="small"
-                        label={
-                          presBilling?.paid
-                            ? "paid"
-                            : presBilling?.exists
-                              ? presBilling?.status || "unpaid"
-                              : "unbilled"
-                        }
+                        label={presBilling?.paid ? "paid" : (presBilling?.status || "unpaid")}
                         color={presBilling?.paid ? "success" : "default"}
                         variant={presBilling?.paid ? "filled" : "outlined"}
                         sx={{ fontWeight: 800 }}
                       />
+                    </Stack>
+                    {presBilling.status !== "paid" && Number(presBilling.balance ?? 0) > 0 && (
+                      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }} sx={{ flexWrap: "wrap", mb: 1.5 }}>
+                        <TextField
+                          size="small"
+                          label="Amount"
+                          type="number"
+                          value={presBillItemAmount}
+                          onChange={(e) => setPresBillItemAmount(e.target.value)}
+                          inputProps={{ min: 0, step: 0.01 }}
+                          placeholder="Extra line item"
+                          sx={{ width: { xs: "100%", sm: 130 } }}
+                        />
+                        <Button
+                          variant="outlined"
+                          onClick={addPrescriptionBillItem}
+                          disabled={presBillItemSaving}
+                          sx={{ fontWeight: 800 }}
+                        >
+                          {presBillItemSaving ? "Adding…" : "Add bill item"}
+                        </Button>
+                      </Stack>
                     )}
-                  </Stack>
-                  <Button
-                    variant="outlined"
-                    onClick={() => openBillingForPrescription(presView.prescription)}
-                    disabled={presBillingLoading || presBilling?.paid}
-                    sx={{ fontWeight: 900 }}
-                  >
-                    Open billing
-                  </Button>
-                </Stack>
-                {presBilling?.exists ? (
-                  <Typography color="text.secondary" sx={{ mt: 1 }}>
-                    Total: {presBilling.total_amount} • Paid:{" "}
-                    {presBilling.paid_amount} • Balance: {presBilling.balance}
-                  </Typography>
-                ) : (
-                  <Typography color="text.secondary" sx={{ mt: 1 }}>
-                    No bill found for this prescription yet.
-                  </Typography>
+                    {(presBilling.status !== "paid" || Number(presBilling.balance ?? 0) > 0) && (
+                      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }} flexWrap="wrap">
+                        <TextField
+                          size="small"
+                          label="Payment amount"
+                          type="number"
+                          value={presPayAmount}
+                          onChange={(e) => setPresPayAmount(e.target.value)}
+                          inputProps={{ min: 0, step: 0.01 }}
+                          sx={{ width: { xs: "100%", sm: 130 } }}
+                        />
+                        <FormControl size="small" sx={{ minWidth: 120 }}>
+                          <InputLabel>Method</InputLabel>
+                          <Select value={presPayMethod} label="Method" onChange={(e) => setPresPayMethod(e.target.value)}>
+                            <MenuItem value="cash">Cash</MenuItem>
+                            <MenuItem value="card">Card</MenuItem>
+                            <MenuItem value="mobile">Mobile</MenuItem>
+                            <MenuItem value="other">Other</MenuItem>
+                          </Select>
+                        </FormControl>
+                        <Button
+                          variant="contained"
+                          startIcon={<PaymentIcon />}
+                          onClick={recordPaymentForPrescription}
+                          disabled={presPaySaving}
+                          sx={{ fontWeight: 800 }}
+                        >
+                          {presPaySaving ? "Recording…" : "Record payment"}
+                        </Button>
+                      </Stack>
+                    )}
+                  </>
                 )}
-                {!presBilling?.paid && (
-                  <Alert severity="warning" sx={{ mt: 1 }}>
+                {!presBilling?.paid && presBilling?.exists && (
+                  <Alert severity="warning" sx={{ mt: 1.5 }}>
                     Dispensing is blocked until payment is recorded.
                   </Alert>
                 )}
