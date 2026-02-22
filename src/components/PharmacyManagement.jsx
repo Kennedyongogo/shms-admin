@@ -43,6 +43,7 @@ import {
   Inventory as InventoryIcon,
   Payment as PaymentIcon,
   Receipt as ReceiptIcon,
+  EventNote as EventNoteIcon,
 } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
 import Swal from "sweetalert2";
@@ -152,6 +153,7 @@ export default function PharmacyManagement() {
   const [presBillingLoading, setPresBillingLoading] = useState(false);
   const [presDispensing, setPresDispensing] = useState(false);
   const [presBillItemAmount, setPresBillItemAmount] = useState("");
+  const [presBillItemNote, setPresBillItemNote] = useState("");
   const [presBillItemSaving, setPresBillItemSaving] = useState(false);
   const [presPayAmount, setPresPayAmount] = useState("");
   const [presPayMethod, setPresPayMethod] = useState("cash");
@@ -438,13 +440,12 @@ export default function PharmacyManagement() {
     setPresView({ open: true, prescription: null, loading: true });
     setPresBilling(null);
     setPresBillItemAmount("");
+    setPresBillItemNote("");
     setPresPayAmount("");
     try {
       const data = await fetchJson(`${API.prescriptions}/${p.id}`, { token });
       const prescription = data.data;
       setPresView({ open: true, prescription, loading: false });
-      const computed = (prescription?.items || []).reduce((sum, it) => sum + Number(it?.medication?.unit_price || 0), 0);
-      if (computed > 0) setPresBillItemAmount(String(computed));
       if (prescription?.id) loadPrescriptionBilling(prescription.id);
     } catch (e) {
       setPresView({ open: false, prescription: null, loading: false });
@@ -467,6 +468,10 @@ export default function PharmacyManagement() {
       const billing = data?.data || null;
       setPresBilling(billing);
       if (billing?.balance != null) setPresPayAmount(String(billing.balance));
+      if (billing?.exists) {
+        setPresBillItemAmount("");
+        setPresBillItemNote("");
+      }
     } catch {
       setPresBilling(null);
     } finally {
@@ -603,10 +608,10 @@ export default function PharmacyManagement() {
 
   const addPrescriptionBillItem = async () => {
     const prescription = presView.prescription;
-    if (!requireTokenGuard() || !presBilling?.bill_id || !prescription?.id) return;
+    if (!requireTokenGuard() || !presBilling?.bill_id) return;
     const amount = Number(presBillItemAmount);
     if (!Number.isFinite(amount) || amount < 0) {
-      Swal.fire({ icon: "warning", title: "Invalid amount", text: "Enter a non-negative amount." });
+      Swal.fire({ icon: "warning", title: "Invalid amount", text: "Enter a valid amount." });
       return;
     }
     setPresBillItemSaving(true);
@@ -614,10 +619,15 @@ export default function PharmacyManagement() {
       await fetchJson(`${API.billing}/${presBilling.bill_id}/items`, {
         method: "POST",
         token,
-        body: { items: [{ item_type: "prescription", reference_id: String(prescription.id), amount }] },
+        body: {
+          items: [
+            { item_type: "service", reference_id: (presBillItemNote || "").trim() || null, amount },
+          ],
+        },
       });
-      await loadPrescriptionBilling(prescription.id);
+      await loadPrescriptionBilling(prescription?.id);
       setPresBillItemAmount("");
+      setPresBillItemNote("");
       showToast("success", "Bill item added.");
     } catch (e) {
       Swal.fire({ icon: "error", title: "Failed", text: e.message });
@@ -626,9 +636,68 @@ export default function PharmacyManagement() {
     }
   };
 
-  const recordPaymentForPrescription = async () => {
+  const payForPrescription = async () => {
+    if (!requireTokenGuard() || !presView.prescription?.id) return false;
+    if (!presBilling?.bill_id) {
+      Swal.fire({ icon: "warning", title: "No bill", text: "Create a bill first, then record payment." });
+      return false;
+    }
+    const defaultAmount = String(presBilling?.balance ?? presBilling?.total_amount ?? "0");
+    const ask = await Swal.fire({
+      icon: "question",
+      title: "Record payment",
+      html: `
+        <label for="swal-amount" style="display:block; text-align:left; margin-bottom:4px;">Amount to pay</label>
+        <input id="swal-amount" class="swal2-input" type="number" min="0" step="0.01" value="${defaultAmount}" style="margin-bottom:12px" />
+        <label for="swal-method" style="display:block; text-align:left; margin-bottom:4px;">Payment method</label>
+        <select id="swal-method" class="swal2-input" style="width:100%; margin:0; box-sizing:border-box;">
+          <option value="cash">Cash</option>
+          <option value="mpesa">M-Pesa</option>
+          <option value="card">Card</option>
+          <option value="bank_transfer">Bank transfer</option>
+          <option value="other">Other</option>
+        </select>
+      `,
+      showCancelButton: true,
+      confirmButtonText: "Record payment",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+      preConfirm: () => {
+        const raw = document.getElementById("swal-amount")?.value;
+        const n = Number(raw);
+        if (!Number.isFinite(n) || n < 0) {
+          Swal.showValidationMessage("Enter a valid amount");
+          return undefined;
+        }
+        const method = document.getElementById("swal-method")?.value || "cash";
+        return { amount: n, payment_method: method };
+      },
+    });
+    if (!ask.isConfirmed || !ask.value) return false;
+    const { amount, payment_method } = ask.value;
+    try {
+      await fetchJson(`${API.payments}/process`, {
+        method: "POST",
+        token,
+        body: {
+          bill_id: presBilling.bill_id,
+          amount_paid: amount,
+          payment_method: payment_method || "cash",
+          payment_date: new Date().toISOString(),
+        },
+      });
+      await loadPrescriptionBilling(presView.prescription.id);
+      Swal.fire({ icon: "success", title: "Payment recorded", text: "You can dispense once the bill is fully paid." });
+      return true;
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Payment failed", text: e?.message ?? "Something went wrong." });
+      return false;
+    }
+  };
+
+  const recordPrescriptionPayment = async () => {
     const prescription = presView.prescription;
-    if (!requireTokenGuard() || !presBilling?.bill_id) return;
+    if (!requireTokenGuard() || !presBilling?.bill_id || !prescription?.id) return;
     const amountRaw = Number(presPayAmount);
     if (!Number.isFinite(amountRaw) || amountRaw <= 0) {
       Swal.fire({ icon: "warning", title: "Invalid amount", text: "Enter a positive amount." });
@@ -646,13 +715,35 @@ export default function PharmacyManagement() {
           payment_date: new Date().toISOString(),
         },
       });
-      await loadPrescriptionBilling(prescription?.id);
-      setPresPayAmount("");
-      showToast("success", "Payment recorded.");
+      Swal.fire({ icon: "success", title: "Payment recorded", text: "You can dispense once the bill is fully paid." });
+      await loadPrescriptionBilling(prescription.id);
     } catch (e) {
-      Swal.fire({ icon: "error", title: "Payment failed", text: e.message });
+      Swal.fire({ icon: "error", title: "Payment failed", text: e?.message ?? "Something went wrong." });
     } finally {
       setPresPaySaving(false);
+    }
+  };
+
+  const deletePrescription = async (prescription) => {
+    if (!requireTokenGuard() || !prescription?.id) return;
+    const result = await Swal.fire({
+      icon: "warning",
+      title: "Delete prescription?",
+      text: "This cannot be undone.",
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#d32f2f",
+      reverseButtons: true,
+    });
+    if (!result.isConfirmed) return;
+    try {
+      await fetchJson(`${API.prescriptions}/${prescription.id}`, { method: "DELETE", token });
+      Swal.fire({ icon: "success", title: "Deleted", timer: 1200, showConfirmButton: false });
+      setPresView({ open: false, prescription: null, loading: false });
+      await loadPrescriptions();
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Failed", text: e?.message ?? "Delete not supported or failed." });
     }
   };
 
@@ -1043,14 +1134,14 @@ export default function PharmacyManagement() {
                           <TableCell sx={{ fontWeight: 800 }}>
                             {formatDateTime(p.prescription_date)}
                           </TableCell>
-                          <TableCell sx={{ fontFamily: "monospace" }}>
-                            {p.patient_id}
+                          <TableCell>
+                            {p.patient?.full_name || p.patient?.user?.full_name || p.patient_id || "—"}
                           </TableCell>
-                          <TableCell sx={{ fontFamily: "monospace" }}>
-                            {p.doctor_id || "—"}
+                          <TableCell>
+                            {p.doctor?.user?.full_name || p.doctor?.staff_type || p.consultation?.appointment?.doctor?.user?.full_name || p.consultation?.appointment?.doctor?.staff_type || p.doctor_id || "—"}
                           </TableCell>
-                          <TableCell sx={{ fontFamily: "monospace" }}>
-                            {p.consultation_id || "—"}
+                          <TableCell sx={{ fontFamily: "monospace", fontSize: "0.85rem" }}>
+                            {p.consultation_id ? String(p.consultation_id).slice(0, 8) + "…" : "—"}
                           </TableCell>
                           <TableCell align="right">
                             <Chip
@@ -1173,7 +1264,7 @@ export default function PharmacyManagement() {
                             {r.prescription_id}
                           </TableCell>
                           <TableCell>
-                            {r.pharmacist?.full_name || "—"}
+                            {r.pharmacist?.user?.full_name || r.pharmacist?.staff_type || "—"}
                           </TableCell>
                           <TableCell align="right">
                             <Tooltip title="View">
@@ -1267,10 +1358,7 @@ export default function PharmacyManagement() {
                             </TableCell>
                             <TableCell>{formatDateTime(b.createdAt)}</TableCell>
                             <TableCell align="right">
-                              <Button size="small" variant="outlined" onClick={() => openPharmBillView(b.id)} sx={{ mr: 0.5 }}>View</Button>
-                              {balance > 0 && (
-                                <Button size="small" variant="contained" onClick={() => openPharmBillView(b.id)}>Record payment</Button>
-                              )}
+                              <Button size="small" variant="outlined" onClick={() => openPharmBillView(b.id)}>View</Button>
                             </TableCell>
                           </TableRow>
                         );
@@ -1547,7 +1635,7 @@ export default function PharmacyManagement() {
         </DialogActions>
       </Dialog>
 
-      {/* Prescription view with items */}
+      {/* Prescription view – same layout as Lab Order dialog */}
       <Dialog
         open={presView.open}
         onClose={() =>
@@ -1556,39 +1644,26 @@ export default function PharmacyManagement() {
         fullWidth
         maxWidth="md"
       >
-        <DialogTitle sx={{ fontWeight: 900 }}>Prescription Items</DialogTitle>
-        <DialogContent>
+        <DialogTitle sx={{ fontWeight: 900 }}>Prescription</DialogTitle>
+        <DialogContent dividers>
           {presView.loading ? (
-            <Stack
-              direction="row"
-              spacing={1}
-              alignItems="center"
-              sx={{ py: 2 }}
-            >
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
               <CircularProgress size={18} />
-              <Typography color="text.secondary">
-                Loading prescription…
-              </Typography>
+              <Typography color="text.secondary">Loading prescription…</Typography>
             </Stack>
+          ) : !presView.prescription ? (
+            <Typography color="text.secondary">No data.</Typography>
           ) : (
-            <>
-              <Stack
-                direction={{ xs: "column", md: "row" }}
-                spacing={2}
-                sx={{ mb: 2 }}
-              >
-                <Chip
-                  label={`Date: ${formatDateTime(presView.prescription?.prescription_date)}`}
-                />
-                <Chip
-                  label={`Patient: ${presView.prescription?.patient_id || "—"}`}
-                  sx={{ fontFamily: "monospace" }}
-                />
-                <Chip
-                  label={`Doctor: ${presView.prescription?.doctor_id || "—"}`}
-                  sx={{ fontFamily: "monospace" }}
-                />
-              </Stack>
+            <Stack spacing={2}>
+              <Typography sx={{ fontWeight: 900 }}>
+                Patient:{" "}
+                {presView.prescription?.patient?.full_name ||
+                  presView.prescription?.patient?.user?.full_name ||
+                  "—"}
+              </Typography>
+              <Typography color="text.secondary">
+                Created: {formatDateTime(presView.prescription?.createdAt ?? presView.prescription?.prescription_date)}
+              </Typography>
 
               <Box
                 sx={{
@@ -1596,19 +1671,66 @@ export default function PharmacyManagement() {
                   borderColor: "divider",
                   borderRadius: 2,
                   p: 2,
-                  mb: 2,
                 }}
               >
-                <Typography sx={{ fontWeight: 900, mb: 1 }}>Billing & payment</Typography>
-                {presBillingLoading ? (
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <CircularProgress size={18} />
-                    <Typography color="text.secondary">Checking billing…</Typography>
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                  <Typography sx={{ fontWeight: 900 }}>Billing &amp; payment</Typography>
+                  {presBillingLoading ? (
+                    <Chip size="small" label="Checking…" />
+                  ) : (
+                    <Chip
+                      size="small"
+                      label={
+                        presBilling?.paid
+                          ? "paid"
+                          : presBilling?.exists
+                            ? presBilling?.status || "unpaid"
+                            : "unbilled"
+                      }
+                      color={presBilling?.paid ? "success" : "default"}
+                      variant={presBilling?.paid ? "filled" : "outlined"}
+                      sx={{ fontWeight: 800 }}
+                    />
+                  )}
+                </Stack>
+                {presBilling?.exists ? (
+                  <Typography color="text.secondary" sx={{ mb: 1.5 }}>
+                    Total: {presBilling.total_amount} • Paid: {presBilling.paid_amount} • Balance: {presBilling.balance}
+                  </Typography>
+                ) : (
+                  <Typography color="text.secondary" sx={{ mb: 1.5 }}>
+                    No bill for this prescription yet. Create one to add items and record payment.
+                  </Typography>
+                )}
+                {!presBilling?.exists && (
+                  <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }} sx={{ mb: 1.5 }} flexWrap="wrap">
+                    <TextField
+                      size="small"
+                      label="Amount"
+                      type="number"
+                      value={presBillItemAmount}
+                      onChange={(e) => setPresBillItemAmount(e.target.value)}
+                      inputProps={{ min: 0, step: 0.01 }}
+                      placeholder={
+                        (presView.prescription?.items || []).length
+                          ? String((presView.prescription.items || []).reduce((s, it) => s + Number(it?.medication?.unit_price || 0), 0))
+                          : undefined
+                      }
+                      sx={{ width: { xs: "100%", sm: 120 } }}
+                    />
+                    <Button
+                      variant="outlined"
+                      onClick={createBillForPrescription}
+                      disabled={presBillItemSaving}
+                      sx={{ fontWeight: 800 }}
+                    >
+                      {presBillItemSaving ? "Creating…" : "Create bill"}
+                    </Button>
                   </Stack>
-                ) : !presBilling?.exists ? (
-                  <Stack spacing={1.5}>
-                    <Alert severity="info">No bill for this prescription yet. Create one to add items and record payment.</Alert>
-                    <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }}>
+                )}
+                {!presBilling?.paid && presBilling?.exists && presBilling?.bill_id && (
+                  <>
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }} sx={{ mb: 1.5 }} flexWrap="wrap">
                       <TextField
                         size="small"
                         label="Amount"
@@ -1616,153 +1738,123 @@ export default function PharmacyManagement() {
                         value={presBillItemAmount}
                         onChange={(e) => setPresBillItemAmount(e.target.value)}
                         inputProps={{ min: 0, step: 0.01 }}
-                        sx={{ width: { xs: "100%", sm: 140 } }}
+                        placeholder="Add item amount"
+                        sx={{ width: { xs: "100%", sm: 120 } }}
+                      />
+                      <TextField
+                        size="small"
+                        label="Note (optional)"
+                        value={presBillItemNote}
+                        onChange={(e) => setPresBillItemNote(e.target.value)}
+                        placeholder="e.g. extra service"
+                        sx={{ flex: { xs: "none", sm: "1 1 140px" }, minWidth: 0 }}
                       />
                       <Button
-                        variant="contained"
-                        onClick={createBillForPrescription}
+                        variant="outlined"
+                        onClick={addPrescriptionBillItem}
                         disabled={presBillItemSaving}
-                        startIcon={<ReceiptIcon />}
                         sx={{ fontWeight: 800 }}
                       >
-                        {presBillItemSaving ? "Creating…" : "Create bill"}
+                        {presBillItemSaving ? "Adding…" : "Add billing item"}
                       </Button>
                     </Stack>
-                  </Stack>
-                ) : (
-                  <>
-                    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" sx={{ mb: 1 }}>
-                      <Typography color="text.secondary">
-                        Total: {Number(presBilling.total_amount ?? 0).toFixed(2)} • Paid: {Number(presBilling.paid_amount ?? 0).toFixed(2)} • Balance: {Number(presBilling.balance ?? 0).toFixed(2)}
-                      </Typography>
-                      <Chip
+                    <Divider sx={{ my: 1.5 }} />
+                    <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 1 }}>Record payment</Typography>
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }} flexWrap="wrap">
+                      <TextField
                         size="small"
-                        label={presBilling?.paid ? "paid" : (presBilling?.status || "unpaid")}
-                        color={presBilling?.paid ? "success" : "default"}
-                        variant={presBilling?.paid ? "filled" : "outlined"}
-                        sx={{ fontWeight: 800 }}
+                        label="Amount"
+                        type="number"
+                        value={presPayAmount || (presBilling?.balance ?? "")}
+                        onChange={(e) => setPresPayAmount(e.target.value)}
+                        inputProps={{ min: 0, step: 0.01 }}
+                        sx={{ width: { xs: "100%", sm: 120 } }}
                       />
+                      <FormControl size="small" sx={{ minWidth: { xs: "100%", sm: 160 } }}>
+                        <InputLabel>Payment method</InputLabel>
+                        <Select
+                          value={presPayMethod}
+                          label="Payment method"
+                          onChange={(e) => setPresPayMethod(e.target.value)}
+                        >
+                          <MenuItem value="cash">Cash</MenuItem>
+                          <MenuItem value="card">Card</MenuItem>
+                          <MenuItem value="mobile">Mobile</MenuItem>
+                          <MenuItem value="mpesa">M-Pesa</MenuItem>
+                          <MenuItem value="insurance">Insurance</MenuItem>
+                          <MenuItem value="other">Other</MenuItem>
+                        </Select>
+                      </FormControl>
+                      <Button
+                        variant="contained"
+                        onClick={recordPrescriptionPayment}
+                        disabled={presPaySaving}
+                        sx={{ fontWeight: 800 }}
+                      >
+                        {presPaySaving ? "Recording…" : "Record payment"}
+                      </Button>
                     </Stack>
-                    {presBilling.status !== "paid" && Number(presBilling.balance ?? 0) > 0 && (
-                      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }} sx={{ flexWrap: "wrap", mb: 1.5 }}>
-                        <TextField
-                          size="small"
-                          label="Amount"
-                          type="number"
-                          value={presBillItemAmount}
-                          onChange={(e) => setPresBillItemAmount(e.target.value)}
-                          inputProps={{ min: 0, step: 0.01 }}
-                          placeholder="Extra line item"
-                          sx={{ width: { xs: "100%", sm: 130 } }}
-                        />
-                        <Button
-                          variant="outlined"
-                          onClick={addPrescriptionBillItem}
-                          disabled={presBillItemSaving}
-                          sx={{ fontWeight: 800 }}
-                        >
-                          {presBillItemSaving ? "Adding…" : "Add bill item"}
-                        </Button>
-                      </Stack>
-                    )}
-                    {(presBilling.status !== "paid" || Number(presBilling.balance ?? 0) > 0) && (
-                      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }} flexWrap="wrap">
-                        <TextField
-                          size="small"
-                          label="Payment amount"
-                          type="number"
-                          value={presPayAmount}
-                          onChange={(e) => setPresPayAmount(e.target.value)}
-                          inputProps={{ min: 0, step: 0.01 }}
-                          sx={{ width: { xs: "100%", sm: 130 } }}
-                        />
-                        <FormControl size="small" sx={{ minWidth: 120 }}>
-                          <InputLabel>Method</InputLabel>
-                          <Select value={presPayMethod} label="Method" onChange={(e) => setPresPayMethod(e.target.value)}>
-                            <MenuItem value="cash">Cash</MenuItem>
-                            <MenuItem value="card">Card</MenuItem>
-                            <MenuItem value="mobile">Mobile</MenuItem>
-                            <MenuItem value="other">Other</MenuItem>
-                          </Select>
-                        </FormControl>
-                        <Button
-                          variant="contained"
-                          startIcon={<PaymentIcon />}
-                          onClick={recordPaymentForPrescription}
-                          disabled={presPaySaving}
-                          sx={{ fontWeight: 800 }}
-                        >
-                          {presPaySaving ? "Recording…" : "Record payment"}
-                        </Button>
-                      </Stack>
-                    )}
                   </>
                 )}
-                {!presBilling?.paid && presBilling?.exists && (
+                {!presBilling?.paid && (
                   <Alert severity="warning" sx={{ mt: 1.5 }}>
-                    Dispensing is blocked until payment is recorded.
+                    Prescription dispensing is blocked until payment is recorded.
                   </Alert>
                 )}
               </Box>
 
-              <TableContainer
-                sx={{
-                  borderRadius: 2,
-                  border: "1px solid",
-                  borderColor: "divider",
-                }}
-              >
-                <Table size="small">
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>
-                        No
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Medication</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Dosage</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Frequency</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Duration</TableCell>
+              <Divider />
+              <Typography sx={{ fontWeight: 900 }}>Medications</Typography>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Medication</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Dosage</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Frequency</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Duration</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {(presView.prescription?.items || []).map((it, idx) => (
+                    <TableRow key={it.id} hover>
+                      <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{idx + 1}</TableCell>
+                      <TableCell>{it.medication?.name || it.medication_id || "—"}</TableCell>
+                      <TableCell>{it.dosage || "—"}</TableCell>
+                      <TableCell>{it.frequency || "—"}</TableCell>
+                      <TableCell>{it.duration || "—"}</TableCell>
                     </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {presView.prescription?.items?.length ? (
-                      presView.prescription.items.map((it, idx) => (
-                        <TableRow key={it.id} hover>
-                          <TableCell
-                            sx={{ color: "text.secondary", fontWeight: 700 }}
-                          >
-                            {idx + 1}
-                          </TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>
-                            {it.medication?.name || it.medication_id}
-                          </TableCell>
-                          <TableCell>{it.dosage || "—"}</TableCell>
-                          <TableCell>{it.frequency || "—"}</TableCell>
-                          <TableCell>{it.duration || "—"}</TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={5}>
-                          <Typography sx={{ py: 2 }} color="text.secondary">
-                            No items found for this prescription.
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </>
+                  ))}
+                  {!(presView.prescription?.items || []).length && (
+                    <TableRow>
+                      <TableCell colSpan={5}>
+                        <Typography color="text.secondary">
+                          No medications on this prescription.
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </Stack>
           )}
         </DialogContent>
         <DialogActions>
           <Button
+            variant="outlined"
             onClick={() =>
               setPresView({ open: false, prescription: null, loading: false })
             }
           >
             Close
+          </Button>
+          <Button
+            variant="outlined"
+            color="error"
+            onClick={() => deletePrescription(presView.prescription)}
+            disabled={!presView.prescription?.id}
+          >
+            Delete
           </Button>
           <Button
             variant="contained"
@@ -1772,7 +1864,7 @@ export default function PharmacyManagement() {
             }
             sx={{ fontWeight: 900 }}
           >
-            {presDispensing ? "Dispensing…" : "Dispense now"}
+            {presDispensing ? "Dispensing…" : "Dispense"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1808,7 +1900,7 @@ export default function PharmacyManagement() {
               Pharmacist
             </Typography>
             <Typography>
-              {dispView.record?.pharmacist?.full_name || "—"}
+              {dispView.record?.pharmacist?.user?.full_name || dispView.record?.pharmacist?.staff_type || "—"}
             </Typography>
           </Stack>
         </DialogContent>

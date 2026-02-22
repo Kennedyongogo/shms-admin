@@ -612,13 +612,27 @@ export default function VisitsManagement() {
         token,
         body: payload,
       });
-      const appt = created.data;
+      const appt = created?.data;
+
+      if (!appt?.id) {
+        Swal.fire({ icon: "error", title: "Failed", text: "Server did not return the created appointment." });
+        return;
+      }
 
       setCreateApptOpen(false);
-      if (walkIn && appt?.id) {
-        const full = await fetchJson(`${API.appointments}/${appt.id}`, {
-          token,
-        });
+
+      // For walk-in, optionally fetch full appointment for billing context; don't fail if this GET errors
+      let fullAppt = appt;
+      if (walkIn) {
+        try {
+          const fullRes = await fetchJson(`${API.appointments}/${appt.id}`, { token });
+          if (fullRes?.data) fullAppt = fullRes.data;
+        } catch (_) {
+          // Use created appointment; table will still show it and user can open from list
+        }
+      }
+
+      if (walkIn) {
         const payNow = await Swal.fire({
           icon: "info",
           title: "Payment required",
@@ -629,7 +643,7 @@ export default function VisitsManagement() {
           reverseButtons: true,
         });
         if (payNow.isConfirmed) {
-          openBillingForAppointment(full.data);
+          openBillingForAppointment(fullAppt);
         } else {
           Swal.fire({
             icon: "success",
@@ -646,7 +660,11 @@ export default function VisitsManagement() {
       }
       await loadAppointments();
     } catch (e) {
-      Swal.fire({ icon: "error", title: "Failed", text: e.message });
+      const backendError = e?.data?.error;
+      const text = backendError
+        ? `${e?.message ?? "Failed"}. ${backendError}`
+        : (e?.message ?? "Something went wrong.");
+      Swal.fire({ icon: "error", title: "Failed", text });
     }
   };
 
@@ -850,6 +868,10 @@ export default function VisitsManagement() {
   const openBillingForAppointment = (appt) => {
     if (!appt?.id) return;
     setTab(2); // Switch to Billing tab on this page (Appointments | Consultations | Billing | Payment)
+    setApptView(appt);
+    setApptViewOpen(true);
+    setApptViewInnerTab(1); // Billing & payment inner tab
+    if (appt?.id) loadAppointmentBilling(appt.id);
   };
 
   const payForAppointment = async (appt) => {
