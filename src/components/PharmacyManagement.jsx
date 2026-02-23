@@ -54,6 +54,7 @@ const API = {
   dispense: "/api/dispense",
   billing: "/api/billing",
   payments: "/api/payments",
+  inventory: "/api/inventory",
 };
 
 const getToken = () => localStorage.getItem("token");
@@ -132,8 +133,11 @@ export default function PharmacyManagement() {
     dosage_form: "",
     manufacturer: "",
     unit_price: "",
+    inventory_item_id: "",
   });
   const [medView, setMedView] = useState({ open: false, med: null });
+  const [inventoryItems, setInventoryItems] = useState([]);
+  const [inventoryItemsLoading, setInventoryItemsLoading] = useState(false);
 
   // Prescriptions
   const presReqId = useRef(0);
@@ -355,12 +359,26 @@ export default function PharmacyManagement() {
   }, [theme.palette.primary.dark, theme.palette.primary.main]);
 
   // Medication CRUD
+  const loadInventoryItems = async () => {
+    if (!requireTokenGuard()) return;
+    setInventoryItemsLoading(true);
+    try {
+      const data = await fetchJson(`${API.inventory}?limit=500`, { token });
+      setInventoryItems(data.data || []);
+    } catch {
+      setInventoryItems([]);
+    } finally {
+      setInventoryItemsLoading(false);
+    }
+  };
+
   const openCreateMed = () => {
     setMedsSearchLocked(true);
     setPresSearchLocked(true);
     setDispSearchLocked(true);
-    setMedForm({ name: "", dosage_form: "", manufacturer: "", unit_price: "" });
+    setMedForm({ name: "", dosage_form: "", manufacturer: "", unit_price: "", inventory_item_id: "" });
     setMedDialog({ open: true, mode: "create", id: null });
+    if (inventoryItems.length === 0) loadInventoryItems();
   };
   const openEditMed = (m) => {
     setMedsSearchLocked(true);
@@ -371,8 +389,10 @@ export default function PharmacyManagement() {
       dosage_form: m.dosage_form || "",
       manufacturer: m.manufacturer || "",
       unit_price: m.unit_price ?? "",
+      inventory_item_id: m.inventory_item_id || "",
     });
     setMedDialog({ open: true, mode: "edit", id: m.id });
+    if (inventoryItems.length === 0) loadInventoryItems();
   };
   const openViewMed = (m) => setMedView({ open: true, med: m });
 
@@ -385,6 +405,7 @@ export default function PharmacyManagement() {
       dosage_form: medForm.dosage_form.trim() || null,
       manufacturer: medForm.manufacturer.trim() || null,
       unit_price: medForm.unit_price === "" ? null : medForm.unit_price,
+      inventory_item_id: medForm.inventory_item_id || null,
     };
     try {
       if (medDialog.mode === "create") {
@@ -576,7 +597,10 @@ export default function PharmacyManagement() {
   const createBillForPrescription = async () => {
     const prescription = presView.prescription;
     if (!requireTokenGuard() || !prescription?.id || !prescription?.patient_id) return;
-    const computed = (prescription?.items || []).reduce((sum, it) => sum + Number(it?.medication?.unit_price || 0), 0);
+    const computed = (prescription?.items || []).reduce(
+      (sum, it) => sum + (Number(it?.medication?.unit_price || 0) * (it?.quantity ?? 1)),
+      0,
+    );
     const amount = Number(presBillItemAmount) || computed || 0;
     if (amount <= 0) {
       Swal.fire({ icon: "warning", title: "Invalid amount", text: "Enter a positive amount or ensure prescription has medications with prices." });
@@ -794,7 +818,14 @@ export default function PharmacyManagement() {
         }
         return;
       }
-      showToast("error", e.message);
+      if (e?.data?.insufficient?.length) {
+        const msg = e.data.insufficient.map((x) => `${x.medication}: need ${x.required}, available ${x.available}`).join("; ");
+        showToast("error", `Insufficient stock: ${msg}`);
+      } else if (e?.data?.notLinked?.length) {
+        showToast("error", "Some medications are not linked to inventory. Link them in Medicine Catalogue first.");
+      } else {
+        showToast("error", e.message);
+      }
     } finally {
       setPresDispensing(false);
     }
@@ -957,6 +988,7 @@ export default function PharmacyManagement() {
                         Manufacturer
                       </TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Unit price</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>Stock link</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 800 }}>
                         Actions
                       </TableCell>
@@ -965,7 +997,7 @@ export default function PharmacyManagement() {
                   <TableBody>
                     {medsLoading ? (
                       <TableRow>
-                        <TableCell colSpan={6}>
+                        <TableCell colSpan={7}>
                           <Stack
                             direction="row"
                             spacing={1}
@@ -993,6 +1025,13 @@ export default function PharmacyManagement() {
                           <TableCell>{m.dosage_form || "—"}</TableCell>
                           <TableCell>{m.manufacturer || "—"}</TableCell>
                           <TableCell>{m.unit_price ?? "—"}</TableCell>
+                          <TableCell>
+                            {m.inventory_item_id ? (
+                              <Chip size="small" label="Linked" color="success" variant="outlined" />
+                            ) : (
+                              "—"
+                            )}
+                          </TableCell>
                           <TableCell align="right">
                             <Tooltip title="View">
                               <IconButton
@@ -1028,7 +1067,7 @@ export default function PharmacyManagement() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={6}>
+                        <TableCell colSpan={7}>
                           <Typography sx={{ py: 2 }} color="text.secondary">
                             No medications found.
                           </Typography>
@@ -1555,6 +1594,19 @@ export default function PharmacyManagement() {
               </Typography>
               <Typography>{medView.med?.manufacturer || "—"}</Typography>
             </Box>
+            {medView.med?.inventory_item_id != null && (
+              <>
+                <Divider sx={{ my: 1 }} />
+                <Typography variant="overline" color="text.secondary">
+                  Linked stock (inventory)
+                </Typography>
+                <Typography>
+                  {medView.med?.inventoryItem
+                    ? `${medView.med.inventoryItem.name} (available: ${medView.med.inventoryItem.quantity_available ?? 0})`
+                    : "Linked (ID: " + String(medView.med.inventory_item_id).slice(0, 8) + "…)"}
+                </Typography>
+              </>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -1612,6 +1664,27 @@ export default function PharmacyManagement() {
                 setMedForm((p) => ({ ...p, manufacturer: e.target.value }))
               }
             />
+            <FormControl fullWidth size="small">
+              <InputLabel>Link to stock (inventory)</InputLabel>
+              <Select
+                label="Link to stock (inventory)"
+                value={medForm.inventory_item_id || ""}
+                onChange={(e) =>
+                  setMedForm((p) => ({ ...p, inventory_item_id: e.target.value || "" }))
+                }
+              >
+                <MenuItem value="">None</MenuItem>
+                {inventoryItemsLoading ? (
+                  <MenuItem disabled>Loading…</MenuItem>
+                ) : (
+                  inventoryItems.map((inv) => (
+                    <MenuItem key={inv.id} value={inv.id}>
+                      {inv.name} {inv.category ? `(${inv.category})` : ""} — Qty: {inv.quantity_available ?? 0}
+                    </MenuItem>
+                  ))
+                )}
+              </Select>
+            </FormControl>
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -1713,7 +1786,7 @@ export default function PharmacyManagement() {
                       inputProps={{ min: 0, step: 0.01 }}
                       placeholder={
                         (presView.prescription?.items || []).length
-                          ? String((presView.prescription.items || []).reduce((s, it) => s + Number(it?.medication?.unit_price || 0), 0))
+                          ? String((presView.prescription.items || []).reduce((s, it) => s + (Number(it?.medication?.unit_price || 0) * (it?.quantity ?? 1)), 0))
                           : undefined
                       }
                       sx={{ width: { xs: "100%", sm: 120 } }}
@@ -1810,6 +1883,7 @@ export default function PharmacyManagement() {
                   <TableRow>
                     <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
                     <TableCell sx={{ fontWeight: 800 }}>Medication</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Qty</TableCell>
                     <TableCell sx={{ fontWeight: 800 }}>Dosage</TableCell>
                     <TableCell sx={{ fontWeight: 800 }}>Frequency</TableCell>
                     <TableCell sx={{ fontWeight: 800 }}>Duration</TableCell>
@@ -1820,6 +1894,7 @@ export default function PharmacyManagement() {
                     <TableRow key={it.id} hover>
                       <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{idx + 1}</TableCell>
                       <TableCell>{it.medication?.name || it.medication_id || "—"}</TableCell>
+                      <TableCell>{it.quantity ?? 1}</TableCell>
                       <TableCell>{it.dosage || "—"}</TableCell>
                       <TableCell>{it.frequency || "—"}</TableCell>
                       <TableCell>{it.duration || "—"}</TableCell>
@@ -1827,7 +1902,7 @@ export default function PharmacyManagement() {
                   ))}
                   {!(presView.prescription?.items || []).length && (
                     <TableRow>
-                      <TableCell colSpan={5}>
+                      <TableCell colSpan={6}>
                         <Typography color="text.secondary">
                           No medications on this prescription.
                         </Typography>

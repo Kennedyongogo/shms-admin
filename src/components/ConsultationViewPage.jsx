@@ -128,7 +128,7 @@ export default function ConsultationViewPage() {
   const [rxSaving, setRxSaving] = useState(false);
   const [medications, setMedications] = useState([]);
   const [medicationsLoading, setMedicationsLoading] = useState(false);
-  const [rxItems, setRxItems] = useState([{ medication: null, dosage: "", frequency: "", duration: "" }]);
+  const [rxItems, setRxItems] = useState([{ medication: null, dosage: "", frequency: "", duration: "", quantity: 1 }]);
 
   const [admitOpen, setAdmitOpen] = useState(false);
   const [admitSaving, setAdmitSaving] = useState(false);
@@ -319,7 +319,7 @@ export default function ConsultationViewPage() {
       Swal.fire({ icon: "warning", title: "Not allowed", text: "Only the assigned doctor (or admin) can prescribe." });
       return;
     }
-    setRxItems([{ medication: null, dosage: "", frequency: "", duration: "" }]);
+    setRxItems([{ medication: null, dosage: "", frequency: "", duration: "", quantity: 1 }]);
     setRxOpen(true);
     if (medications.length === 0) loadMedications();
   };
@@ -330,7 +330,13 @@ export default function ConsultationViewPage() {
     if (!patientId) return Swal.fire({ icon: "warning", title: "Missing patient", text: "Patient not found on this consultation." });
     const items = rxItems
       .filter((i) => i.medication?.id)
-      .map((i) => ({ medication_id: i.medication.id, dosage: i.dosage || null, frequency: i.frequency || null, duration: i.duration || null }));
+      .map((i) => ({
+        medication_id: i.medication.id,
+        dosage: i.dosage || null,
+        frequency: i.frequency || null,
+        duration: i.duration || null,
+        quantity: Math.max(1, parseInt(i.quantity, 10) || 1),
+      }));
     if (!items.length) return Swal.fire({ icon: "warning", title: "Add medications", text: "Choose at least one medication." });
     setRxSaving(true);
     try {
@@ -636,6 +642,7 @@ export default function ConsultationViewPage() {
                     <TextField label="Dosage (optional)" fullWidth value={it.dosage} onChange={(e) => setRxItems((prev) => prev.map((p, i) => (i === idx ? { ...p, dosage: e.target.value } : p)))} />
                     <TextField label="Frequency (optional)" fullWidth value={it.frequency} onChange={(e) => setRxItems((prev) => prev.map((p, i) => (i === idx ? { ...p, frequency: e.target.value } : p)))} />
                     <TextField label="Duration (optional)" fullWidth value={it.duration} onChange={(e) => setRxItems((prev) => prev.map((p, i) => (i === idx ? { ...p, duration: e.target.value } : p)))} />
+                    <TextField label="Quantity" type="number" inputProps={{ min: 1, step: 1 }} value={it.quantity ?? 1} onChange={(e) => setRxItems((prev) => prev.map((p, i) => (i === idx ? { ...p, quantity: e.target.value } : p)))} sx={{ minWidth: 100 }} />
                   </Stack>
                   <Stack direction="row" justifyContent="flex-end">
                     <Button variant="outlined" color="error" size="small" onClick={() => setRxItems((prev) => prev.filter((_, i) => i !== idx))} disabled={rxItems.length === 1}>Remove</Button>
@@ -643,7 +650,7 @@ export default function ConsultationViewPage() {
                 </Stack>
               </Box>
             ))}
-            <Button variant="outlined" onClick={() => setRxItems((p) => [...p, { medication: null, dosage: "", frequency: "", duration: "" }])}>Add medication</Button>
+            <Button variant="outlined" onClick={() => setRxItems((p) => [...p, { medication: null, dosage: "", frequency: "", duration: "", quantity: 1 }])}>Add medication</Button>
           </Stack>
         </DialogContent>
         <DialogActions>

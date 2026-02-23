@@ -240,7 +240,7 @@ export default function VisitsManagement() {
   const [medications, setMedications] = useState([]);
   const [medicationsLoading, setMedicationsLoading] = useState(false);
   const [rxItems, setRxItems] = useState([
-    { medication: null, dosage: "", frequency: "", duration: "" },
+    { medication: null, dosage: "", frequency: "", duration: "", quantity: 1 },
   ]);
 
   const [admitOpen, setAdmitOpen] = useState(false);
@@ -1215,7 +1215,7 @@ export default function VisitsManagement() {
       });
       return;
     }
-    setRxItems([{ medication: null, dosage: "", frequency: "", duration: "" }]);
+    setRxItems([{ medication: null, dosage: "", frequency: "", duration: "", quantity: 1 }]);
     setRxOpen(true);
     if (medications.length === 0) await loadMedications();
   };
@@ -1239,6 +1239,7 @@ export default function VisitsManagement() {
         dosage: i.dosage || null,
         frequency: i.frequency || null,
         duration: i.duration || null,
+        quantity: Math.max(1, parseInt(i.quantity, 10) || 1),
       }));
     if (!items.length)
       return Swal.fire({
@@ -2671,6 +2672,20 @@ export default function VisitsManagement() {
                         )
                       }
                     />
+                    <TextField
+                      label="Quantity"
+                      type="number"
+                      inputProps={{ min: 1, step: 1 }}
+                      value={it.quantity ?? 1}
+                      onChange={(e) =>
+                        setRxItems((prev) =>
+                          prev.map((p, i) =>
+                            i === idx ? { ...p, quantity: e.target.value } : p,
+                          ),
+                        )
+                      }
+                      sx={{ minWidth: 100 }}
+                    />
                   </Stack>
                   <Stack direction="row" spacing={1} justifyContent="flex-end">
                     <Button
@@ -2693,7 +2708,7 @@ export default function VisitsManagement() {
               onClick={() =>
                 setRxItems((p) => [
                   ...p,
-                  { medication: null, dosage: "", frequency: "", duration: "" },
+                  { medication: null, dosage: "", frequency: "", duration: "", quantity: 1 },
                 ])
               }
             >
