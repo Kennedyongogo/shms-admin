@@ -1679,7 +1679,12 @@ export default function PharmacyManagement() {
                 ) : (
                   inventoryItems.map((inv) => (
                     <MenuItem key={inv.id} value={inv.id}>
-                      {inv.name} {inv.category ? `(${inv.category})` : ""} — Qty: {inv.quantity_available ?? 0}
+                      {inv.name}
+                      {inv.unit ? ` (${inv.unit})` : ""}
+                      {inv.pack_size ? ` · ${inv.pack_size} per pack` : ""}
+                      {inv.category ? ` · ${inv.category}` : ""}
+                      {" — "}
+                      {inv.quantity_available ?? 0} available
                     </MenuItem>
                   ))
                 )}
