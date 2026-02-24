@@ -44,6 +44,7 @@ import {
 } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
 import Swal from "sweetalert2";
+import ReceiptDialog from "./ReceiptDialog";
 
 const API = {
   wards: "/api/wards",
@@ -141,6 +142,7 @@ export default function WardManagement() {
   const [admissionsTotal, setAdmissionsTotal] = useState(0);
   const [admissionsStatusFilter, setAdmissionsStatusFilter] = useState("");
   const [admissionView, setAdmissionView] = useState({ open: false, loading: false, admission: null, billing: null });
+  const [receiptDialogPaymentId, setReceiptDialogPaymentId] = useState(null);
   const [noteDialogOpen, setNoteDialogOpen] = useState(false);
   const [noteForm, setNoteForm] = useState({
     temperature: "",
@@ -468,6 +470,23 @@ export default function WardManagement() {
       Swal.fire({ icon: "success", title: "Discharged", timer: 1200, showConfirmButton: false });
       if (admissionView.admission?.id === admissionId) setAdmissionView((p) => ({ ...p, open: false }));
       loadAdmissions();
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Failed", text: e?.message });
+    }
+  };
+
+  const viewAdmissionReceipt = async () => {
+    const billId = admissionView.billing?.bill_id;
+    if (!billId) {
+      Swal.fire({ icon: "info", title: "No bill", text: "Cannot find bill for this admission." });
+      return;
+    }
+    try {
+      const res = await fetchJson(`${API.billing}/${billId}`, { token });
+      const payments = res?.data?.payments || [];
+      const lastPayment = payments.length ? payments[payments.length - 1] : null;
+      if (lastPayment?.id) setReceiptDialogPaymentId(lastPayment.id);
+      else Swal.fire({ icon: "info", title: "No payment", text: "No payment record found for this bill." });
     } catch (e) {
       Swal.fire({ icon: "error", title: "Failed", text: e?.message });
     }
@@ -869,7 +888,14 @@ export default function WardManagement() {
                         </Stack>
                       );
                     }
-                    return <Chip size="small" label="Bill paid" color="success" />;
+                    return (
+                      <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
+                        <Chip size="small" label="Bill paid" color="success" />
+                        <Button size="small" variant="outlined" startIcon={<ReceiptIcon />} onClick={viewAdmissionReceipt} sx={{ fontWeight: 700 }}>
+                          View receipt
+                        </Button>
+                      </Stack>
+                    );
                   })()}
                 </>
               )}
@@ -941,6 +967,13 @@ export default function WardManagement() {
           <Button onClick={() => setAdmissionView((p) => ({ ...p, open: false }))}>Close</Button>
         </DialogActions>
       </Dialog>
+
+      <ReceiptDialog
+        open={!!receiptDialogPaymentId}
+        onClose={() => setReceiptDialogPaymentId(null)}
+        paymentId={receiptDialogPaymentId}
+        getToken={getToken}
+      />
 
       {/* Add nursing note dialog */}
       <Dialog open={noteDialogOpen} onClose={() => setNoteDialogOpen(false)} maxWidth="sm" fullWidth>

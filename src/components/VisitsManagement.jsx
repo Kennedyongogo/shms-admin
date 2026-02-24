@@ -51,6 +51,7 @@ import {
 } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
 import Swal from "sweetalert2";
+import ReceiptDialog from "./ReceiptDialog";
 
 const API = {
   appointments: "/api/appointments",
@@ -182,6 +183,7 @@ export default function VisitsManagement() {
   const [mainPaymentsPage, setMainPaymentsPage] = useState(0);
   const [mainPaymentsRowsPerPage, setMainPaymentsRowsPerPage] = useState(10);
   const [mainPaymentsTotal, setMainPaymentsTotal] = useState(0);
+  const [receiptDialogPaymentId, setReceiptDialogPaymentId] = useState(null);
 
   // Create appointment dialog (walk-in supported)
   const [createApptOpen, setCreateApptOpen] = useState(false);
@@ -1846,12 +1848,13 @@ export default function VisitsManagement() {
                       <TableCell sx={{ fontWeight: 800 }}>Amount</TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Method</TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Bill</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: 72 }} align="center">Action</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {mainPaymentsLoading ? (
                       <TableRow>
-                        <TableCell colSpan={6} sx={{ py: 4 }}>
+                        <TableCell colSpan={7} sx={{ py: 4 }}>
                           <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
                             <CircularProgress size={18} />
                             <Typography color="text.secondary">Loading payments…</Typography>
@@ -1873,12 +1876,19 @@ export default function VisitsManagement() {
                             <TableCell sx={{ fontSize: "0.85rem", color: "text.secondary" }}>
                               {p.bill_id ? `#${String(p.bill_id).slice(0, 8)}` : "—"}
                             </TableCell>
+                            <TableCell align="center">
+                              <Tooltip title="View receipt">
+                                <IconButton size="small" color="primary" onClick={() => setReceiptDialogPaymentId(p.id)} aria-label="View receipt">
+                                  <ReceiptIcon />
+                                </IconButton>
+                              </Tooltip>
+                            </TableCell>
                           </TableRow>
                         );
                       })
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={6}>
+                        <TableCell colSpan={7}>
                           <Typography sx={{ py: 2 }} color="text.secondary">No payments for appointments yet. Record payment from the Billing tab.</Typography>
                         </TableCell>
                       </TableRow>
@@ -2002,6 +2012,13 @@ export default function VisitsManagement() {
           <Button onClick={() => setMainBillView({ open: false, bill: null, loading: false })}>Close</Button>
         </DialogActions>
       </Dialog>
+
+      <ReceiptDialog
+        open={!!receiptDialogPaymentId}
+        onClose={() => setReceiptDialogPaymentId(null)}
+        paymentId={receiptDialogPaymentId}
+        getToken={getToken}
+      />
 
       {/* Create appointment */}
       <Dialog

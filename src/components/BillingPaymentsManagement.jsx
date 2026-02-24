@@ -15,6 +15,7 @@ import {
   Divider,
   FormControl,
   FormControlLabel,
+  IconButton,
   InputLabel,
   MenuItem,
   Select,
@@ -36,10 +37,12 @@ import {
 import {
   Add as AddIcon,
   Payments as PaymentsIcon,
+  Receipt as ReceiptIcon,
   ReceiptLong as ReceiptLongIcon,
   Refresh as RefreshIcon,
   Visibility as VisibilityIcon,
 } from "@mui/icons-material";
+import ReceiptDialog from "./ReceiptDialog";
 import { useTheme } from "@mui/material/styles";
 import Swal from "sweetalert2";
 
@@ -140,6 +143,7 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
   const [paySaving, setPaySaving] = useState(false);
   const [refDetails, setRefDetails] = useState({});
   const [expandedItemIds, setExpandedItemIds] = useState({});
+  const [receiptDialogPaymentId, setReceiptDialogPaymentId] = useState(null);
 
   const heroGradient = useMemo(() => {
     const main = theme.palette.primary.main;
@@ -615,12 +619,13 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
                     <TableCell sx={{ fontWeight: 900 }}>Patient</TableCell>
                     <TableCell sx={{ fontWeight: 900 }}>Amount</TableCell>
                     <TableCell sx={{ fontWeight: 900 }}>Method</TableCell>
+                    <TableCell sx={{ fontWeight: 900, width: 72 }} align="center">Action</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {paymentsLoading ? (
                     <TableRow>
-                      <TableCell colSpan={5} sx={{ py: 4 }}>
+                      <TableCell colSpan={6} sx={{ py: 4 }}>
                         <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
                           <CircularProgress size={18} />
                           <Typography color="text.secondary">Loading payments…</Typography>
@@ -645,12 +650,19 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
                           </TableCell>
                           <TableCell>{money(p.amount_paid)}</TableCell>
                           <TableCell>{p.payment_method}</TableCell>
+                          <TableCell align="center">
+                            <Tooltip title="View receipt">
+                              <IconButton size="small" color="primary" onClick={() => setReceiptDialogPaymentId(p.id)} aria-label="View receipt">
+                                <ReceiptIcon />
+                              </IconButton>
+                            </Tooltip>
+                          </TableCell>
                         </TableRow>
                       );
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} sx={{ py: 3 }}>
+                      <TableCell colSpan={6} sx={{ py: 3 }}>
                         <Typography color="text.secondary">No payments found.</Typography>
                       </TableCell>
                     </TableRow>
@@ -832,6 +844,7 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
                       <TableCell sx={{ fontWeight: 900 }}>Date</TableCell>
                       <TableCell sx={{ fontWeight: 900 }}>Amount</TableCell>
                       <TableCell sx={{ fontWeight: 900 }}>Method</TableCell>
+                      <TableCell sx={{ fontWeight: 900, width: 72 }} align="center">Action</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -842,11 +855,18 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
                           <TableCell>{formatDateTime(p.payment_date)}</TableCell>
                           <TableCell>{money(p.amount_paid)}</TableCell>
                           <TableCell>{p.payment_method}</TableCell>
+                          <TableCell align="center">
+                            <Tooltip title="View receipt">
+                              <IconButton size="small" color="primary" onClick={() => setReceiptDialogPaymentId(p.id)} aria-label="View receipt">
+                                <ReceiptIcon />
+                              </IconButton>
+                            </Tooltip>
+                          </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={4}>
+                        <TableCell colSpan={5}>
                           <Typography color="text.secondary">No payments yet.</Typography>
                         </TableCell>
                       </TableRow>
@@ -863,6 +883,12 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
           </Button>
         </DialogActions>
       </Dialog>
+      <ReceiptDialog
+        open={!!receiptDialogPaymentId}
+        onClose={() => setReceiptDialogPaymentId(null)}
+        paymentId={receiptDialogPaymentId}
+        getToken={getToken}
+      />
       </>
   );
 
