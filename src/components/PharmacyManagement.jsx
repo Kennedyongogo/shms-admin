@@ -33,7 +33,6 @@ import {
   Tooltip,
 } from "@mui/material";
 import {
-  Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Refresh as RefreshIcon,
@@ -125,7 +124,7 @@ export default function PharmacyManagement() {
 
   const [medDialog, setMedDialog] = useState({
     open: false,
-    mode: "create",
+    mode: "edit",
     id: null,
   });
   const [medForm, setMedForm] = useState({
@@ -372,14 +371,6 @@ export default function PharmacyManagement() {
     }
   };
 
-  const openCreateMed = () => {
-    setMedsSearchLocked(true);
-    setPresSearchLocked(true);
-    setDispSearchLocked(true);
-    setMedForm({ name: "", dosage_form: "", manufacturer: "", unit_price: "", inventory_item_id: "" });
-    setMedDialog({ open: true, mode: "create", id: null });
-    if (inventoryItems.length === 0) loadInventoryItems();
-  };
   const openEditMed = (m) => {
     setMedsSearchLocked(true);
     setPresSearchLocked(true);
@@ -397,7 +388,7 @@ export default function PharmacyManagement() {
   const openViewMed = (m) => setMedView({ open: true, med: m });
 
   const saveMed = async () => {
-    if (!requireTokenGuard()) return;
+    if (!requireTokenGuard() || !medDialog.id) return;
     if (!medForm.name.trim())
       return showToast("error", "Medication name is required");
     const payload = {
@@ -408,22 +399,13 @@ export default function PharmacyManagement() {
       inventory_item_id: medForm.inventory_item_id || null,
     };
     try {
-      if (medDialog.mode === "create") {
-        await fetchJson(API.medications, {
-          method: "POST",
-          token,
-          body: payload,
-        });
-        showToast("success", "Medication created");
-      } else {
-        await fetchJson(`${API.medications}/${medDialog.id}`, {
-          method: "PUT",
-          token,
-          body: payload,
-        });
-        showToast("success", "Medication updated");
-      }
-      setMedDialog({ open: false, mode: "create", id: null });
+      await fetchJson(`${API.medications}/${medDialog.id}`, {
+        method: "PUT",
+        token,
+        body: payload,
+      });
+      showToast("success", "Medication updated");
+      setMedDialog({ open: false, mode: "edit", id: null });
       await loadMedications();
     } catch (e) {
       showToast("error", e.message);
@@ -885,22 +867,6 @@ export default function PharmacyManagement() {
                   <RefreshIcon />
                 </IconButton>
               </Tooltip>
-              {isAdmin && tab === 0 && (
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={openCreateMed}
-                  sx={{
-                    bgcolor: "rgba(255,255,255,0.15)",
-                    color: "white",
-                    fontWeight: 800,
-                    border: "1px solid rgba(255,255,255,0.25)",
-                    "&:hover": { bgcolor: "rgba(255,255,255,0.22)" },
-                  }}
-                >
-                  New Medication
-                </Button>
-              )}
             </Stack>
           </Stack>
         </Box>
@@ -989,6 +955,7 @@ export default function PharmacyManagement() {
                       </TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Unit price</TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Stock link</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>In pharmacy</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 800 }}>
                         Actions
                       </TableCell>
@@ -997,7 +964,7 @@ export default function PharmacyManagement() {
                   <TableBody>
                     {medsLoading ? (
                       <TableRow>
-                        <TableCell colSpan={7}>
+                        <TableCell colSpan={8}>
                           <Stack
                             direction="row"
                             spacing={1}
@@ -1031,6 +998,11 @@ export default function PharmacyManagement() {
                             ) : (
                               "—"
                             )}
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>
+                            {m.inventory_item_id && m.inventoryItem != null
+                              ? (m.inventoryItem.quantity_in_pharmacy ?? 0)
+                              : "—"}
                           </TableCell>
                           <TableCell align="right">
                             <Tooltip title="View">
@@ -1067,7 +1039,7 @@ export default function PharmacyManagement() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={7}>
+                        <TableCell colSpan={8}>
                           <Typography sx={{ py: 2 }} color="text.secondary">
                             No medications found.
                           </Typography>
@@ -1602,9 +1574,15 @@ export default function PharmacyManagement() {
                 </Typography>
                 <Typography>
                   {medView.med?.inventoryItem
-                    ? `${medView.med.inventoryItem.name} (available: ${medView.med.inventoryItem.quantity_available ?? 0})`
+                    ? medView.med.inventoryItem.name
                     : "Linked (ID: " + String(medView.med.inventory_item_id).slice(0, 8) + "…)"}
                 </Typography>
+                {medView.med?.inventoryItem && (
+                  <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+                    <Typography><strong>In pharmacy:</strong> {medView.med.inventoryItem.quantity_in_pharmacy ?? 0} {medView.med.inventoryItem.unit || "units"}</Typography>
+                    <Typography color="text.secondary"><strong>Main store:</strong> {medView.med.inventoryItem.quantity_available ?? 0}</Typography>
+                  </Stack>
+                )}
               </>
             )}
           </Stack>
@@ -1619,15 +1597,11 @@ export default function PharmacyManagement() {
       {/* Medication create/edit */}
       <Dialog
         open={medDialog.open}
-        onClose={() => setMedDialog({ open: false, mode: "create", id: null })}
+        onClose={() => setMedDialog({ open: false, mode: "edit", id: null })}
         fullWidth
         maxWidth="sm"
       >
-        <DialogTitle sx={{ fontWeight: 900 }}>
-          {medDialog.mode === "create"
-            ? "Create Medication"
-            : "Edit Medication"}
-        </DialogTitle>
+        <DialogTitle sx={{ fontWeight: 900 }}>Edit Medication</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
@@ -1695,7 +1669,7 @@ export default function PharmacyManagement() {
         <DialogActions>
           <Button
             onClick={() =>
-              setMedDialog({ open: false, mode: "create", id: null })
+              setMedDialog({ open: false, mode: "edit", id: null })
             }
           >
             Cancel
@@ -1969,9 +1943,27 @@ export default function PharmacyManagement() {
             <Typography variant="overline" color="text.secondary">
               Prescription
             </Typography>
-            <Typography sx={{ fontFamily: "monospace" }}>
-              {dispView.record?.prescription_id || "—"}
-            </Typography>
+            {dispView.record?.prescription ? (
+              <Stack spacing={0.5}>
+                <Typography sx={{ fontWeight: 700 }}>
+                  Patient: {dispView.record.prescription.patient?.full_name || dispView.record.prescription.patient?.user?.full_name || "—"}
+                </Typography>
+                {dispView.record.prescription.prescription_date && (
+                  <Typography variant="body2" color="text.secondary">
+                    Prescription date: {formatDateTime(dispView.record.prescription.prescription_date)}
+                  </Typography>
+                )}
+                {Array.isArray(dispView.record.prescription.items) && dispView.record.prescription.items.length > 0 && (
+                  <Typography variant="body2" sx={{ mt: 0.5 }}>
+                    Medications: {dispView.record.prescription.items.map((it) => `${it.medication?.name || "—"} × ${it.quantity ?? 1}`).join("; ")}
+                  </Typography>
+                )}
+              </Stack>
+            ) : (
+              <Typography sx={{ fontFamily: "monospace", color: "text.secondary" }}>
+                {dispView.record?.prescription_id?.slice(0, 8)}…
+              </Typography>
+            )}
             <Typography
               variant="overline"
               color="text.secondary"

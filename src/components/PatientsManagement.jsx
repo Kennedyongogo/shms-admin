@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Alert,
   Avatar,
@@ -28,7 +29,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { Delete, Edit, Person, Refresh, Search, Visibility } from "@mui/icons-material";
+import { Add, Delete, Edit, Person, Refresh, Search, Visibility, Description as ReportIcon } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
 import Swal from "sweetalert2";
 
@@ -70,8 +71,28 @@ async function fetchJson(url, { method = "GET", body, token } = {}) {
 
 const fmt = (v) => (v == null || v === "" ? "—" : String(v));
 
+const normalizeKenyanPhone = (input) => {
+  if (input == null) return { value: null, error: null };
+  const raw = String(input).trim();
+  if (!raw) return { value: null, error: null };
+  let p = raw.replace(/[\s\-()]/g, "");
+  if (p.startsWith("+254")) {
+  } else if (p.startsWith("254")) {
+    p = `+${p}`;
+  } else if (p.startsWith("0") && p.length === 10) {
+    p = `+254${p.slice(1)}`;
+  } else if (/^[71]\d{8}$/.test(p)) {
+    p = `+254${p}`;
+  } else {
+    return { value: raw, error: 'Phone must be a Kenya number starting with "+254"' };
+  }
+  if (!/^\+254\d{9}$/.test(p)) return { value: raw, error: 'Phone must be in format "+254XXXXXXXXX"' };
+  return { value: p, error: null };
+};
+
 export default function PatientsManagement() {
   const theme = useTheme();
+  const navigate = useNavigate();
   const token = getToken();
   const roleName = getRoleName();
   const isAdmin = roleName === "admin";
@@ -100,6 +121,26 @@ export default function PatientsManagement() {
   const [viewOpen, setViewOpen] = useState(false);
   const [viewLoading, setViewLoading] = useState(false);
   const [viewPatient, setViewPatient] = useState(null);
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createSaving, setCreateSaving] = useState(false);
+  const [createPhoneError, setCreatePhoneError] = useState("");
+  const [createForm, setCreateForm] = useState({
+    hospital_id: "",
+    full_name: "",
+    phone: "",
+    email: "",
+    date_of_birth: "",
+    gender: "",
+    blood_group: "",
+    insurance_provider: "",
+    emergency_contact: "",
+    temperature_c: "",
+    weight_kg: "",
+    status: "active",
+    password: "123456",
+    confirm_password: "123456",
+  });
 
   const requireTokenGuard = () => {
     if (!token) {
@@ -178,9 +219,83 @@ export default function PatientsManagement() {
       blood_group: p.blood_group || "",
       insurance_provider: p.insurance_provider || "",
       emergency_contact: p.emergency_contact || "",
+      temperature_c: p.temperature_c != null ? String(p.temperature_c) : "",
+      weight_kg: p.weight_kg != null ? String(p.weight_kg) : "",
       status: p.status || "active",
     });
     setEditOpen(true);
+  };
+
+  const openCreate = () => {
+    setCreatePhoneError("");
+    setCreateForm({
+      hospital_id: hospitals[0]?.id || "",
+      full_name: "",
+      phone: "",
+      email: "",
+      date_of_birth: "",
+      gender: "",
+      blood_group: "",
+      insurance_provider: "",
+      emergency_contact: "",
+      temperature_c: "",
+      weight_kg: "",
+      status: "active",
+      password: "123456",
+      confirm_password: "123456",
+    });
+    setCreateOpen(true);
+  };
+
+  const saveCreate = async () => {
+    if (!requireTokenGuard()) return;
+    if (!isAdmin) return;
+    if (!createForm.hospital_id) return Swal.fire({ icon: "warning", title: "Missing hospital", text: "Select a hospital." });
+    if (!createForm.full_name.trim()) return Swal.fire({ icon: "warning", title: "Missing name", text: "Full name is required." });
+    const normalizedPhone = normalizeKenyanPhone(createForm.phone);
+    if (normalizedPhone.error) {
+      setCreatePhoneError(normalizedPhone.error);
+      return Swal.fire({ icon: "warning", title: "Invalid phone", text: normalizedPhone.error });
+    }
+    if (!normalizedPhone.value && !createForm.email.trim()) {
+      return Swal.fire({ icon: "warning", title: "Missing contact", text: "Provide at least phone or email." });
+    }
+    if (!createForm.password) return Swal.fire({ icon: "warning", title: "Missing password", text: "Portal password is required." });
+    if (createForm.password !== createForm.confirm_password) {
+      return Swal.fire({ icon: "warning", title: "Passwords do not match", text: "Confirm password must match." });
+    }
+    const payload = {
+      hospital_id: createForm.hospital_id,
+      full_name: createForm.full_name.trim(),
+      phone: normalizedPhone.value,
+      email: createForm.email.trim() ? createForm.email.trim().toLowerCase() : null,
+      date_of_birth: createForm.date_of_birth || null,
+      gender: createForm.gender || null,
+      blood_group: createForm.blood_group || null,
+      insurance_provider: createForm.insurance_provider.trim() || null,
+      emergency_contact: createForm.emergency_contact.trim() || null,
+      patient_source: "walk_in",
+      temperature_c: createForm.temperature_c === "" ? null : Number(createForm.temperature_c),
+      weight_kg: createForm.weight_kg === "" ? null : Number(createForm.weight_kg),
+      status: createForm.status,
+      password: createForm.password,
+      confirm_password: createForm.confirm_password,
+    };
+    setCreateSaving(true);
+    try {
+      await fetchJson(API.patients, { method: "POST", token, body: payload });
+      setCreateOpen(false);
+      await loadPatients();
+      Swal.fire({
+        icon: "success",
+        title: "Walk-in patient created",
+        text: "Patient can log in at /patient using phone/email and the password you set.",
+      });
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Failed", text: e.message });
+    } finally {
+      setCreateSaving(false);
+    }
   };
 
   const openView = async (p) => {
@@ -216,6 +331,8 @@ export default function PatientsManagement() {
       blood_group: editForm.blood_group || null,
       insurance_provider: editForm.insurance_provider.trim() || null,
       emergency_contact: editForm.emergency_contact.trim() || null,
+      temperature_c: editForm.temperature_c === "" ? null : Number(editForm.temperature_c),
+      weight_kg: editForm.weight_kg === "" ? null : Number(editForm.weight_kg),
       status: editForm.status,
     };
 
@@ -270,6 +387,16 @@ export default function PatientsManagement() {
               <Typography sx={{ opacity: 0.9, mt: 0.5 }}>List, edit, and delete patient records.</Typography>
             </Box>
             <Stack direction="row" spacing={1}>
+              {isAdmin && (
+                <Button
+                  variant="outlined"
+                  startIcon={<Add />}
+                  onClick={openCreate}
+                  sx={{ color: "white", borderColor: "rgba(255,255,255,0.6)", fontWeight: 800, "&:hover": { borderColor: "white", bgcolor: "rgba(255,255,255,0.1)" } }}
+                >
+                  Add walk-in patient
+                </Button>
+              )}
               <Tooltip title="Refresh">
                 <IconButton
                   onClick={() => loadPatients()}
@@ -360,6 +487,11 @@ export default function PatientsManagement() {
                       <TableCell>{fmt(p.status)}</TableCell>
                       <TableCell align="right">
                         <Stack direction="row" spacing={0.5} justifyContent="flex-end" alignItems="center">
+                          <Tooltip title="Medical reports">
+                            <IconButton size="small" onClick={() => navigate(`/patients/${p.id}/reports`)}>
+                              <ReportIcon fontSize="inherit" />
+                            </IconButton>
+                          </Tooltip>
                           <Tooltip title="View">
                             <IconButton size="small" onClick={() => openView(p)}>
                               <Visibility fontSize="inherit" />
@@ -577,6 +709,25 @@ export default function PatientsManagement() {
                 value={editForm.emergency_contact}
                 onChange={(e) => setEditForm((p) => ({ ...p, emergency_contact: e.target.value }))}
               />
+
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                <TextField
+                  label="Temperature (°C) (optional)"
+                  type="number"
+                  fullWidth
+                  inputProps={{ step: 0.1, min: 25, max: 50 }}
+                  value={editForm.temperature_c}
+                  onChange={(e) => setEditForm((p) => ({ ...p, temperature_c: e.target.value }))}
+                />
+                <TextField
+                  label="Weight (kg) (optional)"
+                  type="number"
+                  fullWidth
+                  inputProps={{ step: 0.01, min: 0, max: 1000 }}
+                  value={editForm.weight_kg}
+                  onChange={(e) => setEditForm((p) => ({ ...p, weight_kg: e.target.value }))}
+                />
+              </Stack>
             </Stack>
           )}
         </DialogContent>
@@ -591,6 +742,81 @@ export default function PatientsManagement() {
             sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: theme.palette.primary.dark }, fontWeight: 900 }}
           >
             {editSaving ? "Saving…" : "Save"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Create walk-in patient dialog */}
+      <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 900 }}>Add walk-in patient</DialogTitle>
+        <DialogContent dividers>
+          {createOpen && (
+            <Stack spacing={2} sx={{ mt: 0.5 }}>
+              <FormControl fullWidth required>
+                <InputLabel>Hospital</InputLabel>
+                <Select
+                  label="Hospital"
+                  value={createForm.hospital_id}
+                  onChange={(e) => setCreateForm((p) => ({ ...p, hospital_id: e.target.value }))}
+                >
+                  {hospitals.map((h) => (
+                    <MenuItem key={h.id} value={h.id}>{h.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                <TextField label="Full name" fullWidth required value={createForm.full_name} onChange={(e) => setCreateForm((p) => ({ ...p, full_name: e.target.value }))} />
+                <FormControl fullWidth>
+                  <InputLabel>Status</InputLabel>
+                  <Select label="Status" value={createForm.status} onChange={(e) => setCreateForm((p) => ({ ...p, status: e.target.value }))}>
+                    <MenuItem value="active">active</MenuItem>
+                    <MenuItem value="inactive">inactive</MenuItem>
+                    <MenuItem value="suspended">suspended</MenuItem>
+                  </Select>
+                </FormControl>
+              </Stack>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                <TextField
+                  label="Phone"
+                  fullWidth
+                  placeholder="+2547XXXXXXXX"
+                  value={createForm.phone}
+                  onChange={(e) => { setCreatePhoneError(""); setCreateForm((p) => ({ ...p, phone: e.target.value })); }}
+                  onBlur={() => {
+                    const n = normalizeKenyanPhone(createForm.phone);
+                    setCreatePhoneError(n.error || "");
+                    if (!n.error && n.value) setCreateForm((p) => ({ ...p, phone: n.value }));
+                    if (!n.value) setCreateForm((p) => ({ ...p, phone: "" }));
+                  }}
+                  error={Boolean(createPhoneError)}
+                  helperText={createPhoneError || 'Kenya format. Saved as "+254XXXXXXXXX".'}
+                />
+                <TextField label="Email (optional)" type="email" fullWidth value={createForm.email} onChange={(e) => setCreateForm((p) => ({ ...p, email: e.target.value }))} />
+              </Stack>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                <TextField label="Date of birth (optional)" type="date" fullWidth InputLabelProps={{ shrink: true }} value={createForm.date_of_birth} onChange={(e) => setCreateForm((p) => ({ ...p, date_of_birth: e.target.value }))} />
+                <TextField label="Gender (optional)" fullWidth value={createForm.gender} onChange={(e) => setCreateForm((p) => ({ ...p, gender: e.target.value }))} />
+              </Stack>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                <TextField label="Blood group (optional)" fullWidth value={createForm.blood_group} onChange={(e) => setCreateForm((p) => ({ ...p, blood_group: e.target.value }))} />
+                <TextField label="Insurance provider (optional)" fullWidth value={createForm.insurance_provider} onChange={(e) => setCreateForm((p) => ({ ...p, insurance_provider: e.target.value }))} />
+              </Stack>
+              <TextField label="Emergency contact (optional)" fullWidth value={createForm.emergency_contact} onChange={(e) => setCreateForm((p) => ({ ...p, emergency_contact: e.target.value }))} />
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                <TextField label="Temperature (°C) (optional)" type="number" fullWidth inputProps={{ step: 0.1, min: 25, max: 50 }} value={createForm.temperature_c} onChange={(e) => setCreateForm((p) => ({ ...p, temperature_c: e.target.value }))} />
+                <TextField label="Weight (kg) (optional)" type="number" fullWidth inputProps={{ step: 0.01, min: 0, max: 1000 }} value={createForm.weight_kg} onChange={(e) => setCreateForm((p) => ({ ...p, weight_kg: e.target.value }))} />
+              </Stack>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                <TextField label="Portal password" type="password" fullWidth required value={createForm.password} onChange={(e) => setCreateForm((p) => ({ ...p, password: e.target.value }))} />
+                <TextField label="Confirm password" type="password" fullWidth required value={createForm.confirm_password} onChange={(e) => setCreateForm((p) => ({ ...p, confirm_password: e.target.value }))} />
+              </Stack>
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button variant="outlined" onClick={() => setCreateOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={saveCreate} disabled={!isAdmin || createSaving} sx={{ fontWeight: 900 }}>
+            {createSaving ? "Creating…" : "Create"}
           </Button>
         </DialogActions>
       </Dialog>

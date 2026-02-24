@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Alert,
@@ -32,6 +32,9 @@ import {
   LocalPharmacy as PharmacyIcon,
   Hotel as AdmitIcon,
   Visibility as VisibilityIcon,
+  Description as ReportIcon,
+  PictureAsPdf as PdfIcon,
+  GetApp as DownloadIcon,
 } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
 import Swal from "sweetalert2";
@@ -45,6 +48,7 @@ const API = {
   admissions: "/api/admissions",
   beds: "/api/beds",
   wards: "/api/wards",
+  medicalReports: "/api/medical-reports",
 };
 
 const getToken = () => localStorage.getItem("token");
@@ -74,6 +78,15 @@ async function fetchJson(url, { method = "GET", body, token } = {}) {
     throw err;
   }
   return data;
+}
+
+async function fetchPdfBlob(url, token) {
+  const res = await fetch(url, {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error("Failed to load PDF");
+  return res.blob();
 }
 
 const formatDateTime = (value) => {
@@ -139,6 +152,16 @@ export default function ConsultationViewPage() {
 
   const [consultationLabOrders, setConsultationLabOrders] = useState([]);
   const [consultationLabOrdersLoading, setConsultationLabOrdersLoading] = useState(false);
+  const [consultationPrescriptions, setConsultationPrescriptions] = useState([]);
+  const [consultationPrescriptionsLoading, setConsultationPrescriptionsLoading] = useState(false);
+
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [reportSaving, setReportSaving] = useState(false);
+  const [reportText, setReportText] = useState("");
+  const [consultationHasReport, setConsultationHasReport] = useState(false);
+  const [consultationReportId, setConsultationReportId] = useState(null);
+  const [reportPdfPreviewUrl, setReportPdfPreviewUrl] = useState(null);
+  const reportPdfObjectUrlRef = useRef(null);
 
   const isAdmin = useMemo(() => {
     try {
@@ -223,6 +246,89 @@ export default function ConsultationViewPage() {
     })();
     return () => { cancelled = true; };
   }, [consultation?.id, token]);
+
+  useEffect(() => {
+    if (!consultation?.id || !token) return;
+    let cancelled = false;
+    setConsultationPrescriptionsLoading(true);
+    (async () => {
+      try {
+        const data = await fetchJson(
+          `${API.prescriptions}?consultation_id=${consultation.id}&limit=100`,
+          { token }
+        );
+        if (!cancelled) setConsultationPrescriptions(data?.data || []);
+      } catch {
+        if (!cancelled) setConsultationPrescriptions([]);
+      } finally {
+        if (!cancelled) setConsultationPrescriptionsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [consultation?.id, token]);
+
+  useEffect(() => {
+    if (!consultation?.id || !token) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await fetchJson(
+          `${API.medicalReports}?consultation_id=${consultation.id}&limit=1`,
+          { token }
+        );
+        const hasReport = Array.isArray(data?.data) && data.data.length > 0;
+        if (!cancelled) {
+          setConsultationHasReport(hasReport);
+          setConsultationReportId(hasReport ? data.data[0].id : null);
+        }
+      } catch {
+        if (!cancelled) {
+          setConsultationHasReport(false);
+          setConsultationReportId(null);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [consultation?.id, token]);
+
+  useEffect(() => {
+    if (!consultationReportId || !token) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const blob = await fetchPdfBlob(`${API.medicalReports}/${consultationReportId}/pdf`, token);
+        if (cancelled) return;
+        if (reportPdfObjectUrlRef.current) URL.revokeObjectURL(reportPdfObjectUrlRef.current);
+        reportPdfObjectUrlRef.current = URL.createObjectURL(blob);
+        setReportPdfPreviewUrl(reportPdfObjectUrlRef.current);
+      } catch {
+        if (!cancelled) setReportPdfPreviewUrl(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (reportPdfObjectUrlRef.current) {
+        URL.revokeObjectURL(reportPdfObjectUrlRef.current);
+        reportPdfObjectUrlRef.current = null;
+      }
+      setReportPdfPreviewUrl(null);
+    };
+  }, [consultationReportId, token]);
+
+  const downloadReportPdf = async () => {
+    if (!consultationReportId || !token) return;
+    try {
+      const blob = await fetchPdfBlob(`${API.medicalReports}/${consultationReportId}/pdf`, token);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "medical-report.pdf";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Download failed", text: e?.message || "Could not download PDF." });
+    }
+  };
 
   const loadLabTests = async () => {
     if (!token) return;
@@ -411,6 +517,90 @@ export default function ConsultationViewPage() {
     }
   };
 
+  const buildPrefilledReportText = () => {
+    const cons = consultation;
+    if (!cons) return "";
+    const patientName = cons.appointment?.patient?.full_name || cons.appointment?.patient?.user?.full_name || "Patient";
+    const doctorName = cons.appointment?.doctor?.user?.full_name || cons.appointment?.doctor?.staff_type || "Doctor";
+    const dateStr = formatDateTime(cons.appointment?.appointment_date || cons.createdAt);
+    const lines = [
+      `Consultation report – ${dateStr}`,
+      `Patient: ${patientName}`,
+      `Doctor: ${doctorName}`,
+      "",
+      "Symptoms:",
+      cons.symptoms || "—",
+      "",
+      "Diagnosis:",
+      cons.diagnosis || "—",
+      "",
+      "Notes:",
+      cons.notes || "—",
+    ];
+    if (consultationPrescriptions.length > 0) {
+      lines.push("", "Prescriptions:");
+      consultationPrescriptions.forEach((rx) => {
+        (rx.items || []).forEach((it) => {
+          lines.push(`  • ${it.medication?.name || "—"} × ${it.quantity ?? 1}${it.dosage ? `, ${it.dosage}` : ""}${it.frequency ? `, ${it.frequency}` : ""}`);
+        });
+      });
+    }
+    if (consultationLabOrders.length > 0) {
+      lines.push("", "Lab results:");
+      consultationLabOrders.forEach((order) => {
+        (order.items || []).forEach((item) => {
+          const test = item.labTest || {};
+          const result = item.result;
+          const val = result?.result_value ?? "Pending";
+          lines.push(`  • ${test.test_name || "—"}: ${val}`);
+        });
+      });
+    }
+    return lines.join("\n");
+  };
+
+  const openReportDialog = () => {
+    setReportText(buildPrefilledReportText());
+    setReportDialogOpen(true);
+  };
+
+  const generateReport = async () => {
+    if (!token || !consultation?.id) return;
+    const patientId = consultation?.appointment?.patient?.id;
+    if (!patientId) {
+      Swal.fire({ icon: "warning", title: "Missing patient", text: "Patient not found on this consultation." });
+      return;
+    }
+    const text = (reportText || "").trim();
+    if (!text) {
+      Swal.fire({ icon: "warning", title: "Report text required", text: "Please enter or edit the report content." });
+      return;
+    }
+    setReportSaving(true);
+    try {
+      const reportRes = await fetchJson(API.medicalReports, {
+        method: "POST",
+        token,
+        body: {
+          patient_id: patientId,
+          doctor_id: consultation?.appointment?.doctor?.id || null,
+          consultation_id: consultation.id,
+          report_text: text,
+        },
+      });
+      await Swal.fire({ icon: "success", title: "Report generated", text: "Medical report has been saved and appointment marked complete.", timer: 1500, showConfirmButton: false });
+      setReportDialogOpen(false);
+      setConsultationHasReport(true);
+      setConsultationReportId(reportRes?.data?.id || null);
+      const data = await fetchJson(`${API.consultations}/${consultation.id}`, { token });
+      setConsultation(data?.data || null);
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Failed", text: e?.message || "Could not save report." });
+    } finally {
+      setReportSaving(false);
+    }
+  };
+
   const handleBack = () => navigate("/appointments");
 
   const patient = consultation?.appointment?.patient;
@@ -524,6 +714,7 @@ export default function ConsultationViewPage() {
               <Button startIcon={<ScienceIcon />} variant="outlined" onClick={openLab} disabled={!canEdit} sx={{ borderRadius: 2, fontWeight: 700, width: "100%", minHeight: 44 }}>Initiate lab test</Button>
               <Button startIcon={<PharmacyIcon />} variant="outlined" onClick={openRx} disabled={!canEdit} sx={{ borderRadius: 2, fontWeight: 700, width: "100%", minHeight: 44 }}>Prescribe</Button>
               <Button startIcon={<AdmitIcon />} variant="outlined" onClick={openAdmit} disabled={!canEdit || hasAdmission} sx={{ borderRadius: 2, fontWeight: 700, width: "100%", minHeight: 44 }}>{hasAdmission ? "Already admitted" : "Admit patient"}</Button>
+              <Button startIcon={<ReportIcon />} variant="outlined" onClick={openReportDialog} disabled={consultationHasReport} sx={{ borderRadius: 2, fontWeight: 700, width: "100%", minHeight: 44, gridColumn: { xs: "1", sm: "1 / -1" } }}>{consultationHasReport ? "Report generated" : "Generate report"}</Button>
             </Box>
 
             <Divider sx={{ my: 2 }} />
@@ -547,7 +738,7 @@ export default function ConsultationViewPage() {
                     referenceRange: result?.reference_range ?? null,
                     interpretation: result?.interpretation ?? null,
                     resultDate: result?.result_date ? new Date(result.result_date) : null,
-                    labTechnicianId: result?.lab_technician_id ?? null,
+                    labTechnicianName: result?.labTechnician?.user?.full_name || result?.labTechnician?.staff_type || null,
                     status: result ? "Entered" : "Pending",
                   });
                 });
@@ -571,7 +762,7 @@ export default function ConsultationViewPage() {
                           <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">{label("Reference range")}{value(r.referenceRange ?? "—")}</Stack>
                           {r.interpretation != null && r.interpretation !== "" && <Stack direction="row" spacing={1} alignItems="flex-start" flexWrap="wrap">{label("Interpretation")}{value(r.interpretation)}</Stack>}
                           <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">{label("Result date")}{value(r.resultDate ? r.resultDate.toLocaleString() : "—")}</Stack>
-                          {r.labTechnicianId != null && <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">{label("Lab technician ID")}{value(r.labTechnicianId)}</Stack>}
+                          {r.labTechnicianName && <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">{label("Lab technician")}{value(r.labTechnicianName)}</Stack>}
                           <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">{label("Status")}<Typography component="span" variant="body2" color={r.status === "Entered" ? "success.main" : "text.secondary"} fontWeight={600}>{r.status}</Typography></Stack>
                         </Stack>
                       </CardContent>
@@ -580,6 +771,69 @@ export default function ConsultationViewPage() {
                 </Stack>
               );
             })()}
+
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Prescriptions</Typography>
+            {consultationPrescriptionsLoading ? (
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
+                <CircularProgress size={20} />
+                <Typography color="text.secondary">Loading prescriptions...</Typography>
+              </Stack>
+            ) : consultationPrescriptions.length === 0 ? (
+              <Typography color="text.secondary">No prescriptions for this consultation yet.</Typography>
+            ) : (
+              <Stack spacing={1.5}>
+                {consultationPrescriptions.map((rx) => (
+                  <Card key={rx.id} variant="outlined" sx={{ borderRadius: 2 }}>
+                    <CardContent sx={{ "&:last-child": { pb: 2 }, py: 1.5, px: 2 }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                        Prescription • {formatDateTime(rx.prescription_date || rx.createdAt)}
+                      </Typography>
+                      <Stack spacing={0.5}>
+                        {Array.isArray(rx.items) && rx.items.length > 0 ? (
+                          rx.items.map((it, i) => (
+                            <Typography key={i} variant="body2">
+                              {it.medication?.name || "—"} × {it.quantity ?? 1}
+                              {it.dosage ? ` • ${it.dosage}` : ""}
+                              {it.frequency ? ` • ${it.frequency}` : ""}
+                            </Typography>
+                          ))
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">No medications listed.</Typography>
+                        )}
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                ))}
+              </Stack>
+            )}
+
+            {consultationHasReport && consultationReportId && (
+              <>
+                <Divider sx={{ my: 2 }} />
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Medical report</Typography>
+                <Card variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>
+                  <CardContent sx={{ "&:last-child": { pb: 2 }, p: 0 }}>
+                    <Box sx={{ p: 1.5, borderBottom: "1px solid", borderColor: "divider", display: "flex", justifyContent: "flex-end", gap: 1 }}>
+                      <Button size="small" startIcon={<DownloadIcon />} variant="contained" onClick={downloadReportPdf} sx={{ borderRadius: 2, fontWeight: 700 }}>
+                        Download PDF
+                      </Button>
+                    </Box>
+                    <Box sx={{ height: 480, bgcolor: "grey.100" }}>
+                      {reportPdfPreviewUrl ? (
+                        <iframe title="Report PDF preview" src={reportPdfPreviewUrl} style={{ width: "100%", height: "100%", border: "none" }} />
+                      ) : (
+                        <Stack alignItems="center" justifyContent="center" sx={{ height: "100%" }} spacing={1}>
+                          <CircularProgress size={32} />
+                          <Typography variant="body2" color="text.secondary">Loading PDF preview...</Typography>
+                        </Stack>
+                      )}
+                    </Box>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+
           </CardContent>
         </Card>
       </Stack>
@@ -684,6 +938,35 @@ export default function ConsultationViewPage() {
         <DialogActions>
           <Button variant="outlined" onClick={() => setAdmitOpen(false)}>Cancel</Button>
           <Button variant="contained" onClick={createAdmission} disabled={admitSaving || !admitBedId || admitBedsLoading} sx={{ fontWeight: 900 }}>{admitSaving ? "Admitting..." : "Admit"}</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={reportDialogOpen} onClose={() => setReportDialogOpen(false)} fullWidth maxWidth="md">
+        <DialogTitle sx={{ fontWeight: 900 }}>Generate medical report</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <Alert severity="info" sx={{ py: 0.5 }}>
+              The report is prefilled from this consultation. You can <strong>edit any part</strong> and <strong>add your own notes</strong> in the box below; whatever you leave here is saved as the medical report.
+            </Alert>
+            <TextField
+              label="Report content (editable — add or change notes as needed)"
+              fullWidth
+              multiline
+              minRows={12}
+              maxRows={24}
+              value={reportText}
+              onChange={(e) => setReportText(e.target.value)}
+              placeholder="Consultation summary and your notes..."
+              helperText="Edit the prefilled text and add any additional notes, follow-up instructions, or clarifications. This full content will be saved as the report."
+              sx={{ "& .MuiInputBase-root": { fontFamily: "monospace", fontSize: "0.9rem" } }}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button variant="outlined" onClick={() => setReportDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={generateReport} disabled={reportSaving} sx={{ fontWeight: 900 }} startIcon={reportSaving ? <CircularProgress size={18} color="inherit" /> : <ReportIcon />}>
+            {reportSaving ? "Saving..." : "Generate report"}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

@@ -7,13 +7,16 @@ import AdminUsersManagement from "./AdminUsersManagement";
 import PharmacyManagement from "./PharmacyManagement";
 import VisitsManagement from "./VisitsManagement";
 import HospitalsManagement from "./HospitalsManagement";
-import WalkInPatientCreate from "./WalkInPatientCreate";
 import PatientsManagement from "./PatientsManagement";
 import LaboratoryManagement from "./LaboratoryManagement";
 import BillingPaymentsManagement from "./BillingPaymentsManagement";
 import WardManagement from "./WardManagement";
+import InventoryManagement from "./InventoryManagement";
 import RecordConsultationPage from "./RecordConsultationPage";
 import ConsultationViewPage from "./ConsultationViewPage";
+import PatientReportsPage from "./PatientReportsPage";
+import AuditLogsPage from "./AuditLogsPage";
+import DashboardPage from "./DashboardPage";
 
 function PageRoutes() {
   const [user, setUser] = useState(null);
@@ -55,18 +58,21 @@ function PageRoutes() {
           <Navigate to="/" replace />
         ) : (
           <Routes>
-            <Route path="home" element={<Navigate to="/users" replace />} />
+            <Route path="home" element={<Navigate to="/dashboard" replace />} />
+            <Route path="dashboard" element={<DashboardPage />} />
             <Route path="users" element={<AdminUsersManagement />} />
             <Route path="pharmacy" element={<PharmacyManagement />} />
             <Route path="appointments" element={<VisitsManagement />} />
             <Route path="appointments/record-consultation" element={<RecordConsultationPage />} />
             <Route path="appointments/consultation/:id" element={<ConsultationViewPage />} />
-            <Route path="appointments/walk-in-patient" element={<WalkInPatientCreate />} />
             <Route path="patients" element={<PatientsManagement />} />
+            <Route path="patients/:patientId/reports" element={<PatientReportsPage />} />
             <Route path="laboratory" element={<LaboratoryManagement />} />
             <Route path="hospitals" element={<HospitalsManagement />} />
             <Route path="billing" element={<BillingPaymentsManagement />} />
             <Route path="ward" element={<WardManagement />} />
+            <Route path="inventory" element={<InventoryManagement />} />
+            <Route path="audit-logs" element={<AuditLogsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         )}

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Alert,
   Box,
@@ -126,7 +126,6 @@ const toLocalDateTimeInputValue = (date = new Date()) => {
 export default function VisitsManagement() {
   const theme = useTheme();
   const navigate = useNavigate();
-  const location = useLocation();
   const token = getToken();
   const currentUser = getUser();
   const roleName = getRoleName();
@@ -518,18 +517,6 @@ export default function VisitsManagement() {
     }
   };
 
-  const openCreateWalkInPatientPage = () => {
-    if (!isAdmin) {
-      Swal.fire({
-        icon: "info",
-        title: "Admins only",
-        text: "Only admins can create walk-in patients.",
-      });
-      return;
-    }
-    navigate("/appointments/walk-in-patient");
-  };
-
   const openCreateAppointment = () => {
     setApptSearchLocked(true);
     setConsSearchLocked(true);
@@ -544,31 +531,6 @@ export default function VisitsManagement() {
     searchDoctors("");
     searchServices("");
   };
-
-  useEffect(() => {
-    const pid = location?.state?.preselectPatientId;
-    if (!pid) return;
-    (async () => {
-      try {
-        const data = await fetchJson(`${API.patients}/${pid}`, { token });
-        const patient = data?.data || null;
-        setApptSearchLocked(true);
-        setConsSearchLocked(true);
-        setWalkIn(true);
-        setAppointmentDate(toLocalDateTimeInputValue());
-        setCreateApptOpen(true);
-        setSelectedDoctor(null);
-        setSelectedPatient(patient);
-        await searchPatients("");
-        await searchDoctors("");
-      } catch (e) {
-        Swal.fire({ icon: "error", title: "Failed", text: e.message });
-      } finally {
-        navigate("/appointments", { replace: true });
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location?.state?.preselectPatientId]);
 
   const createAppointment = async () => {
     if (!requireTokenGuard()) return;
@@ -1426,26 +1388,6 @@ export default function VisitsManagement() {
               >
                 New Appointment
               </Button>
-              {isAdmin && (
-                <Button
-                  variant="outlined"
-                  startIcon={<AddIcon />}
-                  onClick={openCreateWalkInPatientPage}
-                  sx={{
-                    borderColor: "rgba(255,255,255,0.55)",
-                    color: "white",
-                    fontWeight: 800,
-                    fontSize: "clamp(0.72rem, 1.05vw, 0.9rem)",
-                    whiteSpace: "nowrap",
-                    "&:hover": {
-                      borderColor: "rgba(255,255,255,0.85)",
-                      bgcolor: "rgba(255,255,255,0.08)",
-                    },
-                  }}
-                >
-                  Create Walk-in Patient
-                </Button>
-              )}
             </Stack>
           </Stack>
         </Box>
@@ -1989,6 +1931,40 @@ export default function VisitsManagement() {
                   sx={{ mt: 0.5 }}
                 />
               </Box>
+              {Array.isArray(mainBillView.bill.items) && mainBillView.bill.items.length > 0 && (
+                <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ px: 2, pt: 1.5, pb: 0.5 }}>Breakdown</Typography>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: "rgba(0,0,0,0.03)" }}>
+                        <TableCell sx={{ fontWeight: 700 }}>Description</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700 }}>Amount</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {mainBillView.bill.items.map((it, idx) => {
+                        const label = it.item_type === "appointment"
+                          ? "Appointment fee"
+                          : it.item_type === "service" && it.reference_id
+                            ? `Extra: ${it.reference_id}`
+                            : it.item_type === "service"
+                              ? "Extra charge"
+                              : it.item_type === "lab_order"
+                                ? "Lab order"
+                                : it.item_type === "prescription"
+                                  ? "Prescription"
+                                  : it.item_type || "Item";
+                        return (
+                          <TableRow key={it.id || idx}>
+                            <TableCell>{label}</TableCell>
+                            <TableCell align="right">{Number(it.amount ?? 0).toFixed(2)}</TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </Box>
+              )}
               {Number(mainBillView.bill.balance ?? 0) > 0 && (
                 <>
                   <Divider />
@@ -2272,6 +2248,41 @@ export default function VisitsManagement() {
                           />
                         </Stack>
                       </Box>
+
+                      {Array.isArray(apptBilling.items) && apptBilling.items.length > 0 && (
+                        <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
+                          <Typography variant="subtitle2" color="text.secondary" sx={{ px: 2, pt: 1.5, pb: 0.5 }}>Breakdown</Typography>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow sx={{ bgcolor: "rgba(0,0,0,0.03)" }}>
+                                <TableCell sx={{ fontWeight: 700 }}>Description</TableCell>
+                                <TableCell align="right" sx={{ fontWeight: 700 }}>Amount</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {apptBilling.items.map((it, idx) => {
+                                const label = it.item_type === "appointment"
+                                  ? "Appointment fee"
+                                  : it.item_type === "service" && it.reference_id
+                                    ? `Extra: ${it.reference_id}`
+                                    : it.item_type === "service"
+                                      ? "Extra charge"
+                                      : it.item_type === "lab_order"
+                                        ? "Lab order"
+                                        : it.item_type === "prescription"
+                                          ? "Prescription"
+                                          : it.item_type || "Item";
+                                return (
+                                  <TableRow key={it.id || idx}>
+                                    <TableCell>{label}</TableCell>
+                                    <TableCell align="right">{Number(it.amount ?? 0).toFixed(2)}</TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </Box>
+                      )}
 
                       {apptBilling.status !== "paid" && Number(apptBilling.balance ?? 0) > 0 && (
                         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }} sx={{ flexWrap: "wrap" }}>
