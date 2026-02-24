@@ -45,6 +45,7 @@ import {
   Article as ArticleIcon,
   PeopleAlt as PeopleAltIcon,
   Refresh as RefreshIcon,
+  Schedule as ScheduleIcon,
   Visibility as VisibilityIcon,
 } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
@@ -58,6 +59,31 @@ const API = {
   services: "/api/services",
   news: "/api/news",
   events: "/api/events",
+  schedules: "/api/schedules",
+};
+
+/** Time string "HH:mm" or "HH:mm:ss" to minutes since midnight. "00:00" as end = 1440 (midnight next day). */
+const timeToMinutes = (t) => {
+  if (!t) return 0;
+  const s = String(t).trim();
+  const [h, m] = s.split(":").map(Number);
+  if (h === 0 && (m || 0) === 0) return 24 * 60; // midnight = end of day
+  return (h || 0) * 60 + (m || 0);
+};
+/** Given today's slots and current time, return { status: 'working'|'later'|'finished'|'none', nextStart?: string }. */
+const getScheduleStatus = (todaySlots) => {
+  if (!todaySlots?.length) return { status: "none" };
+  const now = new Date();
+  const currentM = now.getHours() * 60 + now.getMinutes();
+  let nextStart = null;
+  for (const slot of todaySlots) {
+    const startM = timeToMinutes(slot.start_time);
+    const endM = timeToMinutes(slot.end_time);
+    if (currentM >= startM && currentM < endM) return { status: "working" };
+    if (currentM < startM && (nextStart == null || startM < timeToMinutes(nextStart))) nextStart = String(slot.start_time).slice(0, 5);
+  }
+  if (nextStart != null) return { status: "later", nextStart };
+  return { status: "finished" };
 };
 
 const getToken = () => localStorage.getItem("token");
@@ -198,6 +224,12 @@ export default function HospitalsManagement() {
     hire_date: "",
   });
   const [staffView, setStaffView] = useState({ open: false, staff: null });
+
+  // Staff schedule dialog
+  const [scheduleDialog, setScheduleDialog] = useState({ open: false, staff: null });
+  const [staffSchedules, setStaffSchedules] = useState([]);
+  const [staffSchedulesLoading, setStaffSchedulesLoading] = useState(false);
+  const [scheduleForm, setScheduleForm] = useState({ day_of_week: 1, start_time: "09:00", end_time: "17:00" });
 
   // Lookup options
   const [userOptions, setUserOptions] = useState([]);
@@ -747,6 +779,72 @@ export default function HospitalsManagement() {
       await fetchJson(`${API.staff}/${s.id}`, { method: "DELETE", token });
       Swal.fire({ icon: "success", title: "Deleted", text: "Staff deleted." });
       await loadStaff();
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Failed", text: e.message });
+    }
+  };
+
+  const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const loadStaffSchedules = async (doctorId) => {
+    if (!doctorId) return;
+    setStaffSchedulesLoading(true);
+    try {
+      const token = getToken();
+      const res = await fetchJson(`${API.schedules}?doctor_id=${doctorId}&limit=50`, { token });
+      setStaffSchedules(res.data || []);
+    } catch {
+      setStaffSchedules([]);
+    } finally {
+      setStaffSchedulesLoading(false);
+    }
+  };
+  const openScheduleDialog = (s) => {
+    setScheduleDialog({ open: true, staff: s });
+    setScheduleForm({ day_of_week: 1, start_time: "09:00", end_time: "17:00" });
+    loadStaffSchedules(s.id);
+  };
+  const addSchedule = async () => {
+    if (!scheduleDialog.staff?.id) return;
+    const token = getToken();
+    const start = scheduleForm.start_time;
+    const end = scheduleForm.end_time;
+    if (!start || !end) return Swal.fire({ icon: "warning", title: "Required", text: "Start and end time are required." });
+    const isMidnight = end === "00:00" || end.startsWith("00:00:");
+    if (!isMidnight && start >= end) return Swal.fire({ icon: "warning", title: "Invalid times", text: "End time must be after start time." });
+    try {
+      await fetchJson(API.schedules, {
+        method: "POST",
+        token,
+        body: {
+          doctor_id: scheduleDialog.staff.id,
+          day_of_week: scheduleForm.day_of_week,
+          start_time: start,
+          end_time: end,
+        },
+      });
+      Swal.fire({ icon: "success", title: "Added", text: "Schedule slot added." });
+      await loadStaffSchedules(scheduleDialog.staff.id);
+      setScheduleForm({ day_of_week: scheduleForm.day_of_week, start_time: "09:00", end_time: "17:00" });
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Failed", text: e.message });
+    }
+  };
+  const removeSchedule = async (scheduleId) => {
+    const result = await Swal.fire({
+      icon: "warning",
+      title: "Remove slot?",
+      text: "This schedule slot will be removed.",
+      showCancelButton: true,
+      confirmButtonText: "Remove",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: theme.palette.error.main,
+    });
+    if (!result.isConfirmed) return;
+    try {
+      const token = getToken();
+      await fetchJson(`${API.schedules}/${scheduleId}`, { method: "DELETE", token });
+      Swal.fire({ icon: "success", title: "Removed", text: "Schedule slot removed." });
+      if (scheduleDialog.staff?.id) await loadStaffSchedules(scheduleDialog.staff.id);
     } catch (e) {
       Swal.fire({ icon: "error", title: "Failed", text: e.message });
     }
@@ -1466,88 +1564,145 @@ export default function HospitalsManagement() {
                 </Alert>
               )}
 
-              <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Name</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Type</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Department</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Phone</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 800, whiteSpace: "nowrap" }}>
-                        Actions
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {staffLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={6}>
-                          <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
-                            <CircularProgress size={18} />
-                            <Typography color="text.secondary">Loading staff…</Typography>
-                          </Stack>
-                        </TableCell>
-                      </TableRow>
-                    ) : staff.length ? (
-                      staff.map((s, idx) => (
-                        <TableRow key={s.id} hover>
-                          <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{staffPage * staffRowsPerPage + idx + 1}</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>{s.user?.full_name || "—"}</TableCell>
-                          <TableCell>
-                            <Chip size="small" label={s.staff_type} sx={{ fontWeight: 800 }} />
-                          </TableCell>
-                          <TableCell>{s.department?.name || "—"}</TableCell>
-                          <TableCell>{s.user?.phone || "—"}</TableCell>
-                          <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
-                            <Tooltip title="View">
-                              <IconButton onClick={() => openViewStaff(s)} size="small">
-                                <VisibilityIcon fontSize="inherit" />
-                              </IconButton>
-                            </Tooltip>
-                            {isAdmin && (
-                              <>
-                                <Tooltip title="Edit">
-                                  <IconButton onClick={() => openEditStaff(s)} size="small">
-                                    <EditIcon fontSize="inherit" />
-                                  </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Delete">
-                                  <IconButton onClick={() => deleteStaff(s)} size="small" color="error">
-                                    <DeleteIcon fontSize="inherit" />
-                                  </IconButton>
-                                </Tooltip>
-                              </>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={6}>
-                          <Typography sx={{ py: 2 }} color="text.secondary">
-                            No staff found.
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-
-              <TablePagination
-                component="div"
-                count={staffTotal}
-                page={staffPage}
-                onPageChange={(_, p) => setStaffPage(p)}
-                rowsPerPage={staffRowsPerPage}
-                onRowsPerPageChange={(e) => {
-                  setStaffRowsPerPage(parseInt(e.target.value, 10));
-                  setStaffPage(0);
-                }}
-                rowsPerPageOptions={[5, 10, 25, 50]}
-              />
+              {staffLoading ? (
+                <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ py: 4 }}>
+                  <CircularProgress size={24} />
+                  <Typography color="text.secondary">Loading staff…</Typography>
+                </Stack>
+              ) : staff.length ? (
+                <>
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(3, 1fr)",
+                      gap: 2,
+                      "& > *": { minWidth: 0 },
+                      "@media (max-width: 900px)": { gridTemplateColumns: "repeat(2, 1fr)" },
+                      "@media (max-width: 600px)": { gridTemplateColumns: "1fr" },
+                    }}
+                  >
+                    {staff.map((s) => {
+                      const today = new Date().getDay();
+                      const todaySlots = (s.schedules || []).filter((slot) => Number(slot.day_of_week) === today);
+                      const scheduleStatus = getScheduleStatus(todaySlots);
+                      return (
+                        <Card
+                          key={s.id}
+                          variant="outlined"
+                          sx={{
+                            borderRadius: 2,
+                            overflow: "hidden",
+                            transition: "box-shadow 0.2s ease, transform 0.2s ease",
+                            borderLeftWidth: scheduleStatus.status === "working" ? 4 : 1,
+                            borderLeftColor: scheduleStatus.status === "working" ? "success.main" : "divider",
+                            "&:hover": {
+                              boxShadow: 2,
+                              transform: "translateY(-2px)",
+                            },
+                            display: "flex",
+                            flexDirection: "column",
+                            height: "100%",
+                          }}
+                        >
+                          <CardContent sx={{ flex: 1, display: "flex", flexDirection: "column", "&:last-child": { pb: 2 } }}>
+                            <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ mb: 1.5 }}>
+                              <Avatar
+                                sx={{
+                                  width: 48,
+                                  height: 48,
+                                  bgcolor: scheduleStatus.status === "working" ? "success.main" : "primary.main",
+                                  color: "primary.contrastText",
+                                  fontWeight: 700,
+                                }}
+                              >
+                                {(s.user?.full_name || "?").charAt(0).toUpperCase()}
+                              </Avatar>
+                              <Box sx={{ minWidth: 0, flex: 1 }}>
+                                <Typography variant="subtitle1" fontWeight={700} noWrap title={s.user?.full_name || "—"}>
+                                  {s.user?.full_name || "—"}
+                                </Typography>
+                                <Chip
+                                  size="small"
+                                  label={s.staff_type}
+                                  sx={{ mt: 0.5, fontWeight: 600, textTransform: "capitalize" }}
+                                />
+                              </Box>
+                            </Stack>
+                            <Stack spacing={0.5} sx={{ mt: 1, flex: 1 }}>
+                              <Typography variant="body2" color="text.secondary" noWrap title={s.department?.name || "—"}>
+                                {s.department?.name || "—"}
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary" component="span">
+                                {s.user?.phone || "—"}
+                              </Typography>
+                              {todaySlots.length > 0 && (
+                                <Typography variant="caption" color="primary.main" fontWeight={600} sx={{ mt: 0.5 }}>
+                                  Today: {todaySlots.map((slot) => `${String(slot.start_time).slice(0, 5)} – ${String(slot.end_time).slice(0, 5)}`).join(", ")}
+                                </Typography>
+                              )}
+                              {scheduleStatus.status === "working" && (
+                                <Chip size="small" label="Working now" color="success" sx={{ mt: 0.5, fontWeight: 600, alignSelf: "flex-start" }} />
+                              )}
+                              {scheduleStatus.status === "later" && (
+                                <Chip size="small" label={`Starts at ${scheduleStatus.nextStart}`} sx={{ mt: 0.5, alignSelf: "flex-start", bgcolor: "action.hover" }} />
+                              )}
+                              {scheduleStatus.status === "finished" && (
+                                <Chip size="small" label="Finished for today" sx={{ mt: 0.5, alignSelf: "flex-start", color: "text.secondary", bgcolor: "action.hover" }} />
+                              )}
+                              {scheduleStatus.status === "none" && (
+                                <Chip size="small" label="No schedule today" sx={{ mt: 0.5, alignSelf: "flex-start", color: "text.secondary", bgcolor: "action.hover" }} />
+                              )}
+                            </Stack>
+                            <Stack direction="row" spacing={0.5} justifyContent="flex-end" sx={{ mt: 2, pt: 1.5, borderTop: 1, borderColor: "divider" }}>
+                              <Tooltip title="Schedule">
+                                <IconButton onClick={() => openScheduleDialog(s)} size="small" color="default" aria-label="Schedule">
+                                  <ScheduleIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="View">
+                                <IconButton onClick={() => openViewStaff(s)} size="small" color="default">
+                                  <VisibilityIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              {isAdmin && (
+                                <>
+                                  <Tooltip title="Edit">
+                                    <IconButton onClick={() => openEditStaff(s)} size="small" color="primary">
+                                      <EditIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Delete">
+                                    <IconButton onClick={() => deleteStaff(s)} size="small" color="error">
+                                      <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </>
+                              )}
+                            </Stack>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </Box>
+                  <TablePagination
+                    component="div"
+                    count={staffTotal}
+                    page={staffPage}
+                    onPageChange={(_, p) => setStaffPage(p)}
+                    rowsPerPage={staffRowsPerPage}
+                    onRowsPerPageChange={(e) => {
+                      setStaffRowsPerPage(parseInt(e.target.value, 10));
+                      setStaffPage(0);
+                    }}
+                    rowsPerPageOptions={[6, 12, 24, 48]}
+                    sx={{ borderTop: 1, borderColor: "divider", mt: 2 }}
+                  />
+                </>
+              ) : (
+                <Box sx={{ py: 4, textAlign: "center" }}>
+                  <Typography color="text.secondary">No staff found.</Typography>
+                </Box>
+              )}
             </Box>
           )}
 
@@ -2065,6 +2220,106 @@ export default function HospitalsManagement() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setStaffView({ open: false, staff: null })}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Staff schedule */}
+      <Dialog open={scheduleDialog.open} onClose={() => setScheduleDialog({ open: false, staff: null })} fullWidth maxWidth="sm">
+        <DialogTitle sx={{ fontWeight: 900 }}>
+          Schedule — {scheduleDialog.staff?.user?.full_name || "Staff"}
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 0.5 }}>
+            {staffSchedulesLoading ? (
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
+                <CircularProgress size={20} />
+                <Typography color="text.secondary">Loading schedule…</Typography>
+              </Stack>
+            ) : (
+              <>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Existing slots
+                </Typography>
+                {staffSchedules.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary">No schedule slots yet. Add one below.</Typography>
+                ) : (
+                  <Stack spacing={0.5}>
+                    {staffSchedules.map((slot) => (
+                      <Stack
+                        key={slot.id}
+                        direction="row"
+                        alignItems="center"
+                        justifyContent="space-between"
+                        sx={{
+                          py: 1,
+                          px: 1.5,
+                          borderRadius: 1,
+                          bgcolor: "action.hover",
+                        }}
+                      >
+                        <Typography variant="body2" fontWeight={600}>
+                          {DAY_NAMES[slot.day_of_week]} — {String(slot.start_time).slice(0, 5)} – {String(slot.end_time).slice(0, 5)}
+                        </Typography>
+                        {isAdmin && (
+                          <IconButton onClick={() => removeSchedule(slot.id)} size="small" color="error" aria-label="Remove slot">
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        )}
+                      </Stack>
+                    ))}
+                  </Stack>
+                )}
+                {isAdmin && (
+                  <>
+                    <Divider />
+                    <Typography variant="subtitle2" color="text.secondary">
+                      Add slot
+                    </Typography>
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ sm: "flex-end" }}>
+                      <FormControl size="small" sx={{ minWidth: 140 }}>
+                        <InputLabel>Day</InputLabel>
+                        <Select
+                          value={scheduleForm.day_of_week}
+                          label="Day"
+                          onChange={(e) => setScheduleForm((p) => ({ ...p, day_of_week: Number(e.target.value) }))}
+                        >
+                          {DAY_NAMES.map((name, i) => (
+                            <MenuItem key={i} value={i}>{name}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <TextField
+                        label="Start"
+                        type="time"
+                        size="small"
+                        value={scheduleForm.start_time}
+                        onChange={(e) => setScheduleForm((p) => ({ ...p, start_time: e.target.value }))}
+                        InputLabelProps={{ shrink: true }}
+                        inputProps={{ step: 300 }}
+                        sx={{ width: 120 }}
+                      />
+                      <TextField
+                        label="End"
+                        type="time"
+                        size="small"
+                        value={scheduleForm.end_time}
+                        onChange={(e) => setScheduleForm((p) => ({ ...p, end_time: e.target.value }))}
+                        InputLabelProps={{ shrink: true }}
+                        inputProps={{ step: 300 }}
+                        sx={{ width: 120 }}
+                      />
+                      <Button variant="contained" onClick={addSchedule} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: theme.palette.primary.dark } }}>
+                        Add
+                      </Button>
+                    </Stack>
+                  </>
+                )}
+              </>
+            )}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setScheduleDialog({ open: false, staff: null })}>Close</Button>
         </DialogActions>
       </Dialog>
 

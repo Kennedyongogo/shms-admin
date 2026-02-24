@@ -177,7 +177,7 @@ export default function ConsultationViewPage() {
     return Boolean(doctorUserId && currentUser?.id && String(doctorUserId) === String(currentUser.id));
   };
 
-  const canEdit = consultation && (isAdmin || isAssignedDoctor(consultation));
+  const canEdit = consultation && isAssignedDoctor(consultation);
 
   const heroGradient = useMemo(() => {
     const main = theme.palette.primary.main;
@@ -358,7 +358,7 @@ export default function ConsultationViewPage() {
 
   const openEdit = () => {
     if (!canEdit) {
-      Swal.fire({ icon: "warning", title: "Not allowed", text: "Only the assigned doctor (or admin) can update this consultation." });
+      Swal.fire({ icon: "warning", title: "Not allowed", text: "Only the doctor assigned to this appointment can update this consultation." });
       return;
     }
     setEditForm({
@@ -391,7 +391,7 @@ export default function ConsultationViewPage() {
 
   const openLab = () => {
     if (!canEdit) {
-      Swal.fire({ icon: "warning", title: "Not allowed", text: "Only the assigned doctor (or admin) can initiate lab tests." });
+      Swal.fire({ icon: "warning", title: "Not allowed", text: "Only the doctor assigned to this appointment can initiate lab tests." });
       return;
     }
     setSelectedLabTests([]);
@@ -422,7 +422,7 @@ export default function ConsultationViewPage() {
 
   const openRx = () => {
     if (!canEdit) {
-      Swal.fire({ icon: "warning", title: "Not allowed", text: "Only the assigned doctor (or admin) can prescribe." });
+      Swal.fire({ icon: "warning", title: "Not allowed", text: "Only the doctor assigned to this appointment can prescribe." });
       return;
     }
     setRxItems([{ medication: null, dosage: "", frequency: "", duration: "", quantity: 1 }]);
@@ -697,7 +697,7 @@ export default function ConsultationViewPage() {
           </Box>
           <CardContent sx={{ p: 2.5 }}>
             {!canEdit && (
-              <Alert severity="info" sx={{ mb: 2 }}>You can view this consultation. Only the assigned doctor (or admin) can update it, prescribe, initiate lab tests, or admit patient.</Alert>
+              <Alert severity="info" sx={{ mb: 2 }}>You can view this consultation. Only the doctor assigned to this appointment can update it, prescribe, initiate lab tests, or admit patient.</Alert>
             )}
             <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
               <Typography sx={{ fontWeight: 900, mb: 0.5 }}>Symptoms</Typography>

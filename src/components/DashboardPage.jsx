@@ -4,6 +4,10 @@ import {
   Card,
   CardContent,
   CircularProgress,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
   Tab,
   Tabs,
   Typography,
@@ -36,9 +40,13 @@ import {
   Description,
   PersonOff,
   Campaign,
+  Business,
+  Category,
 } from "@mui/icons-material";
 
 const API_STATISTICS = "/api/statistics";
+const API_APPOINTMENTS_CHART = "/api/statistics/appointments/chart";
+const API_REVENUE_CHART = "/api/statistics/revenue/chart";
 
 async function fetchJson(url, { token } = {}) {
   const headers = { "Content-Type": "application/json" };
@@ -159,7 +167,7 @@ function PieChartCard({ title, data, emptyMessage }) {
   );
 }
 
-function BarChartCard({ title, data, dataKey = "count", emptyMessage }) {
+function BarChartCard({ title, data, dataKey = "count", emptyMessage, formatValue }) {
   const hasData = Array.isArray(data) && data.length > 0;
   return (
     <Card variant="outlined" sx={{ height: "100%", borderRadius: 2 }}>
@@ -171,8 +179,8 @@ function BarChartCard({ title, data, dataKey = "count", emptyMessage }) {
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={data} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
               <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip />
+              <YAxis tick={{ fontSize: 12 }} tickFormatter={formatValue} />
+              <Tooltip formatter={formatValue ? (v) => [formatValue(v), ""] : undefined} />
               <Bar dataKey={dataKey} fill={BAR_COLORS[0]} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -189,15 +197,21 @@ function BarChartCard({ title, data, dataKey = "count", emptyMessage }) {
 const TAB_CONFIG = [
   { id: "overview", label: "Overview" },
   { id: "appointmentsConsultations", label: "Appointments & Consultations" },
-  { id: "patientsAndReports", label: "Patients & Reports" },
   { id: "laboratory", label: "Laboratory" },
   { id: "pharmacy", label: "Pharmacy" },
   { id: "billing", label: "Billing" },
   { id: "wardsBedsAdmissions", label: "Wards, Beds & Admissions" },
   { id: "inventory", label: "Inventory" },
-  { id: "staff", label: "Staff" },
-  { id: "users", label: "Users" },
-  { id: "eventsAndNews", label: "Events & News" },
+];
+
+const currentYear = new Date().getFullYear();
+const YEARS = Array.from({ length: 6 }, (_, i) => currentYear - 2 + i);
+const MONTHS = [
+  { value: "", label: "All months" },
+  { value: 1, label: "January" }, { value: 2, label: "February" }, { value: 3, label: "March" },
+  { value: 4, label: "April" }, { value: 5, label: "May" }, { value: 6, label: "June" },
+  { value: 7, label: "July" }, { value: 8, label: "August" }, { value: 9, label: "September" },
+  { value: 10, label: "October" }, { value: 11, label: "November" }, { value: 12, label: "December" },
 ];
 
 export default function DashboardPage() {
@@ -205,6 +219,14 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [tab, setTab] = useState(0);
+  const [chartYear, setChartYear] = useState(currentYear);
+  const [chartMonth, setChartMonth] = useState("");
+  const [appointmentsChartData, setAppointmentsChartData] = useState([]);
+  const [appointmentsChartLoading, setAppointmentsChartLoading] = useState(false);
+  const [revenueChartYear, setRevenueChartYear] = useState(currentYear);
+  const [revenueChartMonth, setRevenueChartMonth] = useState("");
+  const [revenueChartData, setRevenueChartData] = useState([]);
+  const [revenueChartLoading, setRevenueChartLoading] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -222,6 +244,38 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (tab !== 1) return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    setAppointmentsChartLoading(true);
+    const params = new URLSearchParams({ year: chartYear });
+    if (chartMonth !== "") params.set("month", chartMonth);
+    fetchJson(`${API_APPOINTMENTS_CHART}?${params}`, { token })
+      .then((res) => {
+        if (res.success && res.data?.bars) setAppointmentsChartData(res.data.bars);
+        else setAppointmentsChartData([]);
+      })
+      .catch(() => setAppointmentsChartData([]))
+      .finally(() => setAppointmentsChartLoading(false));
+  }, [tab, chartYear, chartMonth]);
+
+  useEffect(() => {
+    if (tab !== 4) return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    setRevenueChartLoading(true);
+    const params = new URLSearchParams({ year: revenueChartYear });
+    if (revenueChartMonth !== "") params.set("month", revenueChartMonth);
+    fetchJson(`${API_REVENUE_CHART}?${params}`, { token })
+      .then((res) => {
+        if (res.success && res.data?.bars) setRevenueChartData(res.data.bars);
+        else setRevenueChartData([]);
+      })
+      .catch(() => setRevenueChartData([]))
+      .finally(() => setRevenueChartLoading(false));
+  }, [tab, revenueChartYear, revenueChartMonth]);
+
   if (loading) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 320 }}>
@@ -238,11 +292,6 @@ export default function DashboardPage() {
   }
 
   const d = stats;
-  const appointmentsBarData = [
-    { name: "Today", count: d.appointments?.today ?? 0 },
-    { name: "This Week", count: d.appointments?.thisWeek ?? 0 },
-    { name: "This Month", count: d.appointments?.thisMonth ?? 0 },
-  ];
 
   return (
     <Box sx={{ width: "100%" }}>
@@ -255,41 +304,79 @@ export default function DashboardPage() {
         ))}
       </Tabs>
 
-      {/* Overview — 4 cards per row, equal size, full width (CSS Grid) */}
+      {/* Overview — 4 cards per row, equal size, full width (CSS Grid) + Staff/Users + Events & News */}
       {tab === 0 && (
-        <Box
-          role="tabpanel"
-          id="stats-tabpanel-0"
-          sx={{
-            width: "100%",
-            maxWidth: "100%",
-            display: "grid",
-            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-            gap: 2,
-            "& > *": { minWidth: 0 },
-            "@media (max-width: 900px)": { gridTemplateColumns: "repeat(2, minmax(0, 1fr))" },
-            "@media (max-width: 600px)": { gridTemplateColumns: "1fr" },
-          }}
-        >
-          {[
-            { title: "Hospitals", value: d.overview?.totalHospitals, icon: LocalHospital },
-            { title: "Staff", value: d.overview?.totalStaff, icon: Person },
-            { title: "Patients", value: d.overview?.totalPatients, icon: People },
-            { title: "Appointments", value: d.overview?.totalAppointments, icon: EventNote },
-            { title: "Consultations", value: d.overview?.totalConsultations, icon: RecordVoiceOver },
-            { title: "Total Revenue", value: d.overview?.totalRevenue, icon: ReceiptLong, subtitle: "All time" },
-            { title: "Active Admissions", value: d.overview?.activeAdmissions, icon: Hotel },
-            { title: "Total Beds", value: d.overview?.totalBeds, icon: Bed },
-          ].map((item) => (
-            <StatCard
-              key={item.title}
-              compact
-              title={item.title}
-              value={item.value}
-              icon={item.icon}
-              subtitle={item.subtitle}
-            />
-          ))}
+        <Box role="tabpanel" id="stats-tabpanel-0" sx={{ width: "100%", maxWidth: "100%" }}>
+          <Box
+            sx={{
+              width: "100%",
+              display: "grid",
+              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+              gap: 2,
+              mb: 2,
+              "& > *": { minWidth: 0 },
+              "@media (max-width: 900px)": { gridTemplateColumns: "repeat(2, minmax(0, 1fr))" },
+              "@media (max-width: 600px)": { gridTemplateColumns: "1fr" },
+            }}
+          >
+            {[
+              { title: "Hospitals", value: d.overview?.totalHospitals, icon: LocalHospital },
+              { title: "Departments", value: d.overview?.totalDepartments ?? d.departments?.total, icon: Business },
+              { title: "Services", value: d.overview?.totalServices ?? d.services?.total, icon: Category },
+              { title: "Staff", value: d.overview?.totalStaff, icon: Person },
+              { title: "Patients", value: d.overview?.totalPatients, icon: People },
+              { title: "Appointments", value: d.overview?.totalAppointments, icon: EventNote },
+              { title: "Consultations", value: d.overview?.totalConsultations, icon: RecordVoiceOver },
+              { title: "Total Revenue", value: d.overview?.totalRevenue, icon: ReceiptLong, subtitle: "All time" },
+              { title: "Active Admissions", value: d.overview?.activeAdmissions, icon: Hotel },
+              { title: "Total Beds", value: d.overview?.totalBeds, icon: Bed },
+            ].map((item) => (
+              <StatCard
+                key={item.title}
+                compact
+                title={item.title}
+                value={item.value}
+                icon={item.icon}
+                subtitle={item.subtitle}
+              />
+            ))}
+          </Box>
+          <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" gutterBottom sx={{ mt: 2 }}>
+            Patients
+          </Typography>
+          <Box sx={{ width: "100%", mb: 2 }}>
+            <StatCard title="Active Patients" value={d.patients?.active} icon={People} />
+          </Box>
+          <Box sx={{ width: "100%", mb: 2 }}>
+            <PieChartCard title="Patients by Status" data={d.patients?.byStatus} />
+          </Box>
+          <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" gutterBottom sx={{ mt: 2 }}>
+            Medical Reports
+          </Typography>
+          <Box sx={{ width: "100%", mb: 2 }}>
+            <StatCard title="Medical Reports" value={d.medicalReports?.total} icon={Description} />
+          </Box>
+          <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" gutterBottom sx={{ mt: 2 }}>
+            Users
+          </Typography>
+          <Box sx={{ width: "100%", mb: 2 }}>
+            <StatCard title="Users" value={d.users?.total} icon={PersonOff} />
+          </Box>
+          <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" gutterBottom sx={{ mt: 2 }}>
+            Events & News
+          </Typography>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+              gap: 2,
+              "& > *": { minWidth: 0 },
+              "@media (max-width: 600px)": { gridTemplateColumns: "1fr" },
+            }}
+          >
+            <StatCard title="Events" value={d.eventsAndNews?.totalEvents} icon={Campaign} />
+            <StatCard title="News" value={d.eventsAndNews?.totalNews} />
+          </Box>
         </Box>
       )}
 
@@ -319,7 +406,44 @@ export default function DashboardPage() {
             <PieChartCard title="Appointments by Status" data={d.appointments?.byStatus} />
           </Box>
           <Box sx={{ width: "100%", mb: 2 }}>
-            <BarChartCard title="Appointments (Today / Week / Month)" data={appointmentsBarData} />
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "center", mb: 2 }}>
+              <FormControl size="small" sx={{ minWidth: 100 }}>
+                <InputLabel id="chart-year-label">Year</InputLabel>
+                <Select
+                  labelId="chart-year-label"
+                  value={chartYear}
+                  label="Year"
+                  onChange={(e) => setChartYear(Number(e.target.value))}
+                >
+                  {YEARS.map((y) => (
+                    <MenuItem key={y} value={y}>{y}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl size="small" sx={{ minWidth: 140 }}>
+                <InputLabel id="chart-month-label">Month</InputLabel>
+                <Select
+                  labelId="chart-month-label"
+                  value={chartMonth}
+                  label="Month"
+                  onChange={(e) => setChartMonth(e.target.value === "" ? "" : Number(e.target.value))}
+                >
+                  {MONTHS.map((m) => (
+                    <MenuItem key={m.value === "" ? "all" : m.value} value={m.value}>{m.label}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+            {appointmentsChartLoading ? (
+              <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 220 }}>
+                <CircularProgress size={32} />
+              </Box>
+            ) : (
+              <BarChartCard
+                title={chartMonth ? `Appointments by day (${chartYear}, ${MONTHS.find((m) => m.value === chartMonth)?.label ?? chartMonth})` : `Appointments by month (${chartYear})`}
+                data={appointmentsChartData}
+              />
+            )}
           </Box>
           <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" gutterBottom sx={{ mt: 2 }}>
             Consultations
@@ -339,40 +463,9 @@ export default function DashboardPage() {
         </Box>
       )}
 
-      {/* Patients & Reports */}
+      {/* Laboratory */}
       {tab === 2 && (
         <Box role="tabpanel" id="stats-tabpanel-2" sx={{ width: "100%" }}>
-          <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" gutterBottom>
-            Patients
-          </Typography>
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-              gap: 2,
-              mb: 2,
-              "& > *": { minWidth: 0 },
-              "@media (max-width: 600px)": { gridTemplateColumns: "1fr" },
-            }}
-          >
-            <StatCard title="Total Patients" value={d.patients?.total} icon={People} />
-            <StatCard title="Active Patients" value={d.patients?.active} />
-          </Box>
-          <Box sx={{ width: "100%", mb: 2 }}>
-            <PieChartCard title="Patients by Status" data={d.patients?.byStatus} />
-          </Box>
-          <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" gutterBottom sx={{ mt: 2 }}>
-            Medical Reports
-          </Typography>
-          <Box sx={{ width: "100%" }}>
-            <StatCard title="Medical Reports" value={d.medicalReports?.total} icon={Description} />
-          </Box>
-        </Box>
-      )}
-
-      {/* Laboratory */}
-      {tab === 3 && (
-        <Box role="tabpanel" id="stats-tabpanel-3" sx={{ width: "100%" }}>
           <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" gutterBottom>
             Laboratory
           </Typography>
@@ -397,8 +490,8 @@ export default function DashboardPage() {
       )}
 
       {/* Pharmacy */}
-      {tab === 4 && (
-        <Box role="tabpanel" id="stats-tabpanel-4" sx={{ width: "100%" }}>
+      {tab === 3 && (
+        <Box role="tabpanel" id="stats-tabpanel-3" sx={{ width: "100%" }}>
           <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" gutterBottom>
             Pharmacy
           </Typography>
@@ -419,8 +512,8 @@ export default function DashboardPage() {
       )}
 
       {/* Billing */}
-      {tab === 5 && (
-        <Box role="tabpanel" id="stats-tabpanel-5" sx={{ width: "100%" }}>
+      {tab === 4 && (
+        <Box role="tabpanel" id="stats-tabpanel-4" sx={{ width: "100%" }}>
           <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" gutterBottom>
             Billing
           </Typography>
@@ -438,15 +531,57 @@ export default function DashboardPage() {
             <StatCard title="Total Revenue" value={d.billing?.totalRevenue} />
             <StatCard title="Revenue This Month" value={d.billing?.revenueThisMonth} />
           </Box>
-          <Box sx={{ width: "100%" }}>
+          <Box sx={{ width: "100%", mb: 2 }}>
             <PieChartCard title="Bills by Status" data={d.billing?.byStatus} />
+          </Box>
+          <Box sx={{ width: "100%", mb: 2 }}>
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "center", mb: 2 }}>
+              <FormControl size="small" sx={{ minWidth: 100 }}>
+                <InputLabel id="revenue-year-label">Year</InputLabel>
+                <Select
+                  labelId="revenue-year-label"
+                  value={revenueChartYear}
+                  label="Year"
+                  onChange={(e) => setRevenueChartYear(Number(e.target.value))}
+                >
+                  {YEARS.map((y) => (
+                    <MenuItem key={y} value={y}>{y}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl size="small" sx={{ minWidth: 140 }}>
+                <InputLabel id="revenue-month-label">Month</InputLabel>
+                <Select
+                  labelId="revenue-month-label"
+                  value={revenueChartMonth}
+                  label="Month"
+                  onChange={(e) => setRevenueChartMonth(e.target.value === "" ? "" : Number(e.target.value))}
+                >
+                  {MONTHS.map((m) => (
+                    <MenuItem key={m.value === "" ? "all" : m.value} value={m.value}>{m.label}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+            {revenueChartLoading ? (
+              <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 220 }}>
+                <CircularProgress size={32} />
+              </Box>
+            ) : (
+              <BarChartCard
+                title={revenueChartMonth ? `Revenue by day (${revenueChartYear}, ${MONTHS.find((m) => m.value === revenueChartMonth)?.label ?? revenueChartMonth})` : `Revenue by month (${revenueChartYear})`}
+                data={revenueChartData}
+                dataKey="amount"
+                formatValue={(v) => (typeof v === "number" ? v.toLocaleString("en-KE", { style: "currency", currency: "KES", maximumFractionDigits: 0 }) : v)}
+              />
+            )}
           </Box>
         </Box>
       )}
 
       {/* Wards, Beds & Admissions */}
-      {tab === 6 && (
-        <Box role="tabpanel" id="stats-tabpanel-6" sx={{ width: "100%" }}>
+      {tab === 5 && (
+        <Box role="tabpanel" id="stats-tabpanel-5" sx={{ width: "100%" }}>
           <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" gutterBottom>
             Wards & Beds
           </Typography>
@@ -490,8 +625,8 @@ export default function DashboardPage() {
       )}
 
       {/* Inventory */}
-      {tab === 7 && (
-        <Box role="tabpanel" id="stats-tabpanel-7" sx={{ width: "100%" }}>
+      {tab === 6 && (
+        <Box role="tabpanel" id="stats-tabpanel-6" sx={{ width: "100%" }}>
           <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" gutterBottom>
             Inventory
           </Typography>
@@ -517,50 +652,6 @@ export default function DashboardPage() {
         </Box>
       )}
 
-      {/* Staff */}
-      {tab === 8 && (
-        <Box role="tabpanel" id="stats-tabpanel-8" sx={{ width: "100%" }}>
-          <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" gutterBottom>
-            Staff
-          </Typography>
-          <Box sx={{ width: "100%" }}>
-            <StatCard title="Total Staff" value={d.staff?.total} icon={Person} />
-          </Box>
-        </Box>
-      )}
-
-      {/* Users */}
-      {tab === 9 && (
-        <Box role="tabpanel" id="stats-tabpanel-9" sx={{ width: "100%" }}>
-          <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" gutterBottom>
-            Users
-          </Typography>
-          <Box sx={{ width: "100%" }}>
-            <StatCard title="Users" value={d.users?.total} icon={PersonOff} />
-          </Box>
-        </Box>
-      )}
-
-      {/* Events & News */}
-      {tab === 10 && (
-        <Box role="tabpanel" id="stats-tabpanel-10" sx={{ width: "100%" }}>
-          <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" gutterBottom>
-            Events & News
-          </Typography>
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-              gap: 2,
-              "& > *": { minWidth: 0 },
-              "@media (max-width: 600px)": { gridTemplateColumns: "1fr" },
-            }}
-          >
-            <StatCard title="Events" value={d.eventsAndNews?.totalEvents} icon={Campaign} />
-            <StatCard title="News" value={d.eventsAndNews?.totalNews} />
-          </Box>
-        </Box>
-      )}
     </Box>
   );
 }

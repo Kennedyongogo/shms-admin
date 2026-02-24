@@ -172,9 +172,6 @@ export default function VisitsManagement() {
   const [mainBillsRowsPerPage, setMainBillsRowsPerPage] = useState(10);
   const [mainBillsTotal, setMainBillsTotal] = useState(0);
   const [mainBillView, setMainBillView] = useState({ open: false, bill: null, loading: false });
-  const [mainBillPayAmount, setMainBillPayAmount] = useState("");
-  const [mainBillPayMethod, setMainBillPayMethod] = useState("cash");
-  const [mainBillPaySaving, setMainBillPaySaving] = useState(false);
 
   // Appointment Payment tab (payments for appointment bills only)
   const mainPaymentsReqId = useRef(0);
@@ -381,44 +378,9 @@ export default function VisitsManagement() {
       const data = await fetchJson(`${API.billing}/${billId}`, { token });
       const b = data?.data || null;
       setMainBillView({ open: true, bill: b, loading: false });
-      const total = Number(b?.total_amount || 0);
-      const paid = Number(b?.paid_amount || 0);
-      const balance = Math.max(0, total - paid);
-      setMainBillPayAmount(String(balance > 0 ? balance : total));
-      setMainBillPayMethod("cash");
     } catch (e) {
       setMainBillView({ open: false, bill: null, loading: false });
       Swal.fire({ icon: "error", title: "Failed", text: e.message });
-    }
-  };
-
-  const recordPaymentForMainBill = async () => {
-    const b = mainBillView.bill;
-    if (!b?.id) return;
-    const amountRaw = Number(mainBillPayAmount);
-    if (!Number.isFinite(amountRaw) || amountRaw <= 0) {
-      Swal.fire({ icon: "warning", title: "Invalid amount", text: "Enter a positive amount." });
-      return;
-    }
-    setMainBillPaySaving(true);
-    try {
-      await fetchJson(`${API.payments}/process`, {
-        method: "POST",
-        token,
-        body: {
-          bill_id: b.id,
-          amount_paid: amountRaw,
-          payment_method: mainBillPayMethod || "cash",
-          payment_date: new Date().toISOString(),
-        },
-      });
-      await openMainBillView(b.id);
-      await loadMainBills();
-      Swal.fire({ icon: "success", title: "Paid", text: "Payment recorded." });
-    } catch (e) {
-      Swal.fire({ icon: "error", title: "Payment failed", text: e.message });
-    } finally {
-      setMainBillPaySaving(false);
     }
   };
 
@@ -481,14 +443,15 @@ export default function VisitsManagement() {
     }
   };
 
-  const searchDoctors = async (q) => {
+  const searchDoctors = async (q, dateTimeForAvailability) => {
     if (!requireTokenGuard()) return;
     setDoctorLoading(true);
     try {
       const qs = new URLSearchParams({
         page: "1",
-        limit: "10",
+        limit: "50",
         ...(q ? { search: q } : {}),
+        ...(dateTimeForAvailability ? { available_at: dateTimeForAvailability } : {}),
       });
       const data = await fetchJson(`${API.staff}?${qs.toString()}`, { token });
       setDoctorOptions(data.data || []);
@@ -530,7 +493,7 @@ export default function VisitsManagement() {
     setAppointmentDate(toLocalDateTimeInputValue());
     setCreateApptOpen(true);
     searchPatients("");
-    searchDoctors("");
+    searchDoctors("", toLocalDateTimeInputValue());
     searchServices("");
   };
 
@@ -672,11 +635,11 @@ export default function VisitsManagement() {
   const openRecordConsultation = async (appt) => {
     if (!requireTokenGuard()) return;
     if (!appt?.id) return;
-    if (!isAdmin && !isAssignedDoctor(appt)) {
+    if (!isAssignedDoctor(appt)) {
       Swal.fire({
         icon: "warning",
         title: "Not allowed",
-        text: "Only the assigned doctor (or admin) can record a consultation.",
+        text: "Only the doctor assigned to this appointment can record a consultation.",
       });
       return;
     }
@@ -1032,11 +995,11 @@ export default function VisitsManagement() {
 
   const openEditConsultation = () => {
     if (!consView?.id) return;
-    if (!isAdmin && !isAssignedDoctor(consView)) {
+    if (!isAssignedDoctor(consView)) {
       return Swal.fire({
         icon: "warning",
         title: "Not allowed",
-        text: "Only the assigned doctor (or admin) can update this consultation.",
+        text: "Only the doctor assigned to this appointment can update this consultation.",
       });
     }
     setConsEditForm({
@@ -1114,11 +1077,11 @@ export default function VisitsManagement() {
   };
 
   const openLabDialog = async () => {
-    if (!isAdmin && !isAssignedDoctor(consView)) {
+    if (!isAssignedDoctor(consView)) {
       Swal.fire({
         icon: "warning",
         title: "Not allowed",
-        text: "Only the assigned doctor (or admin) can initiate lab tests for this consultation.",
+        text: "Only the doctor assigned to this appointment can initiate lab tests for this consultation.",
       });
       return;
     }
@@ -1171,11 +1134,11 @@ export default function VisitsManagement() {
   };
 
   const openRxDialog = async () => {
-    if (!isAdmin && !isAssignedDoctor(consView)) {
+    if (!isAssignedDoctor(consView)) {
       Swal.fire({
         icon: "warning",
         title: "Not allowed",
-        text: "Only the assigned doctor (or admin) can prescribe for this consultation.",
+        text: "Only the doctor assigned to this appointment can prescribe for this consultation.",
       });
       return;
     }
@@ -1578,7 +1541,7 @@ export default function VisitsManagement() {
                                   onClick={() => openRecordConsultation(a)}
                                   size="small"
                                   disabled={
-                                    (!isAdmin && !isAssignedDoctor(a)) ||
+                                    !isAssignedDoctor(a) ||
                                     (a.status !== "confirmed" && a.status !== "completed")
                                   }
                                 >
@@ -1756,7 +1719,7 @@ export default function VisitsManagement() {
           {tab === 2 && (
             <Box sx={{ p: 2 }}>
               <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
-                Bills for appointments only. Lab order bills are in Laboratory → Billing.
+                Bills for appointments only.
               </Typography>
               <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
                 <Table size="small">
@@ -1803,10 +1766,7 @@ export default function VisitsManagement() {
                             </TableCell>
                             <TableCell>{formatDateTime(b.createdAt)}</TableCell>
                             <TableCell align="right">
-                              <Button size="small" variant="outlined" onClick={() => openMainBillView(b.id)} sx={{ mr: 0.5 }}>View</Button>
-                              {balance > 0 && (
-                                <Button size="small" variant="contained" onClick={() => openMainBillView(b.id)}>Record payment</Button>
-                              )}
+                              <Button size="small" variant="outlined" onClick={() => openMainBillView(b.id)}>View</Button>
                             </TableCell>
                           </TableRow>
                         );
@@ -1910,7 +1870,7 @@ export default function VisitsManagement() {
         </CardContent>
       </Card>
 
-      {/* Appointment bill view & record payment */}
+      {/* Appointment bill view */}
       <Dialog
         open={mainBillView.open}
         onClose={() => setMainBillView({ open: false, bill: null, loading: false })}
@@ -1974,36 +1934,6 @@ export default function VisitsManagement() {
                     </TableBody>
                   </Table>
                 </Box>
-              )}
-              {Number(mainBillView.bill.balance ?? 0) > 0 && (
-                <>
-                  <Divider />
-                  <Typography sx={{ fontWeight: 800 }}>Record payment</Typography>
-                  <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }}>
-                    <TextField
-                      size="small"
-                      label="Amount"
-                      type="number"
-                      value={mainBillPayAmount}
-                      onChange={(e) => setMainBillPayAmount(e.target.value)}
-                      inputProps={{ min: 0, step: 0.01 }}
-                      sx={{ width: { xs: "100%", sm: 140 } }}
-                    />
-                    <FormControl size="small" sx={{ minWidth: { xs: "100%", sm: 160 } }}>
-                      <InputLabel>Method</InputLabel>
-                      <Select value={mainBillPayMethod} label="Method" onChange={(e) => setMainBillPayMethod(e.target.value)}>
-                        <MenuItem value="cash">Cash</MenuItem>
-                        <MenuItem value="card">Card</MenuItem>
-                        <MenuItem value="mobile">Mobile</MenuItem>
-                        <MenuItem value="insurance">Insurance</MenuItem>
-                        <MenuItem value="other">Other</MenuItem>
-                      </Select>
-                    </FormControl>
-                    <Button variant="contained" onClick={recordPaymentForMainBill} disabled={mainBillPaySaving} sx={{ fontWeight: 800 }}>
-                      {mainBillPaySaving ? "Recording…" : "Record payment"}
-                    </Button>
-                  </Stack>
-                </>
               )}
             </Stack>
           ) : null}
@@ -2075,12 +2005,12 @@ export default function VisitsManagement() {
                 `${d.user?.full_name || "—"} • ${d.staff_type || "staff"}${d.specialization ? ` • ${d.specialization}` : ""}`
               }
               isOptionEqualToValue={(opt, val) => opt.id === val.id}
-              onInputChange={(_, v) => searchDoctors(v)}
+              onInputChange={(_, v) => searchDoctors(v, appointmentDate || undefined)}
               renderInput={(params) => (
                 <TextField
                   {...params}
                   label="Staff"
-                  placeholder="Search staff…"
+                  placeholder={appointmentDate ? "Staff available at selected date & time" : "Select date & time first, or search…"}
                 />
               )}
             />
@@ -2125,9 +2055,14 @@ export default function VisitsManagement() {
               label="Appointment date & time"
               type="datetime-local"
               value={appointmentDate}
-              onChange={(e) => setAppointmentDate(e.target.value)}
+              onChange={(e) => {
+                const next = e.target.value;
+                setAppointmentDate(next);
+                if (next) searchDoctors("", next);
+              }}
               InputLabelProps={{ shrink: true }}
               fullWidth
+              helperText="Staff list shows only those with a schedule at this time."
             />
           </Stack>
         </DialogContent>
@@ -2398,10 +2333,10 @@ export default function VisitsManagement() {
             <Typography color="text.secondary">No data.</Typography>
           ) : (
             <Stack spacing={2}>
-              {!isAdmin && !isAssignedDoctor(consView) && (
+              {!isAssignedDoctor(consView) && (
                 <Alert severity="info">
-                  You can view this consultation, but only the assigned doctor
-                  (or admin) can update it, prescribe, initiate lab tests, or admit patient.
+                  You can view this consultation, but only the doctor assigned to this appointment
+                  can update it, prescribe, initiate lab tests, or admit patient.
                 </Alert>
               )}
               <Typography sx={{ fontWeight: 900 }}>
@@ -2456,7 +2391,7 @@ export default function VisitsManagement() {
                   startIcon={<EditIcon />}
                   variant="outlined"
                   onClick={openEditConsultation}
-                  disabled={!isAdmin && !isAssignedDoctor(consView)}
+                  disabled={!isAssignedDoctor(consView)}
                 >
                   Update consultation
                 </Button>
@@ -2464,7 +2399,7 @@ export default function VisitsManagement() {
                   startIcon={<ScienceIcon />}
                   variant="outlined"
                   onClick={openLabDialog}
-                  disabled={!isAdmin && !isAssignedDoctor(consView)}
+                  disabled={!isAssignedDoctor(consView)}
                 >
                   Initiate lab test
                 </Button>
@@ -2472,7 +2407,7 @@ export default function VisitsManagement() {
                   startIcon={<PharmacyIcon />}
                   variant="outlined"
                   onClick={openRxDialog}
-                  disabled={!isAdmin && !isAssignedDoctor(consView)}
+                  disabled={!isAssignedDoctor(consView)}
                 >
                   Prescribe
                 </Button>
@@ -2480,9 +2415,7 @@ export default function VisitsManagement() {
                   startIcon={<AdmitIcon />}
                   variant="outlined"
                   onClick={openAdmitDialog}
-                  disabled={
-                    (!isAdmin && !isAssignedDoctor(consView)) || consViewHasAdmission
-                  }
+                  disabled={!isAssignedDoctor(consView) || consViewHasAdmission}
                 >
                   {consViewHasAdmission ? "Already admitted" : "Admit patient"}
                 </Button>
