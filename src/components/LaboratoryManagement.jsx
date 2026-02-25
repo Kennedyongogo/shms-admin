@@ -336,10 +336,19 @@ export default function LaboratoryManagement() {
     }
   };
 
+  // Skip first run of debounced search so tab-gated effect does the initial load only (avoids double blink)
+  const testSearchDebounceSkipped = useRef(true);
+  const orderSearchDebounceSkipped = useRef(true);
+  const resultSearchDebounceSkipped = useRef(true);
+
   // debounce searches
   useEffect(() => {
     const t = setTimeout(() => {
       if (tab !== 1) return;
+      if (orderSearchDebounceSkipped.current) {
+        orderSearchDebounceSkipped.current = false;
+        return;
+      }
       if (orderPage !== 0) setOrderPage(0);
       else loadOrders();
     }, 450);
@@ -350,6 +359,10 @@ export default function LaboratoryManagement() {
   useEffect(() => {
     const t = setTimeout(() => {
       if (tab !== 0) return;
+      if (testSearchDebounceSkipped.current) {
+        testSearchDebounceSkipped.current = false;
+        return;
+      }
       if (testPage !== 0) setTestPage(0);
       else loadTests();
     }, 450);
@@ -360,6 +373,10 @@ export default function LaboratoryManagement() {
   useEffect(() => {
     const t = setTimeout(() => {
       if (tab !== 2) return;
+      if (resultSearchDebounceSkipped.current) {
+        resultSearchDebounceSkipped.current = false;
+        return;
+      }
       if (resultPage !== 0) setResultPage(0);
       else loadResults();
     }, 450);

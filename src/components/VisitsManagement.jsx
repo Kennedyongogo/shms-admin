@@ -384,6 +384,10 @@ export default function VisitsManagement() {
     }
   };
 
+  // Skip first run of debounced search so tab-gated effect does the initial load only (avoids double blink)
+  const apptSearchDebounceSkipped = useRef(true);
+  const consSearchDebounceSkipped = useRef(true);
+
   // Load only the active tab's list to avoid double loading flash on mount
   useEffect(() => {
     if (tab === 0) loadAppointments();
@@ -405,24 +409,34 @@ export default function VisitsManagement() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, mainPaymentsPage, mainPaymentsRowsPerPage]);
 
-  // Debounced search
+  // Debounced search — skip first run so we don't double-load on mount
   useEffect(() => {
     const t = setTimeout(() => {
+      if (tab !== 0) return;
+      if (apptSearchDebounceSkipped.current) {
+        apptSearchDebounceSkipped.current = false;
+        return;
+      }
       if (apptPage !== 0) setApptPage(0);
       else loadAppointments();
     }, 450);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apptSearch]);
+  }, [apptSearch, tab]);
 
   useEffect(() => {
     const t = setTimeout(() => {
+      if (tab !== 1) return;
+      if (consSearchDebounceSkipped.current) {
+        consSearchDebounceSkipped.current = false;
+        return;
+      }
       if (consPage !== 0) setConsPage(0);
       else loadConsultations();
     }, 450);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [consSearch]);
+  }, [consSearch, tab]);
 
   const searchPatients = async (q) => {
     if (!requireTokenGuard()) return;

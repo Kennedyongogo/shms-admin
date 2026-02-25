@@ -326,6 +326,10 @@ export default function InventoryManagement() {
     }
   };
 
+  // Skip first run of debounced search so tab-gated effect does the initial load only (avoids double blink)
+  const suppliersSearchDebounceSkipped = useRef(true);
+  const itemsSearchDebounceSkipped = useRef(true);
+
   useEffect(() => {
     if (tab === 0) loadSuppliers();
   }, [tab, suppliersPage, suppliersRowsPerPage, suppliersSearch]);
@@ -347,17 +351,27 @@ export default function InventoryManagement() {
 
   useEffect(() => {
     const t = setTimeout(() => {
-      if (tab === 0 && suppliersSearch !== undefined) loadSuppliers();
+      if (tab !== 0) return;
+      if (suppliersSearchDebounceSkipped.current) {
+        suppliersSearchDebounceSkipped.current = false;
+        return;
+      }
+      if (suppliersSearch !== undefined) loadSuppliers();
     }, 400);
     return () => clearTimeout(t);
-  }, [suppliersSearch]);
+  }, [suppliersSearch, tab]);
 
   useEffect(() => {
     const t = setTimeout(() => {
-      if (tab === 1 && itemsSearch !== undefined) loadInventoryItems();
+      if (tab !== 1) return;
+      if (itemsSearchDebounceSkipped.current) {
+        itemsSearchDebounceSkipped.current = false;
+        return;
+      }
+      if (itemsSearch !== undefined) loadInventoryItems();
     }, 400);
     return () => clearTimeout(t);
-  }, [itemsSearch]);
+  }, [itemsSearch, tab]);
 
   // ——— Suppliers CRUD ———
   const openSupplierCreate = () => {

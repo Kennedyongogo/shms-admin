@@ -336,6 +336,10 @@ export default function WardManagement() {
     }
   };
 
+  // Skip first run of debounced search so tab-gated effect does the initial load only (avoids double blink)
+  const wardsSearchDebounceSkipped = useRef(true);
+  const bedsSearchDebounceSkipped = useRef(true);
+
   useEffect(() => {
     if (tab === 0) {
       loadDepartments();
@@ -366,17 +370,27 @@ export default function WardManagement() {
 
   useEffect(() => {
     const t = setTimeout(() => {
-      if (tab === 0 && wardsSearch.trim() !== undefined) loadWards();
+      if (tab !== 0) return;
+      if (wardsSearchDebounceSkipped.current) {
+        wardsSearchDebounceSkipped.current = false;
+        return;
+      }
+      if (wardsSearch.trim() !== undefined) loadWards();
     }, 400);
     return () => clearTimeout(t);
-  }, [wardsSearch]);
+  }, [wardsSearch, tab]);
 
   useEffect(() => {
     const t = setTimeout(() => {
-      if (tab === 1) loadBeds();
+      if (tab !== 1) return;
+      if (bedsSearchDebounceSkipped.current) {
+        bedsSearchDebounceSkipped.current = false;
+        return;
+      }
+      loadBeds();
     }, 400);
     return () => clearTimeout(t);
-  }, [bedsSearch]);
+  }, [bedsSearch, tab]);
 
   const openWardCreate = () => {
     setWardForm({ department_id: "", name: "", type: "", daily_rate: "" });

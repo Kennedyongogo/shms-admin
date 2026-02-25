@@ -305,6 +305,11 @@ export default function PharmacyManagement() {
     }
   };
 
+  // Skip first run of debounced search so tab-gated effect does the initial load only (avoids double blink)
+  const medsSearchDebounceSkipped = useRef(true);
+  const presSearchDebounceSkipped = useRef(true);
+  const dispSearchDebounceSkipped = useRef(true);
+
   // Load only the active tab's data to avoid multiple loading flashes on mount
   useEffect(() => {
     if (tab === 0) loadMedications();
@@ -327,31 +332,46 @@ export default function PharmacyManagement() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, pharmPaymentsPage, pharmPaymentsRowsPerPage]);
 
-  // Debounced search
+  // Debounced search — skip first run so we don't double-load on mount
   useEffect(() => {
     const t = setTimeout(() => {
+      if (tab !== 0) return;
+      if (medsSearchDebounceSkipped.current) {
+        medsSearchDebounceSkipped.current = false;
+        return;
+      }
       if (medsPage !== 0) setMedsPage(0);
       else loadMedications();
     }, 450);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [medsSearch]);
+  }, [medsSearch, tab]);
   useEffect(() => {
     const t = setTimeout(() => {
+      if (tab !== 1) return;
+      if (presSearchDebounceSkipped.current) {
+        presSearchDebounceSkipped.current = false;
+        return;
+      }
       if (presPage !== 0) setPresPage(0);
       else loadPrescriptions();
     }, 450);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [presSearch]);
+  }, [presSearch, tab]);
   useEffect(() => {
     const t = setTimeout(() => {
+      if (tab !== 2) return;
+      if (dispSearchDebounceSkipped.current) {
+        dispSearchDebounceSkipped.current = false;
+        return;
+      }
       if (dispPage !== 0) setDispPage(0);
       else loadDispenses();
     }, 450);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dispSearch]);
+  }, [dispSearch, tab]);
 
   const heroGradient = useMemo(() => {
     const main = theme.palette.primary.main;

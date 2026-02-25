@@ -487,6 +487,11 @@ export default function HospitalsManagement() {
     }
   };
 
+  // Skip first run of debounced search effects so they don't duplicate the tab-gated load (avoids double blink)
+  const hospitalsSearchDebounceSkipped = useRef(true);
+  const staffSearchDebounceSkipped = useRef(true);
+  const deptSearchDebounceSkipped = useRef(true);
+
   // Load only the active tab's data on mount (avoids multiple loading flashes / blink)
   useEffect(() => {
     if (tab !== 0) return;
@@ -524,33 +529,48 @@ export default function HospitalsManagement() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, svcPage, svcRowsPerPage, hospitals?.[0]?.id]);
 
-  // Debounced search
+  // Debounced search — skip first run so tab-gated effect does the initial load only (avoids double blink)
   useEffect(() => {
     const t = setTimeout(() => {
+      if (tab !== 0) return;
+      if (hospitalsSearchDebounceSkipped.current) {
+        hospitalsSearchDebounceSkipped.current = false;
+        return;
+      }
       if (hospitalsPage !== 0) setHospitalsPage(0);
       else loadHospitals();
     }, 450);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hospitalsSearch]);
+  }, [hospitalsSearch, tab]);
 
   useEffect(() => {
     const t = setTimeout(() => {
+      if (tab !== 2) return;
+      if (staffSearchDebounceSkipped.current) {
+        staffSearchDebounceSkipped.current = false;
+        return;
+      }
       if (staffPage !== 0) setStaffPage(0);
       else loadStaff();
     }, 450);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [staffSearch]);
+  }, [staffSearch, tab]);
 
   useEffect(() => {
     const t = setTimeout(() => {
+      if (tab !== 1) return;
+      if (deptSearchDebounceSkipped.current) {
+        deptSearchDebounceSkipped.current = false;
+        return;
+      }
       if (deptPage !== 0) setDeptPage(0);
       else loadDepartmentsList();
     }, 450);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deptSearch]);
+  }, [deptSearch, tab]);
 
   useEffect(() => {
     const t = setTimeout(() => {

@@ -353,6 +353,10 @@ export default function AdminUsersManagement() {
     }
   };
 
+  // Skip first run of debounced search so tab-gated effect does the initial load only (avoids double blink)
+  const usersSearchDebounceSkipped = useRef(true);
+  const rolesSearchDebounceSkipped = useRef(true);
+
   // Load only the active tab's data (same pattern as Billing) to avoid double blink on mount
   useEffect(() => {
     if (tab === 1) loadRoles();
@@ -364,10 +368,14 @@ export default function AdminUsersManagement() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, usersPage, usersRowsPerPage]);
 
-  // Auto-search (debounced): type to search, clear to reset (only reload when on that tab)
+  // Auto-search (debounced): skip first run so we don't double-load on mount
   useEffect(() => {
     const t = setTimeout(() => {
       if (tab !== 0) return;
+      if (usersSearchDebounceSkipped.current) {
+        usersSearchDebounceSkipped.current = false;
+        return;
+      }
       if (usersPage !== 0) setUsersPage(0);
       else loadUsers();
     }, 450);
@@ -378,6 +386,10 @@ export default function AdminUsersManagement() {
   useEffect(() => {
     const t = setTimeout(() => {
       if (tab !== 1) return;
+      if (rolesSearchDebounceSkipped.current) {
+        rolesSearchDebounceSkipped.current = false;
+        return;
+      }
       if (rolesPage !== 0) setRolesPage(0);
       else loadRoles();
     }, 450);
