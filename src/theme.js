@@ -1,16 +1,35 @@
 import { createTheme } from "@mui/material/styles";
 
+// Teal + Navy + Soft Gray — professional hospital management palette
+const TEAL = {
+  main: "#00897B",
+  light: "#4DB6AC",
+  dark: "#00695C",
+};
+const NAVY = {
+  main: "#1a237e",
+  light: "#534bae",
+  dark: "#0d0d2b",
+};
+const SOFT_GRAY = {
+  bg: "#f5f5f5",
+  bgLight: "#fafafa",
+  border: "#e0e0e0",
+  text: "#757575",
+  textDark: "#616161",
+};
+
 const theme = createTheme({
   palette: {
     primary: {
-      main: "#00897B", // teal (match public portal hero)
-      light: "#4DB6AC",
-      dark: "#00695C",
+      main: TEAL.main,
+      light: TEAL.light,
+      dark: TEAL.dark,
     },
     secondary: {
-      main: "#1f89e5", // public portal blue accent
-      light: "#6fb3f0",
-      dark: "#166ab4",
+      main: NAVY.main,
+      light: NAVY.light,
+      dark: NAVY.dark,
     },
     info: {
       main: "#1f89e5",
@@ -19,25 +38,28 @@ const theme = createTheme({
     },
     background: {
       default: "#ffffff",
-      paper: "#f9f9f9",
-      dark: "#0b2a27",
+      paper: SOFT_GRAY.bg,
+      dark: NAVY.dark,
     },
     text: {
-      primary: "#0f172a",
-      secondary: "#555555",
+      primary: NAVY.dark,
+      secondary: SOFT_GRAY.text,
     },
-    // Keep success color for notifications/status indicators
     success: {
-      main: "#00897B",
-      light: "#4DB6AC",
-      dark: "#00695C",
+      main: TEAL.main,
+      light: TEAL.light,
+      dark: TEAL.dark,
     },
+    divider: SOFT_GRAY.border,
   },
   typography: {
     fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-    h1: {
-      fontWeight: 500,
-    },
+    h1: { fontWeight: 600, color: NAVY.dark },
+    h2: { fontWeight: 600, color: NAVY.dark },
+    h3: { fontWeight: 600, color: NAVY.dark },
+    h4: { fontWeight: 600, color: NAVY.dark },
+    h5: { fontWeight: 600, color: NAVY.dark },
+    h6: { fontWeight: 600, color: NAVY.dark },
     button: {
       textTransform: "none",
     },

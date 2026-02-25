@@ -334,10 +334,10 @@ export default function HospitalsManagement() {
   };
 
   const heroGradient = useMemo(() => {
-    const main = theme.palette.primary.main;
-    const dark = theme.palette.primary.dark || "#00695C";
-    return `linear-gradient(135deg, ${dark} 0%, ${main} 100%)`;
-  }, [theme.palette.primary.dark, theme.palette.primary.main]);
+    const navy = theme.palette.secondary.main;
+    const teal = theme.palette.primary.main;
+    return `linear-gradient(135deg, ${navy} 0%, ${teal} 100%)`;
+  }, [theme.palette.secondary.main, theme.palette.primary.main]);
 
   const loadHospitals = async () => {
     if (!requireTokenGuard()) return;
@@ -1233,7 +1233,7 @@ export default function HospitalsManagement() {
 
   return (
     <Box sx={{ width: "100%" }}>
-      <Card elevation={0} sx={{ mb: 3, borderRadius: 3, border: "1px solid", borderColor: "divider", overflow: "hidden" }}>
+      <Card elevation={0} sx={{ mb: 3, borderRadius: 3, border: "1px solid", borderColor: "divider", overflow: "hidden", bgcolor: "background.paper" }}>
         <Box sx={{ p: { xs: 2.5, md: 3 }, color: "white", background: heroGradient }}>
           <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }} justifyContent="space-between">
             <Box>
@@ -1243,7 +1243,7 @@ export default function HospitalsManagement() {
                   Hospital
                 </Typography>
               </Stack>
-              <Typography sx={{ opacity: 0.9, mt: 0.5 }}>Manage your hospital profile, departments, staff, and updates.</Typography>
+              <Typography sx={{ opacity: 0.92, mt: 0.5 }}>Manage your hospital profile, departments, staff, and updates.</Typography>
             </Box>
             <Stack direction="row" spacing={1}>
               <Tooltip title="Refresh">
@@ -1258,7 +1258,7 @@ export default function HospitalsManagement() {
                       if (contentTab === 1) loadEvents();
                     }
                   }}
-                  sx={{ color: "white", border: "1px solid rgba(255,255,255,0.25)" }}
+                  sx={{ color: "white", border: "1px solid rgba(255,255,255,0.3)" }}
                 >
                   <RefreshIcon />
                 </IconButton>
@@ -1269,11 +1269,11 @@ export default function HospitalsManagement() {
                   startIcon={<AddIcon />}
                   onClick={openCreateHospital}
                   sx={{
-                    bgcolor: "rgba(255,255,255,0.15)",
+                    bgcolor: "rgba(255,255,255,0.2)",
                     color: "white",
                     fontWeight: 800,
-                    border: "1px solid rgba(255,255,255,0.25)",
-                    "&:hover": { bgcolor: "rgba(255,255,255,0.22)" },
+                    border: "1px solid rgba(255,255,255,0.35)",
+                    "&:hover": { bgcolor: "rgba(255,255,255,0.28)" },
                   }}
                 >
                   New Hospital
@@ -1285,11 +1285,11 @@ export default function HospitalsManagement() {
                   startIcon={<AddIcon />}
                   onClick={openCreateDept}
                   sx={{
-                    bgcolor: "rgba(255,255,255,0.15)",
+                    bgcolor: "rgba(255,255,255,0.2)",
                     color: "white",
                     fontWeight: 800,
-                    border: "1px solid rgba(255,255,255,0.25)",
-                    "&:hover": { bgcolor: "rgba(255,255,255,0.22)" },
+                    border: "1px solid rgba(255,255,255,0.35)",
+                    "&:hover": { bgcolor: "rgba(255,255,255,0.28)" },
                   }}
                 >
                   New Department
@@ -1301,11 +1301,11 @@ export default function HospitalsManagement() {
                   startIcon={<AddIcon />}
                   onClick={openCreateStaff}
                   sx={{
-                    bgcolor: "rgba(255,255,255,0.15)",
+                    bgcolor: "rgba(255,255,255,0.2)",
                     color: "white",
                     fontWeight: 800,
-                    border: "1px solid rgba(255,255,255,0.25)",
-                    "&:hover": { bgcolor: "rgba(255,255,255,0.22)" },
+                    border: "1px solid rgba(255,255,255,0.35)",
+                    "&:hover": { bgcolor: "rgba(255,255,255,0.28)" },
                   }}
                 >
                   New Staff
@@ -1317,11 +1317,11 @@ export default function HospitalsManagement() {
                   startIcon={<AddIcon />}
                   onClick={openCreateService}
                   sx={{
-                    bgcolor: "rgba(255,255,255,0.15)",
+                    bgcolor: "rgba(255,255,255,0.2)",
                     color: "white",
                     fontWeight: 800,
-                    border: "1px solid rgba(255,255,255,0.25)",
-                    "&:hover": { bgcolor: "rgba(255,255,255,0.22)" },
+                    border: "1px solid rgba(255,255,255,0.35)",
+                    "&:hover": { bgcolor: "rgba(255,255,255,0.28)" },
                   }}
                 >
                   New Service
@@ -1333,11 +1333,11 @@ export default function HospitalsManagement() {
                   startIcon={<AddIcon />}
                   onClick={contentTab === 0 ? openCreateNews : openCreateEvent}
                   sx={{
-                    bgcolor: "rgba(255,255,255,0.15)",
+                    bgcolor: "rgba(255,255,255,0.2)",
                     color: "white",
                     fontWeight: 800,
-                    border: "1px solid rgba(255,255,255,0.25)",
-                    "&:hover": { bgcolor: "rgba(255,255,255,0.22)" },
+                    border: "1px solid rgba(255,255,255,0.35)",
+                    "&:hover": { bgcolor: "rgba(255,255,255,0.28)" },
                   }}
                 >
                   {contentTab === 0 ? "New News" : "New Event"}
@@ -1348,7 +1348,16 @@ export default function HospitalsManagement() {
         </Box>
 
         <CardContent sx={{ p: 0 }}>
-          <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ px: 2, "& .MuiTabs-indicator": { backgroundColor: theme.palette.primary.main } }}>
+          <Tabs
+            value={tab}
+            onChange={(_, v) => setTab(v)}
+            sx={{
+              px: 2,
+              "& .MuiTabs-indicator": { backgroundColor: "primary.main" },
+              "& .MuiTab-root.Mui-selected": { color: "primary.main", fontWeight: 700 },
+              "& .MuiTab-root": { color: "text.secondary" },
+            }}
+          >
             <Tab icon={<LocalHospitalIcon />} iconPosition="start" label="Hospital" />
             <Tab icon={<PeopleAltIcon />} iconPosition="start" label="Departments" />
             <Tab icon={<PeopleAltIcon />} iconPosition="start" label="Staff" />
@@ -1374,51 +1383,65 @@ export default function HospitalsManagement() {
                 <Stack spacing={2}>
                   {hospitals.map((h) => (
                     <Card key={h.id} variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
-                      <CardContent sx={{ p: { xs: 2, md: 2.5 } }}>
-                        <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }} justifyContent="space-between">
-                          <Stack direction="row" spacing={2} alignItems="center" sx={{ minWidth: 0 }}>
-                            <Avatar
-                              src={buildImageUrl(h.logo_path)}
-                              alt={h.name}
-                              sx={{ width: 64, height: 64, bgcolor: "rgba(0, 137, 123, 0.12)", color: theme.palette.primary.dark, fontWeight: 900 }}
-                            >
-                              {(h.name || "H").trim().charAt(0).toUpperCase()}
-                            </Avatar>
-                            <Box sx={{ minWidth: 0 }}>
-                              <Typography sx={{ fontWeight: 900, fontSize: 18, lineHeight: 1.2 }}>{h.name || "—"}</Typography>
-                              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25, wordBreak: "break-word" }}>
-                                {h.email || "—"}
+                      <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
+                        <Stack direction={{ xs: "column", md: "row" }} sx={{ minHeight: 0 }}>
+                          {/* Left half: logo fills the frame (rectangular, not circle) */}
+                          <Box
+                            sx={{
+                              width: { xs: "100%", md: "50%" },
+                              flexShrink: 0,
+                              aspectRatio: { xs: "2 / 1", md: "auto" },
+                              minHeight: { md: 160 },
+                              bgcolor: "grey.100",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              overflow: "hidden",
+                            }}
+                          >
+                            {h.logo_path ? (
+                              <Box
+                                component="img"
+                                src={buildImageUrl(h.logo_path)}
+                                alt={h.name}
+                                sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                              />
+                            ) : (
+                              <Typography sx={{ fontSize: 48, fontWeight: 900, color: "secondary.main" }}>
+                                {(h.name || "H").trim().charAt(0).toUpperCase()}
                               </Typography>
-                              <Typography variant="body2" sx={{ mt: 0.25, fontWeight: 700 }}>
-                                {h.phone || "—"}
-                              </Typography>
-                            </Box>
-                          </Stack>
-
-                          {isAdmin && (
-                            <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end">
-                              <Tooltip title="Edit">
-                                <IconButton onClick={() => openEditHospital(h)} size="small" sx={{ border: "1px solid", borderColor: "divider" }}>
-                                  <EditIcon fontSize="inherit" />
-                                </IconButton>
-                              </Tooltip>
-                            </Stack>
-                          )}
-                        </Stack>
-
-                        <Divider sx={{ my: 2 }} />
-                        <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                          <Box sx={{ flex: 1 }}>
-                            <Typography variant="caption" color="text.secondary">
-                              Address
-                            </Typography>
-                            <Typography sx={{ fontWeight: 700, whiteSpace: "pre-wrap" }}>{h.address || "—"}</Typography>
+                            )}
                           </Box>
-                          <Box sx={{ width: { xs: "100%", md: 220 } }}>
-                            <Typography variant="caption" color="text.secondary">
-                              Created
+                          {/* Right half: details */}
+                          <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", p: { xs: 2, md: 2.5 } }}>
+                            <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1} sx={{ mb: 1.5 }}>
+                              <Typography sx={{ fontWeight: 900, fontSize: 18, lineHeight: 1.2, color: "text.primary" }}>{h.name || "—"}</Typography>
+                              {isAdmin && (
+                                <Tooltip title="Edit">
+                                  <IconButton onClick={() => openEditHospital(h)} size="small" sx={{ border: "1px solid", borderColor: "divider" }}>
+                                    <EditIcon fontSize="inherit" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                            </Stack>
+                            <Typography variant="body2" color="text.secondary" sx={{ wordBreak: "break-word" }}>
+                              {h.email || "—"}
                             </Typography>
-                            <Typography sx={{ fontWeight: 700 }}>{formatDate(h.createdAt)}</Typography>
+                            <Typography variant="body2" sx={{ mt: 0.25, fontWeight: 700 }}>
+                              {h.phone || "—"}
+                            </Typography>
+                            <Box sx={{ mt: 1.5 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                Address
+                              </Typography>
+                              <Typography sx={{ fontWeight: 700, whiteSpace: "pre-wrap" }}>{h.address || "—"}</Typography>
+                            </Box>
+                            <Box sx={{ mt: 1 }}>
+                              <Typography variant="caption" color="text.secondary">
+                                Created
+                              </Typography>
+                              <Typography sx={{ fontWeight: 700 }}>{formatDate(h.createdAt)}</Typography>
+                            </Box>
                           </Box>
                         </Stack>
                       </CardContent>
@@ -1452,7 +1475,7 @@ export default function HospitalsManagement() {
               <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
                 <Table size="small">
                   <TableHead>
-                    <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
+                    <TableRow sx={{ bgcolor: "grey.100" }}>
                       <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Department</TableCell>
                       <TableCell sx={{ fontWeight: 800, width: 360 }}>Description</TableCell>
@@ -1735,7 +1758,7 @@ export default function HospitalsManagement() {
               <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
                 <Table size="small">
                   <TableHead>
-                    <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
+                    <TableRow sx={{ bgcolor: "grey.100" }}>
                       <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Service</TableCell>
                       <TableCell sx={{ fontWeight: 800 }}>Department</TableCell>
@@ -1765,7 +1788,7 @@ export default function HospitalsManagement() {
                               <Avatar
                                 src={buildImageUrl(s.image_path)}
                                 alt={s.name}
-                                sx={{ width: 32, height: 32, bgcolor: "rgba(0, 137, 123, 0.10)", color: theme.palette.primary.dark, fontWeight: 900 }}
+                                sx={{ width: 32, height: 32, bgcolor: "grey.100", color: "secondary.main", fontWeight: 900 }}
                               >
                                 {(s.name || "S").trim().charAt(0).toUpperCase()}
                               </Avatar>
@@ -1839,7 +1862,7 @@ export default function HospitalsManagement() {
               <Tabs
                 value={contentTab}
                 onChange={(_, v) => setContentTab(v)}
-                sx={{ mb: 2, "& .MuiTabs-indicator": { backgroundColor: theme.palette.primary.main } }}
+                sx={{ mb: 2, "& .MuiTabs-indicator": { backgroundColor: "primary.main" }, "& .MuiTab-root.Mui-selected": { color: "primary.main", fontWeight: 700 }, "& .MuiTab-root": { color: "text.secondary" } }}
               >
                 <Tab icon={<ArticleIcon />} iconPosition="start" label="News" />
                 <Tab icon={<EventIcon />} iconPosition="start" label="Events" />
@@ -1867,7 +1890,7 @@ export default function HospitalsManagement() {
                   <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
                     <Table size="small">
                       <TableHead>
-                        <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
+                        <TableRow sx={{ bgcolor: "grey.100" }}>
                           <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
                           <TableCell sx={{ fontWeight: 800 }}>Title</TableCell>
                           <TableCell sx={{ fontWeight: 800 }}>Hospital</TableCell>
@@ -1970,7 +1993,7 @@ export default function HospitalsManagement() {
                   <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
                     <Table size="small">
                       <TableHead>
-                        <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
+                        <TableRow sx={{ bgcolor: "grey.100" }}>
                           <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
                           <TableCell sx={{ fontWeight: 800 }}>Title</TableCell>
                           <TableCell sx={{ fontWeight: 800 }}>Hospital</TableCell>
@@ -2065,7 +2088,7 @@ export default function HospitalsManagement() {
               <Avatar
                 src={buildImageUrl(hospitalView.hospital?.logo_path)}
                 alt={hospitalView.hospital?.name}
-                sx={{ width: 56, height: 56, bgcolor: "rgba(0, 137, 123, 0.12)", color: theme.palette.primary.dark, fontWeight: 900 }}
+                sx={{ width: 56, height: 56, bgcolor: "grey.100", color: "secondary.main", fontWeight: 900 }}
               >
                 {(hospitalView.hospital?.name || "H").trim().charAt(0).toUpperCase()}
               </Avatar>
@@ -2113,7 +2136,7 @@ export default function HospitalsManagement() {
               <Avatar
                 src={hospitalForm.logoPreview}
                 alt={hospitalForm.name}
-                sx={{ width: 56, height: 56, bgcolor: "rgba(0, 137, 123, 0.12)", color: theme.palette.primary.dark, fontWeight: 900 }}
+                sx={{ width: 56, height: 56, bgcolor: "grey.100", color: "secondary.main", fontWeight: 900 }}
               >
                 {(hospitalForm.name || "H").trim().charAt(0).toUpperCase()}
               </Avatar>
@@ -2151,7 +2174,7 @@ export default function HospitalsManagement() {
         <DialogActions>
           <Button onClick={() => setHospitalDialog({ open: false, mode: "create", id: null })}>Cancel</Button>
           {isAdmin && (
-            <Button variant="contained" onClick={saveHospital} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: theme.palette.primary.dark } }}>
+            <Button variant="contained" onClick={saveHospital} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: "primary.dark" } }}>
               Save
             </Button>
           )}
@@ -2308,7 +2331,7 @@ export default function HospitalsManagement() {
                         inputProps={{ step: 300 }}
                         sx={{ width: 120 }}
                       />
-                      <Button variant="contained" onClick={addSchedule} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: theme.palette.primary.dark } }}>
+                      <Button variant="contained" onClick={addSchedule} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: "primary.dark" } }}>
                         Add
                       </Button>
                     </Stack>
@@ -2379,7 +2402,7 @@ export default function HospitalsManagement() {
         <DialogActions>
           <Button onClick={() => setStaffDialog({ open: false, mode: "create", id: null })}>Cancel</Button>
           {isAdmin && (
-            <Button variant="contained" onClick={saveStaff} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: theme.palette.primary.dark } }}>
+            <Button variant="contained" onClick={saveStaff} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: "primary.dark" } }}>
               Save
             </Button>
           )}
@@ -2437,7 +2460,7 @@ export default function HospitalsManagement() {
         <DialogActions>
           <Button onClick={() => setDeptDialog({ open: false, mode: "create", id: null })}>Cancel</Button>
           {isAdmin && (
-            <Button variant="contained" onClick={saveDept} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: theme.palette.primary.dark } }}>
+            <Button variant="contained" onClick={saveDept} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: "primary.dark" } }}>
               Save
             </Button>
           )}
@@ -2453,7 +2476,7 @@ export default function HospitalsManagement() {
               <Avatar
                 variant="rounded"
                 src={buildImageUrl(svcView.service?.image_path)}
-                sx={{ width: 64, height: 64, bgcolor: "rgba(0, 137, 123, 0.12)", color: theme.palette.primary.dark, fontWeight: 900 }}
+                sx={{ width: 64, height: 64, bgcolor: "grey.100", color: "secondary.main", fontWeight: 900 }}
               >
                 {(svcView.service?.name || "S").trim().charAt(0).toUpperCase()}
               </Avatar>
@@ -2502,7 +2525,7 @@ export default function HospitalsManagement() {
                 variant="rounded"
                 src={svcForm.imagePreview}
                 alt={svcForm.name}
-                sx={{ width: 56, height: 56, bgcolor: "rgba(0, 137, 123, 0.12)", color: theme.palette.primary.dark, fontWeight: 900 }}
+                sx={{ width: 56, height: 56, bgcolor: "grey.100", color: "secondary.main", fontWeight: 900 }}
               >
                 {(svcForm.name || "S").trim().charAt(0).toUpperCase()}
               </Avatar>
@@ -2580,7 +2603,7 @@ export default function HospitalsManagement() {
         <DialogActions>
           <Button onClick={() => setSvcDialog({ open: false, mode: "create", id: null })}>Cancel</Button>
           {isAdmin && (
-            <Button variant="contained" onClick={saveService} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: theme.palette.primary.dark } }}>
+            <Button variant="contained" onClick={saveService} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: "primary.dark" } }}>
               Save
             </Button>
           )}
@@ -2596,7 +2619,7 @@ export default function HospitalsManagement() {
               <Avatar
                 variant="rounded"
                 src={buildImageUrl(newsView.news?.featured_image_path)}
-                sx={{ width: 64, height: 64, bgcolor: "rgba(0, 137, 123, 0.12)", color: theme.palette.primary.dark, fontWeight: 900 }}
+                sx={{ width: 64, height: 64, bgcolor: "grey.100", color: "secondary.main", fontWeight: 900 }}
               >
                 {(newsView.news?.title || "N").trim().charAt(0).toUpperCase()}
               </Avatar>
@@ -2646,7 +2669,7 @@ export default function HospitalsManagement() {
               <Avatar
                 variant="rounded"
                 src={newsForm.featuredPreview}
-                sx={{ width: 56, height: 56, bgcolor: "rgba(0, 137, 123, 0.12)", color: theme.palette.primary.dark, fontWeight: 900 }}
+                sx={{ width: 56, height: 56, bgcolor: "grey.100", color: "secondary.main", fontWeight: 900 }}
               >
                 {(newsForm.title || "N").trim().charAt(0).toUpperCase()}
               </Avatar>
@@ -2725,7 +2748,7 @@ export default function HospitalsManagement() {
         <DialogActions>
           <Button onClick={() => setNewsDialog({ open: false, mode: "create", id: null })}>Cancel</Button>
           {isAdmin && (
-            <Button variant="contained" onClick={saveNews} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: theme.palette.primary.dark } }}>
+            <Button variant="contained" onClick={saveNews} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: "primary.dark" } }}>
               Save
             </Button>
           )}
@@ -2741,7 +2764,7 @@ export default function HospitalsManagement() {
               <Avatar
                 variant="rounded"
                 src={buildImageUrl(eventView.event?.banner_image_path)}
-                sx={{ width: 64, height: 64, bgcolor: "rgba(0, 137, 123, 0.12)", color: theme.palette.primary.dark, fontWeight: 900 }}
+                sx={{ width: 64, height: 64, bgcolor: "grey.100", color: "secondary.main", fontWeight: 900 }}
               >
                 {(eventView.event?.title || "E").trim().charAt(0).toUpperCase()}
               </Avatar>
@@ -2805,7 +2828,7 @@ export default function HospitalsManagement() {
               <Avatar
                 variant="rounded"
                 src={eventForm.bannerPreview}
-                sx={{ width: 56, height: 56, bgcolor: "rgba(0, 137, 123, 0.12)", color: theme.palette.primary.dark, fontWeight: 900 }}
+                sx={{ width: 56, height: 56, bgcolor: "grey.100", color: "secondary.main", fontWeight: 900 }}
               >
                 {(eventForm.title || "E").trim().charAt(0).toUpperCase()}
               </Avatar>
@@ -2923,7 +2946,7 @@ export default function HospitalsManagement() {
         <DialogActions>
           <Button onClick={() => setEventDialog({ open: false, mode: "create", id: null })}>Cancel</Button>
           {isAdmin && (
-            <Button variant="contained" onClick={saveEvent} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: theme.palette.primary.dark } }}>
+            <Button variant="contained" onClick={saveEvent} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: "primary.dark" } }}>
               Save
             </Button>
           )}

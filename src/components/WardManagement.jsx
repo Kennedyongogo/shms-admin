@@ -12,6 +12,7 @@ import {
   DialogTitle,
   Divider,
   FormControl,
+  IconButton,
   InputLabel,
   MenuItem,
   Select,
@@ -40,7 +41,9 @@ import {
   Visibility as VisibilityIcon,
   Logout as DischargeIcon,
   NoteAdd as NoteAddIcon,
+  Payments as PaymentsIcon,
   Receipt as ReceiptIcon,
+  ReceiptLong as ReceiptLongIcon,
 } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
 import Swal from "sweetalert2";
@@ -52,10 +55,19 @@ const API = {
   admissions: "/api/admissions",
   nursingNotes: "/api/nursing-notes",
   billing: "/api/billing",
+  payments: "/api/payments",
   departments: "/api/departments",
 };
 
 const getToken = () => localStorage.getItem("token");
+const getRoleName = () => {
+  try {
+    const role = JSON.parse(localStorage.getItem("role") || "null");
+    return role?.name || null;
+  } catch {
+    return null;
+  }
+};
 
 async function fetchJson(url, { method = "GET", body, token } = {}) {
   const res = await fetch(url, {
@@ -104,6 +116,7 @@ function patientLabel(p) {
 export default function WardManagement() {
   const theme = useTheme();
   const token = getToken();
+  const isAdmin = getRoleName() === "admin";
 
   const [tab, setTab] = useState(0);
 
@@ -154,6 +167,26 @@ export default function WardManagement() {
     date_time: "",
   });
   const [noteSaving, setNoteSaving] = useState(false);
+  const [admissionPayAmount, setAdmissionPayAmount] = useState("");
+  const [admissionPayMethod, setAdmissionPayMethod] = useState("cash");
+  const [admissionPaySaving, setAdmissionPaySaving] = useState(false);
+
+  // Admission billing tab (bills for admissions only)
+  const admissionBillsReqId = useRef(0);
+  const [admissionBills, setAdmissionBills] = useState([]);
+  const [admissionBillsLoading, setAdmissionBillsLoading] = useState(false);
+  const [admissionBillsPage, setAdmissionBillsPage] = useState(0);
+  const [admissionBillsRowsPerPage, setAdmissionBillsRowsPerPage] = useState(10);
+  const [admissionBillsTotal, setAdmissionBillsTotal] = useState(0);
+  const [admissionBillView, setAdmissionBillView] = useState({ open: false, bill: null, loading: false });
+
+  // Admission payments tab (payments for admission bills only)
+  const admissionPaymentsReqId = useRef(0);
+  const [admissionPayments, setAdmissionPayments] = useState([]);
+  const [admissionPaymentsLoading, setAdmissionPaymentsLoading] = useState(false);
+  const [admissionPaymentsPage, setAdmissionPaymentsPage] = useState(0);
+  const [admissionPaymentsRowsPerPage, setAdmissionPaymentsRowsPerPage] = useState(10);
+  const [admissionPaymentsTotal, setAdmissionPaymentsTotal] = useState(0);
 
   const heroGradient = useMemo(() => {
     const main = theme.palette.primary.main;
@@ -248,6 +281,61 @@ export default function WardManagement() {
     }
   };
 
+  const loadAdmissionBills = async () => {
+    const reqId = ++admissionBillsReqId.current;
+    setAdmissionBillsLoading(true);
+    try {
+      const qs = new URLSearchParams({
+        page: String(admissionBillsPage + 1),
+        limit: String(admissionBillsRowsPerPage),
+        item_type: "admission",
+      });
+      const data = await fetchJson(`${API.billing}?${qs.toString()}`, { token });
+      if (reqId !== admissionBillsReqId.current) return;
+      setAdmissionBills(data?.data || []);
+      setAdmissionBillsTotal(data?.pagination?.total ?? 0);
+    } catch (e) {
+      if (reqId !== admissionBillsReqId.current) return;
+      Swal.fire({ icon: "error", title: "Failed", text: e?.message });
+      setAdmissionBills([]);
+    } finally {
+      if (reqId === admissionBillsReqId.current) setAdmissionBillsLoading(false);
+    }
+  };
+
+  const loadAdmissionPayments = async () => {
+    const reqId = ++admissionPaymentsReqId.current;
+    setAdmissionPaymentsLoading(true);
+    try {
+      const qs = new URLSearchParams({
+        page: String(admissionPaymentsPage + 1),
+        limit: String(admissionPaymentsRowsPerPage),
+        for_admission: "1",
+      });
+      const data = await fetchJson(`${API.payments}?${qs.toString()}`, { token });
+      if (reqId !== admissionPaymentsReqId.current) return;
+      setAdmissionPayments(data?.data || []);
+      setAdmissionPaymentsTotal(data?.pagination?.total ?? 0);
+    } catch (e) {
+      if (reqId !== admissionPaymentsReqId.current) return;
+      Swal.fire({ icon: "error", title: "Failed", text: e?.message });
+      setAdmissionPayments([]);
+    } finally {
+      if (reqId === admissionPaymentsReqId.current) setAdmissionPaymentsLoading(false);
+    }
+  };
+
+  const openAdmissionBillView = async (billId) => {
+    setAdmissionBillView({ open: true, bill: null, loading: true });
+    try {
+      const data = await fetchJson(`${API.billing}/${billId}`, { token });
+      setAdmissionBillView({ open: true, bill: data?.data || null, loading: false });
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Failed", text: e?.message });
+      setAdmissionBillView({ open: false, bill: null, loading: false });
+    }
+  };
+
   useEffect(() => {
     if (tab === 0) {
       loadDepartments();
@@ -267,6 +355,14 @@ export default function WardManagement() {
       loadAdmissions();
     }
   }, [tab, admissionsPage, admissionsRowsPerPage, admissionsStatusFilter]);
+
+  useEffect(() => {
+    if (tab === 3) loadAdmissionBills();
+  }, [tab, admissionBillsPage, admissionBillsRowsPerPage]);
+
+  useEffect(() => {
+    if (tab === 4) loadAdmissionPayments();
+  }, [tab, admissionPaymentsPage, admissionPaymentsRowsPerPage]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -410,6 +506,8 @@ export default function WardManagement() {
 
   const openAdmissionView = async (admissionId) => {
     setAdmissionView({ open: true, loading: true, admission: null, billing: null });
+    setAdmissionPayAmount("");
+    setAdmissionPayMethod("cash");
     setNoteDialogOpen(false);
     setNoteForm({
       temperature: "",
@@ -492,6 +590,39 @@ export default function WardManagement() {
     }
   };
 
+  const recordAdmissionPayment = async () => {
+    const billId = admissionView.billing?.bill_id;
+    const admissionId = admissionView.admission?.id;
+    if (!billId || !admissionId) return;
+    const defaultAmount = Number(admissionView.billing?.balance ?? admissionView.billing?.total_amount ?? 0);
+    const amountRaw = admissionPayAmount !== "" ? Number(admissionPayAmount) : defaultAmount;
+    if (!Number.isFinite(amountRaw) || amountRaw <= 0) {
+      Swal.fire({ icon: "warning", title: "Invalid amount", text: "Enter a positive amount." });
+      return;
+    }
+    setAdmissionPaySaving(true);
+    try {
+      const res = await fetchJson(`${API.payments}/process`, {
+        method: "POST",
+        token,
+        body: {
+          bill_id: billId,
+          amount_paid: amountRaw,
+          payment_method: admissionPayMethod || "cash",
+          payment_date: new Date().toISOString(),
+        },
+      });
+      Swal.fire({ icon: "success", title: "Payment recorded", text: "You can discharge the patient when ready." });
+      const billingRes = await fetchJson(`${API.billing}/by-reference?item_type=admission&reference_id=${admissionId}`, { token }).catch(() => ({ data: null }));
+      setAdmissionView((p) => ({ ...p, billing: billingRes?.data ?? p.billing }));
+      setAdmissionPayAmount("");
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Payment failed", text: e?.message });
+    } finally {
+      setAdmissionPaySaving(false);
+    }
+  };
+
   const openAddNoteDialog = () => {
     const now = new Date();
     const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
@@ -549,6 +680,8 @@ export default function WardManagement() {
               if (tab === 0) loadWards();
               if (tab === 1) loadBeds();
               if (tab === 2) loadAdmissions();
+              if (tab === 3) loadAdmissionBills();
+              if (tab === 4) loadAdmissionPayments();
             }}
             sx={{ borderColor: "rgba(255,255,255,0.55)", color: "white", fontWeight: 800, "&:hover": { borderColor: "rgba(255,255,255,0.85)", bgcolor: "rgba(255,255,255,0.08)" } }}
           >
@@ -562,6 +695,8 @@ export default function WardManagement() {
           <Tab icon={<WardIcon />} iconPosition="start" label="Wards" />
           <Tab icon={<BedIcon />} iconPosition="start" label="Beds" />
           <Tab icon={<AdmissionIcon />} iconPosition="start" label="Admissions" />
+          <Tab icon={<ReceiptLongIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Billing" />
+          <Tab icon={<PaymentsIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Payment" />
         </Tabs>
         <Divider />
 
@@ -570,10 +705,15 @@ export default function WardManagement() {
           <Box sx={{ p: 2 }}>
             <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems={{ md: "center" }} sx={{ mb: 2 }}>
               <TextField size="small" fullWidth label="Search (name, type)" value={wardsSearch} onChange={(e) => { setWardsSearch(e.target.value); setWardsPage(0); }} />
-              <Button variant="contained" startIcon={<AddIcon />} onClick={openWardCreate} sx={{ fontWeight: 900, minWidth: { xs: "100%", md: 140 } }}>
-                Add Ward
-              </Button>
+              {isAdmin && (
+                <Button variant="contained" startIcon={<AddIcon />} onClick={openWardCreate} sx={{ fontWeight: 900, minWidth: { xs: "100%", md: 140 } }}>
+                  Add Ward
+                </Button>
+              )}
             </Stack>
+            {!isAdmin && (
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>View only. Only admins can create, edit, or delete wards.</Typography>
+            )}
             <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
               <Table size="small">
                 <TableHead>
@@ -583,13 +723,13 @@ export default function WardManagement() {
                     <TableCell sx={{ fontWeight: 900 }}>Type</TableCell>
                     <TableCell sx={{ fontWeight: 900 }}>Department</TableCell>
                     <TableCell sx={{ fontWeight: 900 }}>Daily rate</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 900 }}>Actions</TableCell>
+                    {isAdmin && <TableCell align="right" sx={{ fontWeight: 900 }}>Actions</TableCell>}
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {wardsLoading ? (
                     <TableRow>
-                      <TableCell colSpan={6} sx={{ py: 4 }}>
+                      <TableCell colSpan={isAdmin ? 6 : 5} sx={{ py: 4 }}>
                         <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
                           <CircularProgress size={18} />
                           <Typography color="text.secondary">Loading…</Typography>
@@ -604,17 +744,19 @@ export default function WardManagement() {
                         <TableCell>{w.type || "—"}</TableCell>
                         <TableCell>{departmentOptions.find((d) => d.id === w.department_id)?.name ?? w.department?.name ?? "—"}</TableCell>
                         <TableCell>{w.daily_rate != null ? Number(w.daily_rate).toLocaleString() : "—"}</TableCell>
-                        <TableCell align="right">
-                          <Stack direction="row" spacing={1} justifyContent="flex-end">
-                            <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => openWardEdit(w)} sx={{ fontWeight: 800 }}>Edit</Button>
-                            <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => deleteWard(w.id)} sx={{ fontWeight: 800 }}>Delete</Button>
-                          </Stack>
-                        </TableCell>
+                        {isAdmin && (
+                          <TableCell align="right">
+                            <Stack direction="row" spacing={1} justifyContent="flex-end">
+                              <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => openWardEdit(w)} sx={{ fontWeight: 800 }}>Edit</Button>
+                              <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => deleteWard(w.id)} sx={{ fontWeight: 800 }}>Delete</Button>
+                            </Stack>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} sx={{ py: 3 }}>
+                      <TableCell colSpan={isAdmin ? 6 : 5} sx={{ py: 3 }}>
                         <Typography color="text.secondary">No wards found.</Typography>
                       </TableCell>
                     </TableRow>
@@ -631,10 +773,15 @@ export default function WardManagement() {
           <Box sx={{ p: 2 }}>
             <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems={{ md: "center" }} sx={{ mb: 2, width: "100%" }}>
               <TextField size="small" label="Search (bed number, status)" value={bedsSearch} onChange={(e) => { setBedsSearch(e.target.value); setBedsPage(0); }} sx={{ flex: 1, minWidth: 0 }} />
-              <Button variant="contained" startIcon={<AddIcon />} onClick={openBedCreate} sx={{ fontWeight: 900, flexShrink: 0, minWidth: { xs: "100%", md: 120 } }}>
-                Add Bed
-              </Button>
+              {isAdmin && (
+                <Button variant="contained" startIcon={<AddIcon />} onClick={openBedCreate} sx={{ fontWeight: 900, flexShrink: 0, minWidth: { xs: "100%", md: 120 } }}>
+                  Add Bed
+                </Button>
+              )}
             </Stack>
+            {!isAdmin && (
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>View only. Only admins can create, edit, delete beds, or change status.</Typography>
+            )}
             <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
               <Table size="small">
                 <TableHead>
@@ -643,13 +790,13 @@ export default function WardManagement() {
                     <TableCell sx={{ fontWeight: 900 }}>Bed number</TableCell>
                     <TableCell sx={{ fontWeight: 900 }}>Ward</TableCell>
                     <TableCell sx={{ fontWeight: 900 }}>Status</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 900 }}>Actions</TableCell>
+                    {isAdmin && <TableCell align="right" sx={{ fontWeight: 900 }}>Actions</TableCell>}
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {bedsLoading ? (
                     <TableRow>
-                      <TableCell colSpan={5} sx={{ py: 4 }}>
+                      <TableCell colSpan={isAdmin ? 5 : 4} sx={{ py: 4 }}>
                         <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
                           <CircularProgress size={18} />
                           <Typography color="text.secondary">Loading…</Typography>
@@ -665,22 +812,24 @@ export default function WardManagement() {
                         <TableCell>
                           <Chip size="small" label={b.status} color={b.status === "available" ? "success" : b.status === "maintenance" ? "warning" : "default"} variant="outlined" />
                         </TableCell>
-                        <TableCell align="right">
-                          <Stack direction="row" spacing={1} justifyContent="flex-end" flexWrap="wrap">
-                            <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => openBedEdit(b)} sx={{ fontWeight: 800 }}>Edit</Button>
-                            {b.status !== "maintenance" && (
-                              <Button size="small" variant="outlined" onClick={() => updateBedStatus(b.id, b.status === "available" ? "maintenance" : "available")} sx={{ fontWeight: 800 }}>
-                                {b.status === "available" ? "Set maintenance" : "Set available"}
-                              </Button>
-                            )}
-                            <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => deleteBed(b.id)} sx={{ fontWeight: 800 }}>Delete</Button>
-                          </Stack>
-                        </TableCell>
+                        {isAdmin && (
+                          <TableCell align="right">
+                            <Stack direction="row" spacing={1} justifyContent="flex-end" flexWrap="wrap">
+                              <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => openBedEdit(b)} sx={{ fontWeight: 800 }}>Edit</Button>
+                              {b.status !== "maintenance" && (
+                                <Button size="small" variant="outlined" onClick={() => updateBedStatus(b.id, b.status === "available" ? "maintenance" : "available")} sx={{ fontWeight: 800 }}>
+                                  {b.status === "available" ? "Set maintenance" : "Set available"}
+                                </Button>
+                              )}
+                              <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => deleteBed(b.id)} sx={{ fontWeight: 800 }}>Delete</Button>
+                            </Stack>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} sx={{ py: 3 }}>
+                      <TableCell colSpan={isAdmin ? 5 : 4} sx={{ py: 3 }}>
                         <Typography color="text.secondary">No beds found.</Typography>
                       </TableCell>
                     </TableRow>
@@ -761,7 +910,193 @@ export default function WardManagement() {
             <TablePagination component="div" count={admissionsTotal} page={admissionsPage} onPageChange={(_, p) => setAdmissionsPage(p)} rowsPerPage={admissionsRowsPerPage} onRowsPerPageChange={(e) => { setAdmissionsRowsPerPage(parseInt(e.target.value, 10)); setAdmissionsPage(0); }} rowsPerPageOptions={[5, 10, 25, 50]} />
           </Box>
         )}
+
+        {/* Billing tab (bills for admissions only) */}
+        {tab === 3 && (
+          <Box sx={{ p: 2 }}>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
+              Bills for ward admissions. When you admit a patient and generate billing, the bill appears here. View and record payment in Admissions or here.
+            </Typography>
+            <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: "rgba(0,0,0,0.02)" }}>
+                    <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Patient</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Total</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Paid</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Balance</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Created</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 800 }}>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {admissionBillsLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} sx={{ py: 4 }}>
+                        <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
+                          <CircularProgress size={18} />
+                          <Typography color="text.secondary">Loading bills…</Typography>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  ) : admissionBills.length ? (
+                    admissionBills.map((b, idx) => {
+                      const patientName = b?.patient?.full_name || b?.patient?.user?.full_name || "—";
+                      const total = Number(b?.total_amount ?? 0);
+                      const paidAmt = Number(b?.paid_amount ?? 0);
+                      const balance = Math.max(0, total - paidAmt);
+                      const status = b?.paid ? "paid" : (b?.status || "unpaid");
+                      return (
+                        <TableRow key={b.id} hover>
+                          <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{admissionBillsPage * admissionBillsRowsPerPage + idx + 1}</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>{patientName}</TableCell>
+                          <TableCell>{total.toFixed(2)}</TableCell>
+                          <TableCell>{paidAmt.toFixed(2)}</TableCell>
+                          <TableCell>{balance.toFixed(2)}</TableCell>
+                          <TableCell>
+                            <Chip size="small" label={status} color={status === "paid" ? "success" : status === "partial" ? "warning" : "default"} />
+                          </TableCell>
+                          <TableCell>{formatDateTime(b.createdAt)}</TableCell>
+                          <TableCell align="right">
+                            <Button size="small" variant="outlined" onClick={() => openAdmissionBillView(b.id)}>View</Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={8}>
+                        <Typography sx={{ py: 2 }} color="text.secondary">No admission bills yet. Admit a patient and generate billing from Admissions to create a bill here.</Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination component="div" count={admissionBillsTotal} page={admissionBillsPage} onPageChange={(_, p) => setAdmissionBillsPage(p)} rowsPerPage={admissionBillsRowsPerPage} onRowsPerPageChange={(e) => { setAdmissionBillsRowsPerPage(parseInt(e.target.value, 10)); setAdmissionBillsPage(0); }} rowsPerPageOptions={[5, 10, 25, 50]} />
+          </Box>
+        )}
+
+        {/* Payment tab (payments for admission bills only) */}
+        {tab === 4 && (
+          <Box sx={{ p: 2 }}>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
+              Payments recorded for admission (ward) bills.
+            </Typography>
+            <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: "rgba(0,0,0,0.02)" }}>
+                    <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Patient</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Amount</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Method</TableCell>
+                    <TableCell sx={{ fontWeight: 800 }}>Bill</TableCell>
+                    <TableCell sx={{ fontWeight: 800, width: 72 }} align="center">Action</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {admissionPaymentsLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} sx={{ py: 4 }}>
+                        <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
+                          <CircularProgress size={18} />
+                          <Typography color="text.secondary">Loading payments…</Typography>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  ) : admissionPayments.length ? (
+                    admissionPayments.map((p, idx) => {
+                      const patientName = p?.bill?.patient?.full_name || p?.bill?.patient?.user?.full_name || "—";
+                      return (
+                        <TableRow key={p.id} hover>
+                          <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{admissionPaymentsPage * admissionPaymentsRowsPerPage + idx + 1}</TableCell>
+                          <TableCell>{formatDateTime(p.payment_date || p.createdAt)}</TableCell>
+                          <TableCell sx={{ fontWeight: 700 }}>{patientName}</TableCell>
+                          <TableCell>{Number(p.amount_paid ?? 0).toFixed(2)}</TableCell>
+                          <TableCell>{p.payment_method || "—"}</TableCell>
+                          <TableCell sx={{ fontSize: "0.85rem", color: "text.secondary" }}>{p.bill_id ? `#${String(p.bill_id).slice(0, 8)}` : "—"}</TableCell>
+                          <TableCell align="center">
+                            <Tooltip title="View receipt">
+                              <IconButton size="small" color="primary" onClick={() => setReceiptDialogPaymentId(p.id)} aria-label="View receipt">
+                                <ReceiptIcon />
+                              </IconButton>
+                            </Tooltip>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7}>
+                        <Typography sx={{ py: 2 }} color="text.secondary">No payments for admissions yet. Record payment from the Admissions tab (view admission → pay when billed).</Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination component="div" count={admissionPaymentsTotal} page={admissionPaymentsPage} onPageChange={(_, p) => setAdmissionPaymentsPage(p)} rowsPerPage={admissionPaymentsRowsPerPage} onRowsPerPageChange={(e) => { setAdmissionPaymentsRowsPerPage(parseInt(e.target.value, 10)); setAdmissionPaymentsPage(0); }} rowsPerPageOptions={[5, 10, 25, 50]} />
+          </Box>
+        )}
       </CardContent>
+
+      {/* Admission bill view dialog */}
+      <Dialog open={admissionBillView.open} onClose={() => setAdmissionBillView({ open: false, bill: null, loading: false })} fullWidth maxWidth="sm">
+        <DialogTitle sx={{ fontWeight: 900 }}>Admission bill</DialogTitle>
+        <DialogContent dividers>
+          {admissionBillView.loading ? (
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
+              <CircularProgress size={18} />
+              <Typography color="text.secondary">Loading…</Typography>
+            </Stack>
+          ) : admissionBillView.bill ? (
+            <Stack spacing={2}>
+              <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
+                <Typography variant="subtitle2" color="text.secondary">Bill #{admissionBillView.bill.id?.slice(0, 8)}</Typography>
+                <Typography sx={{ fontWeight: 800 }}>Patient: {admissionBillView.bill.patient?.full_name || admissionBillView.bill.patient?.user?.full_name || "—"}</Typography>
+                <Typography>Total: {Number(admissionBillView.bill.total_amount ?? 0).toFixed(2)} • Paid: {Number(admissionBillView.bill.paid_amount ?? 0).toFixed(2)} • Balance: {Number(admissionBillView.bill.balance ?? 0).toFixed(2)}</Typography>
+                <Chip size="small" label={admissionBillView.bill.paid ? "paid" : (admissionBillView.bill.status || "unpaid")} color={admissionBillView.bill.paid ? "success" : "default"} sx={{ mt: 0.5 }} />
+              </Box>
+              {Array.isArray(admissionBillView.bill.payments) && admissionBillView.bill.payments.length > 0 && (
+                <Box>
+                  <Typography sx={{ fontWeight: 800, mb: 1 }}>Payments</Typography>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Amount</TableCell>
+                        <TableCell sx={{ fontWeight: 700 }}>Method</TableCell>
+                        <TableCell align="center" sx={{ fontWeight: 700 }}>Action</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {admissionBillView.bill.payments.map((p) => (
+                        <TableRow key={p.id}>
+                          <TableCell>{formatDateTime(p.payment_date)}</TableCell>
+                          <TableCell>{Number(p.amount_paid ?? 0).toFixed(2)}</TableCell>
+                          <TableCell>{p.payment_method || "—"}</TableCell>
+                          <TableCell align="center">
+                            <Tooltip title="View receipt">
+                              <IconButton size="small" color="primary" onClick={() => setReceiptDialogPaymentId(p.id)}><ReceiptIcon /></IconButton>
+                            </Tooltip>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </Box>
+              )}
+            </Stack>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAdmissionBillView({ open: false, bill: null, loading: false })}>Close</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Ward create/edit dialog */}
       <Dialog open={wardDialog.open} onClose={() => setWardDialog((p) => ({ ...p, open: false }))} maxWidth="sm" fullWidth>
@@ -876,15 +1211,54 @@ export default function WardManagement() {
                           <Button size="small" variant="contained" startIcon={<ReceiptIcon />} onClick={() => generateAdmissionBilling(admissionView.admission.id)} sx={{ fontWeight: 800 }}>
                             Generate billing
                           </Button>
-                          <Typography variant="body2" color="text.secondary">Generate the total bill (days × daily rate), then collect payment before discharge.</Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Generate the total bill (days × daily rate), then collect payment before discharge.
+                          </Typography>
                         </Stack>
                       );
                     }
                     if (!paid) {
+                      const balance = Number(b?.balance ?? b?.total_amount ?? 0);
                       return (
-                        <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
-                          <Chip size="small" label={`Bill: ${total} — unpaid`} color="warning" variant="outlined" />
-                          <Typography variant="body2" color="text.secondary">Pay in Billing to enable Discharge.</Typography>
+                        <Stack spacing={1.5}>
+                          <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
+                            <Chip size="small" label={`Bill: ${total} — unpaid`} color="warning" variant="outlined" />
+                            <Typography variant="body2" color="text.secondary">Record payment below to enable Discharge.</Typography>
+                          </Stack>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Record payment</Typography>
+                          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }} flexWrap="wrap">
+                            <TextField
+                              size="small"
+                              label="Amount"
+                              type="number"
+                              value={admissionPayAmount !== "" ? admissionPayAmount : String(balance > 0 ? balance : total)}
+                              onChange={(e) => setAdmissionPayAmount(e.target.value)}
+                              inputProps={{ min: 0, step: 0.01 }}
+                              sx={{ width: { xs: "100%", sm: 120 } }}
+                            />
+                            <FormControl size="small" sx={{ minWidth: { xs: "100%", sm: 160 } }}>
+                              <InputLabel>Payment method</InputLabel>
+                              <Select
+                                value={admissionPayMethod}
+                                label="Payment method"
+                                onChange={(e) => setAdmissionPayMethod(e.target.value)}
+                              >
+                                <MenuItem value="cash">Cash</MenuItem>
+                                <MenuItem value="card">Card</MenuItem>
+                                <MenuItem value="mobile">Mobile</MenuItem>
+                                <MenuItem value="insurance">Insurance</MenuItem>
+                                <MenuItem value="other">Other</MenuItem>
+                              </Select>
+                            </FormControl>
+                            <Button
+                              variant="contained"
+                              onClick={recordAdmissionPayment}
+                              disabled={admissionPaySaving}
+                              sx={{ fontWeight: 800 }}
+                            >
+                              {admissionPaySaving ? "Recording…" : "Record payment"}
+                            </Button>
+                          </Stack>
                         </Stack>
                       );
                     }

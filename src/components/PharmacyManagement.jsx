@@ -784,7 +784,8 @@ export default function PharmacyManagement() {
         body: { prescription_id: prescription.id },
       });
       showToast("success", "Dispensed successfully.");
-      setPresView({ open: false, prescription: null, loading: false });
+      const updated = await fetchJson(`${API.prescriptions}/${prescription.id}`, { token });
+      setPresView((prev) => ({ ...prev, prescription: updated?.data ?? prev.prescription }));
       await loadDispenses();
     } catch (e) {
       if (Number(e?.status) === 402 && e?.data?.code === "PAYMENT_REQUIRED") {
@@ -1931,11 +1932,14 @@ export default function PharmacyManagement() {
             variant="contained"
             onClick={dispensePrescription}
             disabled={
-              presView.loading || presDispensing || !presView.prescription?.id
+              presView.loading ||
+              presDispensing ||
+              !presView.prescription?.id ||
+              (presView.prescription?.dispenseRecords?.length > 0)
             }
             sx={{ fontWeight: 900 }}
           >
-            {presDispensing ? "Dispensing…" : "Dispense"}
+            {presDispensing ? "Dispensing…" : (presView.prescription?.dispenseRecords?.length > 0 ? "Dispensed" : "Dispense")}
           </Button>
         </DialogActions>
       </Dialog>

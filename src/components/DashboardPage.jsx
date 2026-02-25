@@ -278,8 +278,17 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 320 }}>
-        <CircularProgress />
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "60vh",
+          width: "100%",
+          bgcolor: "grey.50",
+        }}
+      >
+        <CircularProgress size={48} />
       </Box>
     );
   }

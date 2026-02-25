@@ -48,6 +48,8 @@ const API = {
   admissions: "/api/admissions",
   beds: "/api/beds",
   wards: "/api/wards",
+  dietTypes: "/api/diet-types",
+  patientDietOrders: "/api/patient-diet-orders",
   medicalReports: "/api/medical-reports",
 };
 
@@ -146,14 +148,20 @@ export default function ConsultationViewPage() {
   const [admitOpen, setAdmitOpen] = useState(false);
   const [admitSaving, setAdmitSaving] = useState(false);
   const [admitBedId, setAdmitBedId] = useState("");
+  const [admitDietTypeId, setAdmitDietTypeId] = useState("");
+  const [admitDietStartDate, setAdmitDietStartDate] = useState("");
+  const [admitDietEndDate, setAdmitDietEndDate] = useState("");
   const [availableBeds, setAvailableBeds] = useState([]);
   const [admitBedsLoading, setAdmitBedsLoading] = useState(false);
+  const [dietTypesOptions, setDietTypesOptions] = useState([]);
   const [wardOptions, setWardOptions] = useState([]);
 
   const [consultationLabOrders, setConsultationLabOrders] = useState([]);
   const [consultationLabOrdersLoading, setConsultationLabOrdersLoading] = useState(false);
   const [consultationPrescriptions, setConsultationPrescriptions] = useState([]);
   const [consultationPrescriptionsLoading, setConsultationPrescriptionsLoading] = useState(false);
+  const [consultationAdmissions, setConsultationAdmissions] = useState([]);
+  const [consultationAdmissionsLoading, setConsultationAdmissionsLoading] = useState(false);
 
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [reportSaving, setReportSaving] = useState(false);
@@ -178,6 +186,8 @@ export default function ConsultationViewPage() {
   };
 
   const canEdit = consultation && isAssignedDoctor(consultation);
+  const appointmentIsComplete = consultation?.appointment?.status === "completed";
+  const actionsDisabled = !canEdit || appointmentIsComplete;
 
   const heroGradient = useMemo(() => {
     const main = theme.palette.primary.main;
@@ -266,6 +276,24 @@ export default function ConsultationViewPage() {
     })();
     return () => { cancelled = true; };
   }, [consultation?.id, token]);
+
+  useEffect(() => {
+    const apptId = consultation?.appointment?.id;
+    if (!apptId || !token) return;
+    let cancelled = false;
+    setConsultationAdmissionsLoading(true);
+    (async () => {
+      try {
+        const data = await fetchJson(`${API.admissions}?appointment_id=${apptId}&limit=20`, { token });
+        if (!cancelled) setConsultationAdmissions(data?.data || []);
+      } catch {
+        if (!cancelled) setConsultationAdmissions([]);
+      } finally {
+        if (!cancelled) setConsultationAdmissionsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [consultation?.appointment?.id, token]);
 
   useEffect(() => {
     if (!consultation?.id || !token) return;
@@ -464,18 +492,24 @@ export default function ConsultationViewPage() {
     if (!consultation?.appointment) return;
     setAdmitOpen(true);
     setAdmitBedId("");
+    setAdmitDietTypeId("");
+    setAdmitDietStartDate(new Date().toISOString().slice(0, 10));
+    setAdmitDietEndDate("");
     setAdmitBedsLoading(true);
     try {
-      const [bedsRes, wardsRes] = await Promise.all([
+      const [bedsRes, wardsRes, dietTypesRes] = await Promise.all([
         fetchJson(`${API.beds}?limit=500`, { token }),
         fetchJson(`${API.wards}?limit=500`, { token }),
+        fetchJson(`${API.dietTypes}?limit=500`, { token }),
       ]);
       const beds = bedsRes?.data || [];
       setAvailableBeds(beds.filter((b) => b.status === "available"));
       setWardOptions(wardsRes?.data || []);
+      setDietTypesOptions(dietTypesRes?.data || []);
     } catch (e) {
       setAvailableBeds([]);
       setWardOptions([]);
+      setDietTypesOptions([]);
       Swal.fire({ icon: "error", title: "Failed to load beds", text: e.message });
     } finally {
       setAdmitBedsLoading(false);
@@ -502,12 +536,31 @@ export default function ConsultationViewPage() {
     }
     setAdmitSaving(true);
     try {
-      await fetchJson(`${API.admissions}/admit`, {
+      const res = await fetchJson(`${API.admissions}/admit`, {
         method: "POST",
         token,
         body: { appointment_id: appt.id, patient_id: patientId, doctor_id: doctorId, bed_id: admitBedId },
       });
-      Swal.fire({ icon: "success", title: "Patient admitted", timer: 1200, showConfirmButton: false });
+      const admissionId = res?.data?.id;
+      if (admissionId && admitDietTypeId) {
+        if (!admitDietStartDate) {
+          Swal.fire({ icon: "warning", title: "Diet start date required", text: "Select a start date for the diet order." });
+          setAdmitSaving(false);
+          return;
+        }
+        await fetchJson(API.patientDietOrders, {
+          method: "POST",
+          token,
+          body: {
+            admission_id: admissionId,
+            diet_type_id: admitDietTypeId,
+            start_date: admitDietStartDate,
+            end_date: admitDietEndDate || null,
+            prescribed_by: doctorId,
+          },
+        });
+      }
+      Swal.fire({ icon: "success", title: "Patient admitted" + (admitDietTypeId ? " with diet order" : ""), timer: 1200, showConfirmButton: false });
       setAdmitOpen(false);
       setHasAdmission(true);
     } catch (e) {
@@ -553,6 +606,24 @@ export default function ConsultationViewPage() {
           const result = item.result;
           const val = result?.result_value ?? "Pending";
           lines.push(`  • ${test.test_name || "—"}: ${val}`);
+        });
+      });
+    }
+    if (consultationAdmissions.length > 0) {
+      lines.push("", "Admission notes:");
+      consultationAdmissions.forEach((adm) => {
+        const bedLabel = adm.bed ? `${adm.bed.bed_number}${adm.bed.ward?.name ? ` (${adm.bed.ward.name})` : ""}` : "";
+        (adm.nursingNotes || []).forEach((n) => {
+          const dt = formatDateTime(n.date_time || n.recorded_at);
+          const nurse = n.nurse?.user?.full_name ?? "—";
+          const parts = [];
+          if (n.temperature != null) parts.push(`Temp: ${n.temperature}°C`);
+          if (n.blood_pressure) parts.push(`BP: ${n.blood_pressure}`);
+          if (n.pulse != null) parts.push(`Pulse: ${n.pulse}`);
+          if (n.respiratory_rate != null) parts.push(`RR: ${n.respiratory_rate}`);
+          if (n.pain_scale != null) parts.push(`Pain: ${n.pain_scale}`);
+          lines.push(`  • ${dt} (${nurse})${bedLabel ? ` [${bedLabel}]` : ""}${parts.length ? " – " + parts.join(", ") : ""}`);
+          if (n.notes && n.notes.trim()) lines.push(`    ${n.notes.trim()}`);
         });
       });
     }
@@ -696,8 +767,12 @@ export default function ConsultationViewPage() {
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>Symptoms, diagnosis, and notes for this visit.</Typography>
           </Box>
           <CardContent sx={{ p: 2.5 }}>
-            {!canEdit && (
-              <Alert severity="info" sx={{ mb: 2 }}>You can view this consultation. Only the doctor assigned to this appointment can update it, prescribe, initiate lab tests, or admit patient.</Alert>
+            {(!canEdit || appointmentIsComplete) && (
+              <Alert severity="info" sx={{ mb: 2 }}>
+                {appointmentIsComplete
+                  ? "This appointment is complete. Consultation, prescription, lab test, and admit actions are no longer available."
+                  : "You can view this consultation. Only the doctor assigned to this appointment can update it, prescribe, initiate lab tests, or admit patient."}
+              </Alert>
             )}
             <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
               <Typography sx={{ fontWeight: 900, mb: 0.5 }}>Symptoms</Typography>
@@ -710,10 +785,10 @@ export default function ConsultationViewPage() {
               <Typography color="text.secondary" sx={{ whiteSpace: "pre-wrap" }}>{consultation.notes || "—"}</Typography>
             </Box>
             <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1.5, mt: 2 }}>
-              <Button startIcon={<EditIcon />} variant="outlined" onClick={openEdit} disabled={!canEdit} sx={{ borderRadius: 2, fontWeight: 700, width: "100%", minHeight: 44 }}>Update consultation</Button>
-              <Button startIcon={<ScienceIcon />} variant="outlined" onClick={openLab} disabled={!canEdit} sx={{ borderRadius: 2, fontWeight: 700, width: "100%", minHeight: 44 }}>Initiate lab test</Button>
-              <Button startIcon={<PharmacyIcon />} variant="outlined" onClick={openRx} disabled={!canEdit} sx={{ borderRadius: 2, fontWeight: 700, width: "100%", minHeight: 44 }}>Prescribe</Button>
-              <Button startIcon={<AdmitIcon />} variant="outlined" onClick={openAdmit} disabled={!canEdit || hasAdmission} sx={{ borderRadius: 2, fontWeight: 700, width: "100%", minHeight: 44 }}>{hasAdmission ? "Already admitted" : "Admit patient"}</Button>
+              <Button startIcon={<EditIcon />} variant="outlined" onClick={openEdit} disabled={actionsDisabled} sx={{ borderRadius: 2, fontWeight: 700, width: "100%", minHeight: 44 }}>Update consultation</Button>
+              <Button startIcon={<ScienceIcon />} variant="outlined" onClick={openLab} disabled={actionsDisabled} sx={{ borderRadius: 2, fontWeight: 700, width: "100%", minHeight: 44 }}>Initiate lab test</Button>
+              <Button startIcon={<PharmacyIcon />} variant="outlined" onClick={openRx} disabled={actionsDisabled} sx={{ borderRadius: 2, fontWeight: 700, width: "100%", minHeight: 44 }}>Prescribe</Button>
+              <Button startIcon={<AdmitIcon />} variant="outlined" onClick={openAdmit} disabled={actionsDisabled || hasAdmission} sx={{ borderRadius: 2, fontWeight: 700, width: "100%", minHeight: 44 }}>{hasAdmission ? "Already admitted" : "Admit patient"}</Button>
               <Button startIcon={<ReportIcon />} variant="outlined" onClick={openReportDialog} disabled={consultationHasReport} sx={{ borderRadius: 2, fontWeight: 700, width: "100%", minHeight: 44, gridColumn: { xs: "1", sm: "1 / -1" } }}>{consultationHasReport ? "Report generated" : "Generate report"}</Button>
             </Box>
 
@@ -807,6 +882,51 @@ export default function ConsultationViewPage() {
                 ))}
               </Stack>
             )}
+
+            <Divider sx={{ my: 2 }} />
+            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Admission notes</Typography>
+            {consultationAdmissionsLoading ? (
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
+                <CircularProgress size={20} />
+                <Typography color="text.secondary">Loading admission notes...</Typography>
+              </Stack>
+            ) : (() => {
+              const notes = [];
+              consultationAdmissions.forEach((adm) => {
+                (adm.nursingNotes || []).forEach((n) => {
+                  notes.push({
+                    ...n,
+                    admissionDate: adm.admission_date,
+                    admissionStatus: adm.status,
+                    bedLabel: adm.bed ? `${adm.bed.bed_number}${adm.bed.ward?.name ? ` (${adm.bed.ward.name})` : ""}` : "—",
+                  });
+                });
+              });
+              if (notes.length === 0) {
+                return <Typography color="text.secondary">No admission notes for this consultation yet.</Typography>;
+              }
+              return (
+                <Stack spacing={1.5}>
+                  {notes.map((n) => (
+                    <Card key={n.id} variant="outlined" sx={{ borderRadius: 2 }}>
+                      <CardContent sx={{ "&:last-child": { pb: 2 }, py: 1.5, px: 2 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                          {formatDateTime(n.date_time || n.recorded_at)} • Recorded by {n.nurse?.user?.full_name ?? "—"}
+                        </Typography>
+                        <Stack spacing={0.5} direction="row" flexWrap="wrap" sx={{ gap: 1.5 }}>
+                          {n.temperature != null && <Typography variant="body2"><strong>Temp:</strong> {n.temperature}°C</Typography>}
+                          {n.blood_pressure && <Typography variant="body2"><strong>BP:</strong> {n.blood_pressure}</Typography>}
+                          {n.pulse != null && <Typography variant="body2"><strong>Pulse:</strong> {n.pulse}</Typography>}
+                          {n.respiratory_rate != null && <Typography variant="body2"><strong>RR:</strong> {n.respiratory_rate}</Typography>}
+                          {n.pain_scale != null && <Typography variant="body2"><strong>Pain:</strong> {n.pain_scale}</Typography>}
+                        </Stack>
+                        {n.notes && <Typography variant="body2" sx={{ mt: 0.5 }}>{n.notes}</Typography>}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </Stack>
+              );
+            })()}
 
             {consultationHasReport && consultationReportId && (
               <>
@@ -930,6 +1050,38 @@ export default function ConsultationViewPage() {
                     ))}
                   </Select>
                 </FormControl>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Diet type (optional)</InputLabel>
+                  <Select value={admitDietTypeId} label="Diet type (optional)" onChange={(e) => setAdmitDietTypeId(e.target.value)}>
+                    <MenuItem value="">None</MenuItem>
+                    {dietTypesOptions.map((d) => (
+                      <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                {admitDietTypeId && (
+                  <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      type="date"
+                      label="Diet start date"
+                      value={admitDietStartDate}
+                      onChange={(e) => setAdmitDietStartDate(e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                      required
+                    />
+                    <TextField
+                      fullWidth
+                      size="small"
+                      type="date"
+                      label="Diet end date (optional)"
+                      value={admitDietEndDate}
+                      onChange={(e) => setAdmitDietEndDate(e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  </Stack>
+                )}
                 {availableBeds.length === 0 && <Alert severity="info">No available beds. Add beds in Ward and Admissions.</Alert>}
               </>
             )}

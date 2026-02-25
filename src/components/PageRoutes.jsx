@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Route, Routes, Navigate } from "react-router-dom";
-import { Box, CircularProgress } from "@mui/material";
+import { Box } from "@mui/material";
 import Navbar from "./Navbar";
 import NotFound from "../Pages/NotFound";
 import AdminUsersManagement from "./AdminUsersManagement";
@@ -11,6 +11,7 @@ import PatientsManagement from "./PatientsManagement";
 import LaboratoryManagement from "./LaboratoryManagement";
 import BillingPaymentsManagement from "./BillingPaymentsManagement";
 import WardManagement from "./WardManagement";
+import DietManagement from "./DietManagement";
 import InventoryManagement from "./InventoryManagement";
 import RecordConsultationPage from "./RecordConsultationPage";
 import ConsultationViewPage from "./ConsultationViewPage";
@@ -18,43 +19,23 @@ import PatientReportsPage from "./PatientReportsPage";
 import AuditLogsPage from "./AuditLogsPage";
 import DashboardPage from "./DashboardPage";
 
-function PageRoutes() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Load user from localStorage on component mount
+function getInitialUser() {
+  try {
     const savedUser = localStorage.getItem("user");
     const token = localStorage.getItem("token");
+    if (savedUser && token) return JSON.parse(savedUser);
+  } catch (e) {}
+  return null;
+}
 
-    if (savedUser && token) {
-      setUser(JSON.parse(savedUser));
-    }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    if (user) {
-      setLoading(false);
-    }
-  }, [user]);
+function PageRoutes() {
+  const [user, setUser] = useState(getInitialUser);
 
   return (
     <Box sx={{ display: "flex" }}>
       <Navbar user={user} setUser={setUser} />
-      <Box component="main" sx={{ flexGrow: 1, p: 3, mt: 9 }}>
-        {loading ? (
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: "100vh",
-            }}
-          >
-            <CircularProgress />
-          </Box>
-        ) : !user ? (
+      <Box component="main" sx={{ flexGrow: 1, p: 3, mt: 9, minHeight: "100vh", bgcolor: "grey.50" }}>
+        {!user ? (
           <Navigate to="/" replace />
         ) : (
           <Routes>
@@ -71,6 +52,7 @@ function PageRoutes() {
             <Route path="hospitals" element={<HospitalsManagement />} />
             <Route path="billing" element={<BillingPaymentsManagement />} />
             <Route path="ward" element={<WardManagement />} />
+            <Route path="diet" element={<DietManagement />} />
             <Route path="inventory" element={<InventoryManagement />} />
             <Route path="audit-logs" element={<AuditLogsPage />} />
             <Route path="*" element={<NotFound />} />

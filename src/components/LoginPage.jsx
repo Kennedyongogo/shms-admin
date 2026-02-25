@@ -111,6 +111,10 @@ export default function LoginPage() {
           confirmButtonColor: primaryTeal,
         });
       } else if (data.success) {
+        localStorage.setItem("token", data.data.token);
+        localStorage.setItem("user", JSON.stringify(data.data.user));
+        localStorage.setItem("role", JSON.stringify(data.data.role ?? null));
+        navigate("/dashboard");
         Swal.fire({
           icon: "success",
           title: "Success!",
@@ -118,10 +122,6 @@ export default function LoginPage() {
           timer: 1500,
           showConfirmButton: false,
         });
-        localStorage.setItem("token", data.data.token);
-        localStorage.setItem("user", JSON.stringify(data.data.user));
-        localStorage.setItem("role", JSON.stringify(data.data.role ?? null));
-        setTimeout(() => navigate("/users"), 1500);
       } else {
         Swal.fire({
           icon: "error",
