@@ -491,6 +491,9 @@ export default function HospitalsManagement() {
   const hospitalsSearchDebounceSkipped = useRef(true);
   const staffSearchDebounceSkipped = useRef(true);
   const deptSearchDebounceSkipped = useRef(true);
+  const svcSearchDebounceSkipped = useRef(true);
+  const newsSearchDebounceSkipped = useRef(true);
+  const eventsSearchDebounceSkipped = useRef(true);
 
   // Load only the active tab's data on mount (avoids multiple loading flashes / blink)
   useEffect(() => {
@@ -573,8 +576,19 @@ export default function HospitalsManagement() {
   }, [deptSearch, tab]);
 
   useEffect(() => {
+    if (tab !== 3) {
+      svcSearchDebounceSkipped.current = true;
+      return;
+    }
+  }, [tab]);
+
+  useEffect(() => {
     const t = setTimeout(() => {
       if (tab !== 3) return;
+      if (svcSearchDebounceSkipped.current) {
+        svcSearchDebounceSkipped.current = false;
+        return;
+      }
       if (svcPage !== 0) setSvcPage(0);
       else loadServicesList();
     }, 450);
@@ -583,8 +597,19 @@ export default function HospitalsManagement() {
   }, [tab, svcSearch]);
 
   useEffect(() => {
+    if (tab !== 4 || contentTab !== 0) {
+      newsSearchDebounceSkipped.current = true;
+      return;
+    }
+  }, [tab, contentTab]);
+
+  useEffect(() => {
     const t = setTimeout(() => {
       if (tab !== 4 || contentTab !== 0) return;
+      if (newsSearchDebounceSkipped.current) {
+        newsSearchDebounceSkipped.current = false;
+        return;
+      }
       if (newsPage !== 0) setNewsPage(0);
       else loadNews();
     }, 450);
@@ -593,8 +618,19 @@ export default function HospitalsManagement() {
   }, [tab, contentTab, newsSearch]);
 
   useEffect(() => {
+    if (tab !== 4 || contentTab !== 1) {
+      eventsSearchDebounceSkipped.current = true;
+      return;
+    }
+  }, [tab, contentTab]);
+
+  useEffect(() => {
     const t = setTimeout(() => {
       if (tab !== 4 || contentTab !== 1) return;
+      if (eventsSearchDebounceSkipped.current) {
+        eventsSearchDebounceSkipped.current = false;
+        return;
+      }
       if (eventsPage !== 0) setEventsPage(0);
       else loadEvents();
     }, 450);
