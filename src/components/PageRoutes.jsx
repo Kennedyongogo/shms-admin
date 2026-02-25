@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Route, Routes, Navigate } from "react-router-dom";
-import { Box } from "@mui/material";
+import { Box, CircularProgress } from "@mui/material";
 import Navbar from "./Navbar";
 import NotFound from "../Pages/NotFound";
 import AdminUsersManagement from "./AdminUsersManagement";
@@ -19,23 +19,31 @@ import PatientReportsPage from "./PatientReportsPage";
 import AuditLogsPage from "./AuditLogsPage";
 import DashboardPage from "./DashboardPage";
 
-function getInitialUser() {
-  try {
+function PageRoutes() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
     const savedUser = localStorage.getItem("user");
     const token = localStorage.getItem("token");
-    if (savedUser && token) return JSON.parse(savedUser);
-  } catch (e) {}
-  return null;
-}
+    if (savedUser && token) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (e) {}
+    }
+    setLoading(false);
+  }, []);
 
-function PageRoutes() {
-  const [user, setUser] = useState(getInitialUser);
-
+  // Same pattern as mk-admin: show one spinner until ready, then Routes stay mounted (no blink on nav)
   return (
     <Box sx={{ display: "flex" }}>
       <Navbar user={user} setUser={setUser} />
       <Box component="main" sx={{ flexGrow: 1, p: 3, mt: 9, minHeight: "100vh", bgcolor: "grey.50" }}>
-        {!user ? (
+        {loading ? (
+          <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
+            <CircularProgress />
+          </Box>
+        ) : !user ? (
           <Navigate to="/" replace />
         ) : (
           <Routes>
