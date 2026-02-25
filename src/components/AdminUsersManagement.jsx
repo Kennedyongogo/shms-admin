@@ -353,34 +353,37 @@ export default function AdminUsersManagement() {
     }
   };
 
+  // Load only the active tab's data (same pattern as Billing) to avoid double blink on mount
   useEffect(() => {
-    loadRoles();
+    if (tab === 1) loadRoles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rolesPage, rolesRowsPerPage]);
+  }, [tab, rolesPage, rolesRowsPerPage]);
 
   useEffect(() => {
-    loadUsers();
+    if (tab === 0) loadUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [usersPage, usersRowsPerPage]);
+  }, [tab, usersPage, usersRowsPerPage]);
 
-  // Auto-search (debounced): type to search, clear to reset
+  // Auto-search (debounced): type to search, clear to reset (only reload when on that tab)
   useEffect(() => {
     const t = setTimeout(() => {
+      if (tab !== 0) return;
       if (usersPage !== 0) setUsersPage(0);
       else loadUsers();
     }, 450);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [usersSearch]);
+  }, [tab, usersSearch]);
 
   useEffect(() => {
     const t = setTimeout(() => {
+      if (tab !== 1) return;
       if (rolesPage !== 0) setRolesPage(0);
       else loadRoles();
     }, 450);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rolesSearch]);
+  }, [tab, rolesSearch]);
 
   const openCreateRole = () => {
     setUsersSearchLocked(true);

@@ -384,15 +384,16 @@ export default function VisitsManagement() {
     }
   };
 
+  // Load only the active tab's list to avoid double loading flash on mount
   useEffect(() => {
-    loadAppointments();
+    if (tab === 0) loadAppointments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apptPage, apptRowsPerPage, statusFilter]);
+  }, [tab, apptPage, apptRowsPerPage, statusFilter]);
 
   useEffect(() => {
-    loadConsultations();
+    if (tab === 1) loadConsultations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [consPage, consRowsPerPage]);
+  }, [tab, consPage, consRowsPerPage]);
 
   useEffect(() => {
     if (tab === 2) loadMainBills();

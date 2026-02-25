@@ -193,19 +193,20 @@ export default function PatientsManagement() {
   }, [searchInput]);
 
   useEffect(() => {
-    loadPatients({ pageOverride: 0 });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, limit]);
-
-  useEffect(() => {
     loadHospitals();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Reset to first page when search or limit changes
+  useEffect(() => {
+    setPage(0);
+  }, [search, limit]);
+
+  // Single load effect: one fetch when page, search, or limit changes (avoids double fetch on mount)
   useEffect(() => {
     loadPatients();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
+  }, [page, search, limit]);
 
   const openEdit = (p) => {
     setEditForm({

@@ -367,12 +367,13 @@ export default function LaboratoryManagement() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, resultSearch]);
 
+  // Load only the active tab's data to avoid multiple loading flashes on mount
   useEffect(() => {
     if (tab === 0) loadTests();
-    if (tab === 1) loadOrders();
-    if (tab === 2) loadResults();
-    if (tab === 3) loadLabBills();
-    if (tab === 4) loadLabPayments();
+    else if (tab === 1) loadOrders();
+    else if (tab === 2) loadResults();
+    else if (tab === 3) loadLabBills();
+    else if (tab === 4) loadLabPayments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     tab,

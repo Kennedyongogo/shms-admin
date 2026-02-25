@@ -305,19 +305,19 @@ export default function PharmacyManagement() {
     }
   };
 
-  // Initial loads + pagination
+  // Load only the active tab's data to avoid multiple loading flashes on mount
   useEffect(() => {
-    loadMedications();
+    if (tab === 0) loadMedications();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [medsPage, medsRowsPerPage]);
+  }, [tab, medsPage, medsRowsPerPage]);
   useEffect(() => {
-    loadPrescriptions();
+    if (tab === 1) loadPrescriptions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [presPage, presRowsPerPage]);
+  }, [tab, presPage, presRowsPerPage]);
   useEffect(() => {
-    loadDispenses();
+    if (tab === 2) loadDispenses();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dispPage, dispRowsPerPage]);
+  }, [tab, dispPage, dispRowsPerPage]);
   useEffect(() => {
     if (tab === 3) loadPharmBills();
     // eslint-disable-next-line react-hooks/exhaustive-deps
