@@ -96,16 +96,6 @@ const Navbar = (props) => {
   const [open, setOpen] = useState(() => {
     return window.innerWidth >= theme.breakpoints.values.md;
   });
-  const [menuItems, setMenuItems] = useState([]);
-
-  const handleDrawerOpen = () => setOpen(true);
-  const handleDrawerClose = () => setOpen(false);
-
-  const logout = () => {
-    localStorage.clear();
-    navigate("/");
-    fetch("/api/auth/logout", { method: "POST" });
-  };
 
   const adminItems = [
     { text: "Dashboard", icon: <Assessment />, path: "/dashboard" },
@@ -121,22 +111,17 @@ const Navbar = (props) => {
     { text: "Users & Roles", icon: <PeopleAlt />, path: "/users" },
     { text: "Audit log", icon: <History />, path: "/audit-logs" },
   ];
+  // Derive menu items from user so sidebar doesn't pop in after first paint (avoids blink)
+  const menuItems = user ? adminItems : [];
 
-  useEffect(() => {
-    if (user) {
-      // if (
-      //   user.Department ===
-      //   "Lands, Physical Planning, Housing and Urban Development"
-      // ) {
-      //   setMenuItems(adminItems);
-      // } else if (user.Department === "ICT") {
-      //   // setMenuItems(ICTItems);
-      // } else if (user.Department === "Finance and Economic Planning") {
-      //   // setMenuItems(financeItems);
-      // }
-      setMenuItems(adminItems);
-    }
-  }, [user]);
+  const handleDrawerOpen = () => setOpen(true);
+  const handleDrawerClose = () => setOpen(false);
+
+  const logout = () => {
+    localStorage.clear();
+    navigate("/");
+    fetch("/api/auth/logout", { method: "POST" });
+  };
 
   useEffect(() => {
     const handleResize = () => {

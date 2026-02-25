@@ -487,20 +487,24 @@ export default function HospitalsManagement() {
     }
   };
 
+  // Load only the active tab's data on mount (avoids multiple loading flashes / blink)
   useEffect(() => {
+    if (tab !== 0) return;
     loadHospitals();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hospitalsPage, hospitalsRowsPerPage]);
+  }, [tab, hospitalsPage, hospitalsRowsPerPage]);
 
   useEffect(() => {
+    if (tab !== 2) return;
     loadStaff();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [staffPage, staffRowsPerPage, hospitalFilter]);
+  }, [tab, staffPage, staffRowsPerPage, hospitalFilter]);
 
   useEffect(() => {
+    if (tab !== 1) return;
     loadDepartmentsList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deptPage, deptRowsPerPage, deptHospitalFilter]);
+  }, [tab, deptPage, deptRowsPerPage, deptHospitalFilter]);
 
   useEffect(() => {
     if (tab !== 4 || contentTab !== 0) return;

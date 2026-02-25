@@ -276,32 +276,8 @@ export default function DashboardPage() {
       .finally(() => setRevenueChartLoading(false));
   }, [tab, revenueChartYear, revenueChartMonth]);
 
-  if (loading) {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          minHeight: "60vh",
-          width: "100%",
-          bgcolor: "grey.50",
-        }}
-      >
-        <CircularProgress size={48} />
-      </Box>
-    );
-  }
-  if (error || !stats) {
-    return (
-      <Box sx={{ p: 2 }}>
-        <Typography color="error">{error || "Failed to load statistics"}</Typography>
-      </Box>
-    );
-  }
-
+  // Always show page shell (title + tabs) so navigation doesn't cause full-page spinner → content blink
   const d = stats;
-
   return (
     <Box sx={{ width: "100%" }}>
       <Typography variant="h5" fontWeight="bold" gutterBottom>
@@ -312,6 +288,17 @@ export default function DashboardPage() {
           <Tab key={t.id} label={t.label} id={`stats-tab-${i}`} aria-controls={`stats-tabpanel-${i}`} />
         ))}
       </Tabs>
+
+      {loading ? (
+        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "50vh", width: "100%" }}>
+          <CircularProgress size={48} />
+        </Box>
+      ) : error || !stats ? (
+        <Box sx={{ p: 2 }}>
+          <Typography color="error">{error || "Failed to load statistics"}</Typography>
+        </Box>
+      ) : (
+        <>
 
       {/* Overview — 4 cards per row, equal size, full width (CSS Grid) + Staff/Users + Events & News */}
       {tab === 0 && (
@@ -660,7 +647,8 @@ export default function DashboardPage() {
           </Box>
         </Box>
       )}
-
+        </>
+      )}
     </Box>
   );
 }

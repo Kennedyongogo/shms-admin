@@ -107,7 +107,7 @@ export default function PatientsManagement() {
   const [hospitalsLoading, setHospitalsLoading] = useState(false);
 
   const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // true so first paint is loading, not empty (avoids blink)
   const [page, setPage] = useState(0);
   const [limit, setLimit] = useState(10);
   const [total, setTotal] = useState(0);
