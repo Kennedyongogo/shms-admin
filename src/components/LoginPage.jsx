@@ -237,7 +237,7 @@ export default function LoginPage() {
     },
       "& .MuiInputLabel-root.Mui-focused": { color: primaryTeal },
     "& .MuiInputBase-input": {
-      py: "clamp(10px, 2vh, 14px)",
+      py: "clamp(8px, 1.5vh, 14px)",
       pl: "clamp(40px, 10vw, 56px)",
     },
   };
@@ -393,7 +393,7 @@ export default function LoginPage() {
             minHeight: 0,
             display: "flex",
             flexDirection: "column",
-            padding: "clamp(20px, 4vh, 40px) clamp(20px, 6vw, 56px)",
+            padding: "clamp(8px, 2vh, 40px) clamp(16px, 5vw, 56px)",
             overflow: "hidden",
             position: "relative",
             zIndex: 1,
@@ -404,22 +404,22 @@ export default function LoginPage() {
             sx={{
               flexShrink: 0,
               textAlign: "center",
-              marginBottom: "clamp(16px, 3vh, 32px)",
+              marginBottom: "clamp(6px, 1.2vh, 24px)",
             }}
           >
             <Box
               sx={{
-                width: "clamp(48px, 12vw, 72px)",
-                height: "clamp(48px, 12vw, 72px)",
-                minWidth: 48,
-                minHeight: 48,
+                width: "clamp(40px, 10vw, 72px)",
+                height: "clamp(40px, 10vw, 72px)",
+                minWidth: 40,
+                minHeight: 40,
                 background: `linear-gradient(135deg, ${primaryTeal} 0%, ${primaryTealDark} 100%)`,
-                borderRadius: "16px",
+                borderRadius: "12px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 mx: "auto",
-                mb: "clamp(12px, 2.5vh, 20px)",
+                mb: "clamp(6px, 1.2vh, 16px)",
                 boxShadow: "0 8px 24px rgba(0, 137, 123, 0.25)",
               }}
             >
@@ -433,11 +433,12 @@ export default function LoginPage() {
             <Typography
               variant="h1"
               sx={{
-                fontSize: "clamp(1.2rem, 2.8vw + 0.5rem, 1.95rem)",
+                fontSize: "clamp(0.8rem, 1.6vw + 0.5rem, 1.45rem)",
                 fontWeight: 900,
                 color: textPrimary,
                 lineHeight: 1.2,
                 letterSpacing: "-0.02em",
+                whiteSpace: "nowrap",
               }}
             >
               Smart Hospital Management System
@@ -456,17 +457,16 @@ export default function LoginPage() {
             </Typography>
           </Box>
 
-          {/* Scrollable form area */}
+          {/* Form area - fits viewport, no scroll */}
           <Box
             sx={{
               flex: 1,
               minHeight: 0,
-              overflowY: "auto",
-              overflowX: "hidden",
+              overflow: "hidden",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              justifyContent: "flex-start",
+              justifyContent: "center",
             }}
           >
             <Box sx={{ width: "100%", maxWidth: "min(420px, 92vw)", flexShrink: 0 }}>
@@ -480,7 +480,7 @@ export default function LoginPage() {
                   bgcolor: "rgba(255,255,255,0.85)",
                   backdropFilter: "blur(12px)",
                   boxShadow: "0 4px 24px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,137,123,0.04)",
-                  p: "clamp(24px, 4vh, 36px)",
+                  p: "clamp(12px, 2.5vh, 36px)",
                 }}
               >
                 <Box
@@ -488,7 +488,7 @@ export default function LoginPage() {
                     borderLeft: "4px solid",
                     borderColor: primaryTeal,
                     pl: 2,
-                    mb: "clamp(16px, 3vh, 28px)",
+                    mb: "clamp(8px, 1.5vh, 24px)",
                   }}
                 >
                   <Typography
@@ -531,7 +531,7 @@ export default function LoginPage() {
                     }}
                     sx={{
                       ...inputSx,
-                      mb: "clamp(14px, 2.5vh, 20px)",
+                      mb: "clamp(6px, 1.2vh, 20px)",
                       "& .MuiOutlinedInput-root": { ...inputSx["& .MuiOutlinedInput-root"], borderRadius: "12px" },
                     }}
                   />
@@ -565,7 +565,7 @@ export default function LoginPage() {
                     }}
                     sx={{
                       ...inputSx,
-                      mb: "clamp(6px, 1.5vh, 12px)",
+                      mb: "clamp(4px, 1vh, 12px)",
                       "& .MuiOutlinedInput-root": { ...inputSx["& .MuiOutlinedInput-root"], borderRadius: "12px" },
                     }}
                   />
@@ -577,7 +577,7 @@ export default function LoginPage() {
                       alignItems: "center",
                       flexWrap: "wrap",
                       gap: 1,
-                      mb: "clamp(4px, 1vh, 8px)",
+                      mb: "clamp(2px, 0.8vh, 8px)",
                     }}
                   >
                     <FormControlLabel
@@ -628,8 +628,8 @@ export default function LoginPage() {
                       )
                     }
                     sx={{
-                      mt: "clamp(20px, 3.5vh, 28px)",
-                      py: "clamp(14px, 2.8vh, 16px)",
+                      mt: "clamp(10px, 2vh, 28px)",
+                      py: "clamp(10px, 2vh, 16px)",
                       background: `linear-gradient(135deg, ${primaryTeal} 0%, ${primaryTealDark} 100%)`,
                       color: "white",
                       fontWeight: 800,
@@ -655,7 +655,7 @@ export default function LoginPage() {
           <Box
             sx={{
               flexShrink: 0,
-              paddingTop: "clamp(16px, 2.5vh, 24px)",
+              paddingTop: "clamp(6px, 1.2vh, 24px)",
               textAlign: "center",
             }}
           >

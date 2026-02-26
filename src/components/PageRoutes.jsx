@@ -5,7 +5,7 @@ import Navbar from "./Navbar";
 import NotFound from "../Pages/NotFound";
 import AdminUsersManagement from "./AdminUsersManagement";
 import PharmacyManagement from "./PharmacyManagement";
-import VisitsManagement from "./VisitsManagement";
+import ConsultationManagement from "./ConsultationManagement";
 import HospitalsManagement from "./HospitalsManagement";
 import PatientsManagement from "./PatientsManagement";
 import LaboratoryManagement from "./LaboratoryManagement";
@@ -52,7 +52,7 @@ function PageRoutes() {
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="users" element={<AdminUsersManagement />} />
             <Route path="pharmacy" element={<PharmacyManagement />} />
-            <Route path="appointments" element={<VisitsManagement />} />
+            <Route path="appointments" element={<ConsultationManagement />} />
             <Route path="appointments/record-consultation" element={<RecordConsultationPage />} />
             <Route path="appointments/consultation/:id" element={<ConsultationViewPage />} />
             <Route path="patients" element={<PatientsManagement />} />

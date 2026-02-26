@@ -99,8 +99,7 @@ async function fetchJson(url, { method = "GET", body, token } = {}) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const message =
-      data?.message || data?.error || `Request failed (${res.status})`;
+    const message = data?.message || data?.error || `Request failed (${res.status})`;
     const err = new Error(message);
     err.status = res.status;
     err.data = data;
@@ -119,12 +118,11 @@ const formatDateTime = (value) => {
 };
 
 const toLocalDateTimeInputValue = (date = new Date()) => {
-  // `datetime-local` expects local time, but `toISOString()` is UTC.
   const tzOffsetMs = date.getTimezoneOffset() * 60 * 1000;
   return new Date(date.getTime() - tzOffsetMs).toISOString().slice(0, 16);
 };
 
-export default function VisitsManagement() {
+export default function ConsultationManagement() {
   const theme = useTheme();
   const isMobileQuery = useMediaQuery(theme.breakpoints.down("sm"), { noSsr: true });
   const [isMobile, setIsMobile] = useState(true);
@@ -147,9 +145,8 @@ export default function VisitsManagement() {
     );
   };
 
-  const [tab, setTab] = useState(0); // 0 appointments, 1 consultations, 2 billing, 3 payment
+  const [tab, setTab] = useState(0);
 
-  // Appointments list
   const apptReqId = useRef(0);
   const [appointments, setAppointments] = useState([]);
   const [apptLoading, setApptLoading] = useState(false);
@@ -159,7 +156,6 @@ export default function VisitsManagement() {
   const [apptSearch, setApptSearch] = useState("");
   const [apptSearchLocked, setApptSearchLocked] = useState(true);
 
-  // Consultations list
   const consReqId = useRef(0);
   const [consultations, setConsultations] = useState([]);
   const [consLoading, setConsLoading] = useState(false);
@@ -169,7 +165,6 @@ export default function VisitsManagement() {
   const [consSearch, setConsSearch] = useState("");
   const [consSearchLocked, setConsSearchLocked] = useState(true);
 
-  // Appointment Billing tab (bills with item_type=appointment only)
   const mainBillsReqId = useRef(0);
   const [mainBills, setMainBills] = useState([]);
   const [mainBillsLoading, setMainBillsLoading] = useState(false);
@@ -178,7 +173,6 @@ export default function VisitsManagement() {
   const [mainBillsTotal, setMainBillsTotal] = useState(0);
   const [mainBillView, setMainBillView] = useState({ open: false, bill: null, loading: false });
 
-  // Appointment Payment tab (payments for appointment bills only)
   const mainPaymentsReqId = useRef(0);
   const [mainPayments, setMainPayments] = useState([]);
   const [mainPaymentsLoading, setMainPaymentsLoading] = useState(false);
@@ -187,7 +181,6 @@ export default function VisitsManagement() {
   const [mainPaymentsTotal, setMainPaymentsTotal] = useState(0);
   const [receiptDialogPaymentId, setReceiptDialogPaymentId] = useState(null);
 
-  // Create appointment dialog (walk-in supported)
   const [createApptOpen, setCreateApptOpen] = useState(false);
   const [walkIn, setWalkIn] = useState(true);
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -206,7 +199,6 @@ export default function VisitsManagement() {
   const [serviceOptions, setServiceOptions] = useState([]);
   const [serviceLoading, setServiceLoading] = useState(false);
 
-  // Appointment view/status dialog
   const [apptViewOpen, setApptViewOpen] = useState(false);
   const [apptViewLoading, setApptViewLoading] = useState(false);
   const [apptView, setApptView] = useState(null);
@@ -214,12 +206,11 @@ export default function VisitsManagement() {
   const [apptStatusSaving, setApptStatusSaving] = useState(false);
   const [apptBilling, setApptBilling] = useState(null);
   const [apptBillingLoading, setApptBillingLoading] = useState(false);
-  const [apptViewInnerTab, setApptViewInnerTab] = useState(0); // 0 Details, 1 Billing & payment
+  const [apptViewInnerTab, setApptViewInnerTab] = useState(0);
   const [apptBillItemAmount, setApptBillItemAmount] = useState("");
   const [apptBillItemNote, setApptBillItemNote] = useState("");
   const [apptBillItemSaving, setApptBillItemSaving] = useState(false);
 
-  // Consultation view + actions
   const [consViewOpen, setConsViewOpen] = useState(false);
   const [consViewLoading, setConsViewLoading] = useState(false);
   const [consView, setConsView] = useState(null);
@@ -389,32 +380,25 @@ export default function VisitsManagement() {
     }
   };
 
-  // Skip first run of debounced search so tab-gated effect does the initial load only (avoids double blink)
   const apptSearchDebounceSkipped = useRef(true);
   const consSearchDebounceSkipped = useRef(true);
 
-  // Load only the active tab's list to avoid double loading flash on mount
   useEffect(() => {
     if (tab === 0) loadAppointments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, apptPage, apptRowsPerPage, statusFilter]);
 
   useEffect(() => {
     if (tab === 1) loadConsultations();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, consPage, consRowsPerPage]);
 
   useEffect(() => {
     if (tab === 2) loadMainBills();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, mainBillsPage, mainBillsRowsPerPage]);
 
   useEffect(() => {
     if (tab === 3) loadMainPayments();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, mainPaymentsPage, mainPaymentsRowsPerPage]);
 
-  // Debounced search — skip first run so we don't double-load on mount
   useEffect(() => {
     const t = setTimeout(() => {
       if (tab !== 0) return;
@@ -426,7 +410,6 @@ export default function VisitsManagement() {
       else loadAppointments();
     }, 450);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apptSearch, tab]);
 
   useEffect(() => {
@@ -440,7 +423,6 @@ export default function VisitsManagement() {
       else loadConsultations();
     }, 450);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [consSearch, tab]);
 
   const searchPatients = async (q) => {
@@ -568,15 +550,12 @@ export default function VisitsManagement() {
 
       setCreateApptOpen(false);
 
-      // For walk-in, optionally fetch full appointment for billing context; don't fail if this GET errors
       let fullAppt = appt;
       if (walkIn) {
         try {
           const fullRes = await fetchJson(`${API.appointments}/${appt.id}`, { token });
           if (fullRes?.data) fullAppt = fullRes.data;
-        } catch (_) {
-          // Use created appointment; table will still show it and user can open from list
-        }
+        } catch (_) {}
       }
 
       if (walkIn) {
@@ -664,7 +643,6 @@ export default function VisitsManagement() {
       return;
     }
 
-    // Consultation is only allowed after payment → appointment confirmed
     if (appt.status !== "confirmed" && appt.status !== "completed") {
       const ask = await Swal.fire({
         icon: "warning",
@@ -684,7 +662,6 @@ export default function VisitsManagement() {
     }
 
     try {
-      // Backend enforces one consultation per appointment.
       const existing = await fetchJson(
         `${API.consultations}/appointment/${appt.id}`,
         { token },
@@ -700,7 +677,6 @@ export default function VisitsManagement() {
         return;
       }
     } catch (e) {
-      // 404 means no consultation yet; proceed. Any other error should stop.
       if (e?.status && Number(e.status) !== 404) {
         Swal.fire({ icon: "error", title: "Failed", text: e.message });
         return;
@@ -756,7 +732,6 @@ export default function VisitsManagement() {
 
   const allowedNextStatuses = (current) => {
     if (!current) return [];
-    // Confirmation is payment-driven from Billing & Payments; only allow cancelling while pending.
     if (current === "pending") return ["cancelled"];
     if (current === "confirmed") return ["completed", "cancelled"];
     return [];
@@ -814,10 +789,10 @@ export default function VisitsManagement() {
 
   const openBillingForAppointment = (appt) => {
     if (!appt?.id) return;
-    setTab(2); // Switch to Billing tab on this page (Appointments | Consultations | Billing | Payment)
+    setTab(2);
     setApptView(appt);
     setApptViewOpen(true);
-    setApptViewInnerTab(1); // Billing & payment inner tab
+    setApptViewInnerTab(1);
     if (appt?.id) loadAppointmentBilling(appt.id);
   };
 
@@ -983,34 +958,10 @@ export default function VisitsManagement() {
     }
   };
 
-  const openViewConsultation = async (c) => {
+  const openViewConsultation = (c) => {
     if (!requireTokenGuard()) return;
-    setConsViewOpen(true);
-    setConsViewLoading(true);
-    setConsView(null);
-    setConsViewHasAdmission(false);
-    try {
-      const data = await fetchJson(`${API.consultations}/${c.id}`, { token });
-      const consultation = data?.data || null;
-      setConsView(consultation);
-      const apptId = consultation?.appointment?.id;
-      if (apptId) {
-        try {
-          const admRes = await fetchJson(
-            `${API.admissions}?appointment_id=${apptId}&status=admitted&limit=1`,
-            { token }
-          );
-          setConsViewHasAdmission(Array.isArray(admRes?.data) && admRes.data.length > 0);
-        } catch {
-          setConsViewHasAdmission(false);
-        }
-      }
-    } catch (e) {
-      Swal.fire({ icon: "error", title: "Failed", text: e.message });
-      setConsViewOpen(false);
-    } finally {
-      setConsViewLoading(false);
-    }
+    if (!c?.id) return;
+    navigate("/appointments/consultation/" + c.id);
   };
 
   const openEditConsultation = () => {
@@ -1052,7 +1003,6 @@ export default function VisitsManagement() {
       });
       setConsEditOpen(false);
       await loadConsultations();
-      // reload view
       const data = await fetchJson(`${API.consultations}/${consView.id}`, {
         token,
       });
@@ -1283,69 +1233,21 @@ export default function VisitsManagement() {
   };
 
   return (
-    <>
     <Card sx={{ borderRadius: 3, overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.08)", width: "100%", minWidth: 0 }}>
       <Box sx={{ p: 2.5, background: heroGradient, color: "white", width: "100%", minWidth: "100%", flexShrink: 0, boxSizing: "border-box" }}>
         <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }} justifyContent="space-between" sx={{ width: "100%", minWidth: 0 }}>
-          <Box sx={{ minWidth: 0, maxWidth: { md: "58%", lg: "65%", xl: "70%" } }}>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <EventNoteIcon />
-              <Typography
-                variant="h5"
-                noWrap
-                sx={{
-                  fontWeight: 900,
-                  letterSpacing: 0.2,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                Appointments & Consultations
-              </Typography>
-            </Stack>
-            <Typography
-              noWrap
-              sx={{
-                opacity: 0.9,
-                mt: 0.5,
-                fontSize: "clamp(0.75rem, 1.4vw, 0.95rem)",
-                lineHeight: 1.25,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              Book appointments, support walk-ins, and record consultations.
-            </Typography>
-          </Box>
-          <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", justifyContent: { xs: "flex-start", md: "flex-end" }, flexShrink: 0 }}>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={openCreateAppointment}
-              sx={{
-                bgcolor: "rgba(255,255,255,0.15)",
-                color: "white",
-                fontWeight: 800,
-                fontSize: "clamp(0.72rem, 1.1vw, 0.9rem)",
-                whiteSpace: "nowrap",
-                border: "1px solid rgba(255,255,255,0.25)",
-                "&:hover": { bgcolor: "rgba(255,255,255,0.22)" },
-              }}
-            >
-              New Appointment
-            </Button>
-          </Stack>
+          <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: 0.2 }}>
+            Consultation Management
+          </Typography>
         </Stack>
       </Box>
 
       <CardContent sx={{ p: 0 }}>
         {isMobile ? (
           <FormControl fullWidth size="small" sx={{ px: 2, pt: 3.5, pb: 1.5, "& .MuiInputLabel-shrink": { marginTop: 1 } }}>
-            <InputLabel id="visits-section-label">Section</InputLabel>
+            <InputLabel id="consultation-section-label">Section</InputLabel>
             <Select
-              labelId="visits-section-label"
+              labelId="consultation-section-label"
               value={tab}
               label="Section"
               onChange={(e) => setTab(Number(e.target.value))}
@@ -1367,474 +1269,487 @@ export default function VisitsManagement() {
         )}
         <Divider />
 
-          {tab === 0 && (
-            <Box sx={{ p: 2, minWidth: 0, overflow: "hidden" }}>
-              <Stack
-                direction={{ xs: "column", md: "row" }}
-                spacing={1.5}
-                alignItems={{ md: "center" }}
-                sx={{ mb: 2 }}
-              >
-                <TextField
-                  value={apptSearch}
-                  onChange={(e) => setApptSearch(e.target.value)}
-                  placeholder="Search appointments (patient name/email/phone)…"
-                  size="small"
-                  fullWidth
-                  name="appt_search"
-                  type="search"
-                  autoComplete="off"
-                  onFocus={() => setApptSearchLocked(false)}
-                  onClick={() => setApptSearchLocked(false)}
-                  InputProps={{ readOnly: apptSearchLocked }}
-                  inputProps={{
-                    autoComplete: "off",
-                    "data-lpignore": "true",
-                    "data-1p-ignore": "true",
-                  }}
-                />
-                <FormControl size="small" sx={{ minWidth: 180 }}>
-                  <InputLabel>Status</InputLabel>
-                  <Select
-                    value={statusFilter}
-                    label="Status"
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                  >
-                    <MenuItem value="">All</MenuItem>
-                    <MenuItem value="pending">pending</MenuItem>
-                    <MenuItem value="confirmed">confirmed</MenuItem>
-                    <MenuItem value="completed">completed</MenuItem>
-                    <MenuItem value="cancelled">cancelled</MenuItem>
-                  </Select>
-                </FormControl>
-              </Stack>
+        {/* Tab 0: Appointments */}
+        {tab === 0 && (
+          <Box sx={{ p: 2, minWidth: 0, overflow: "hidden" }}>
+            <Stack
+              direction={{ xs: "column", md: "row" }}
+              spacing={1.5}
+              alignItems={{ md: "center" }}
+              sx={{ mb: 2 }}
+            >
+              <TextField
+                value={apptSearch}
+                onChange={(e) => setApptSearch(e.target.value)}
+                placeholder="Search appointments (patient name/email/phone)…"
+                size="small"
+                fullWidth
+                name="appt_search"
+                type="search"
+                autoComplete="off"
+                onFocus={() => setApptSearchLocked(false)}
+                onClick={() => setApptSearchLocked(false)}
+                InputProps={{ readOnly: apptSearchLocked }}
+                inputProps={{
+                  autoComplete: "off",
+                  "data-lpignore": "true",
+                  "data-1p-ignore": "true",
+                }}
+              />
+              <FormControl size="small" sx={{ minWidth: 180 }}>
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={statusFilter}
+                  label="Status"
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <MenuItem value="">All</MenuItem>
+                  <MenuItem value="pending">pending</MenuItem>
+                  <MenuItem value="confirmed">confirmed</MenuItem>
+                  <MenuItem value="completed">completed</MenuItem>
+                  <MenuItem value="cancelled">cancelled</MenuItem>
+                </Select>
+              </FormControl>
+              <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateAppointment} sx={{ fontWeight: 900, minWidth: { xs: "100%", md: 220 }, whiteSpace: "nowrap", flexShrink: 0 }}>
+                New Appointment
+              </Button>
+            </Stack>
 
-              <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider", overflowX: "auto", maxWidth: "100%" }}>
-                <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: "grey.100" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 48, minWidth: 48, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "18%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Date</TableCell>
-                      <TableCell sx={{ fontWeight: 800, width: "30%", minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Patient</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "18%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Doctor</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "14%", minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Status</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 800, width: 96, minWidth: 96, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Actions</TableCell>
+            <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider", overflowX: "auto", maxWidth: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: "grey.100" }}>
+                    <TableCell sx={{ fontWeight: 800, width: 48, minWidth: 48, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "18%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Date</TableCell>
+                    <TableCell sx={{ fontWeight: 800, width: "30%", minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Patient</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "18%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Doctor</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "14%", minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Status</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 800, width: 96, minWidth: 96, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {apptLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={6}>
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          alignItems="center"
+                          sx={{ py: 2 }}
+                        >
+                          <CircularProgress size={18} />
+                          <Typography color="text.secondary">
+                            Loading appointments…
+                          </Typography>
+                        </Stack>
+                      </TableCell>
                     </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {apptLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={6}>
-                          <Stack
-                            direction="row"
-                            spacing={1}
-                            alignItems="center"
-                            sx={{ py: 2 }}
-                          >
-                            <CircularProgress size={18} />
-                            <Typography color="text.secondary">
-                              Loading appointments…
-                            </Typography>
-                          </Stack>
+                  ) : appointments.length ? (
+                    appointments.map((a, idx) => (
+                      <TableRow
+                        key={a.id}
+                        hover
+                        onClick={isMobile ? () => openViewAppointment(a) : undefined}
+                        sx={isMobile ? { cursor: "pointer" } : undefined}
+                      >
+                        <TableCell
+                          sx={{ color: "text.secondary", fontWeight: 700 }}
+                        >
+                          {apptPage * apptRowsPerPage + idx + 1}
                         </TableCell>
-                      </TableRow>
-                    ) : appointments.length ? (
-                      appointments.map((a, idx) => (
-                        <TableRow key={a.id} hover>
-                          <TableCell
-                            sx={{ color: "text.secondary", fontWeight: 700 }}
-                          >
-                            {apptPage * apptRowsPerPage + idx + 1}
-                          </TableCell>
-                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" } }}>
-                            {formatDateTime(a.appointment_date)}
-                          </TableCell>
-                          <TableCell sx={{ minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
-                            <Typography noWrap sx={{ fontWeight: 800 }}>
-                              {a.patient?.full_name ||
-                                a.patient?.user?.full_name ||
-                                "—"}
-                            </Typography>
-                            <Typography noWrap variant="caption" color="text.secondary">
-                              {a.patient?.phone ||
-                                a.patient?.email ||
-                                a.patient?.user?.phone ||
-                                a.patient?.user?.email ||
-                                ""}
-                            </Typography>
-                          </TableCell>
-                          <TableCell sx={{ display: { xs: "none", md: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
-                            {a.doctor?.user?.full_name ||
-                              a.doctor?.staff_type ||
+                        <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" } }}>
+                          {formatDateTime(a.appointment_date)}
+                        </TableCell>
+                        <TableCell sx={{ minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
+                          <Typography noWrap sx={{ fontWeight: 800 }}>
+                            {a.patient?.full_name ||
+                              a.patient?.user?.full_name ||
                               "—"}
-                          </TableCell>
-                          <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
-                            <Chip
-                              size="small"
-                              label={a.status}
-                              color={
-                                a.status === "confirmed"
-                                  ? "success"
-                                  : a.status === "cancelled"
-                                    ? "error"
-                                    : "default"
-                              }
-                              variant={
-                                a.status === "confirmed" ? "filled" : "outlined"
-                              }
-                            />
-                          </TableCell>
-                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
-                            <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
-                              <Tooltip title="View">
+                          </Typography>
+                          <Typography noWrap variant="caption" color="text.secondary">
+                            {a.patient?.phone ||
+                              a.patient?.email ||
+                              a.patient?.user?.phone ||
+                              a.patient?.user?.email ||
+                              ""}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={{ display: { xs: "none", md: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
+                          {a.doctor?.user?.full_name ||
+                            a.doctor?.staff_type ||
+                            "—"}
+                        </TableCell>
+                        <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
+                          <Chip
+                            size="small"
+                            label={a.status}
+                            color={
+                              a.status === "confirmed"
+                                ? "success"
+                                : a.status === "cancelled"
+                                  ? "error"
+                                  : "default"
+                            }
+                            variant={
+                              a.status === "confirmed" ? "filled" : "outlined"
+                            }
+                          />
+                        </TableCell>
+                        <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} onClick={(e) => e.stopPropagation()}>
+                          <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
+                            <Tooltip title="View">
+                              <Box component="span" sx={{ display: { xs: "none", md: "inline-flex" } }}>
                                 <IconButton
                                   onClick={() => openViewAppointment(a)}
                                   size="small"
                                 >
                                   <VisibilityIcon fontSize="inherit" />
                                 </IconButton>
+                              </Box>
+                            </Tooltip>
+                            <Tooltip
+                              title={
+                                a.status !== "confirmed" && a.status !== "completed"
+                                  ? "Payment required before consultation"
+                                  : "Record consultation"
+                              }
+                            >
+                              <span>
+                                <IconButton
+                                  onClick={() => openRecordConsultation(a)}
+                                  size="small"
+                                  disabled={
+                                    !isAssignedDoctor(a) ||
+                                    (a.status !== "confirmed" && a.status !== "completed")
+                                  }
+                                >
+                                  <NoteAddIcon fontSize="inherit" />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                            {isAdmin && (
+                              <Tooltip title="Delete">
+                                <IconButton
+                                  onClick={() => deleteAppointment(a)}
+                                  size="small"
+                                  color="error"
+                                >
+                                  <DeleteIcon fontSize="inherit" />
+                                </IconButton>
                               </Tooltip>
-                              <Tooltip
-                                title={
-                                  a.status !== "confirmed" && a.status !== "completed"
-                                    ? "Payment required before consultation"
-                                    : "Record consultation"
-                                }
-                              >
-                                <span>
-                                  <IconButton
-                                    onClick={() => openRecordConsultation(a)}
-                                    size="small"
-                                    disabled={
-                                      !isAssignedDoctor(a) ||
-                                      (a.status !== "confirmed" && a.status !== "completed")
-                                    }
-                                  >
-                                    <NoteAddIcon fontSize="inherit" />
-                                  </IconButton>
-                                </span>
-                              </Tooltip>
-                              {isAdmin && (
-                                <Tooltip title="Delete">
-                                  <IconButton
-                                    onClick={() => deleteAppointment(a)}
-                                    size="small"
-                                    color="error"
-                                  >
-                                    <DeleteIcon fontSize="inherit" />
-                                  </IconButton>
-                                </Tooltip>
-                              )}
-                            </Box>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={6}>
-                          <Typography sx={{ py: 2 }} color="text.secondary">
-                            No appointments found.
-                          </Typography>
+                            )}
+                          </Box>
                         </TableCell>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-
-              <TablePagination
-                component="div"
-                count={apptTotal}
-                page={apptPage}
-                onPageChange={(_, p) => setApptPage(p)}
-                rowsPerPage={apptRowsPerPage}
-                onRowsPerPageChange={(e) => {
-                  setApptRowsPerPage(parseInt(e.target.value, 10));
-                  setApptPage(0);
-                }}
-                rowsPerPageOptions={[5, 10, 25, 50]}
-              />
-            </Box>
-          )}
-
-          {tab === 1 && (
-            <Box sx={{ p: 2, minWidth: 0, overflow: "hidden" }}>
-              <TextField
-                value={consSearch}
-                onChange={(e) => setConsSearch(e.target.value)}
-                placeholder="Search consultations (patient, symptoms, diagnosis)…"
-                size="small"
-                fullWidth
-                name="cons_search"
-                type="search"
-                autoComplete="off"
-                onFocus={() => setConsSearchLocked(false)}
-                onClick={() => setConsSearchLocked(false)}
-                InputProps={{ readOnly: consSearchLocked }}
-                inputProps={{
-                  autoComplete: "off",
-                  "data-lpignore": "true",
-                  "data-1p-ignore": "true",
-                }}
-                sx={{ mb: 2 }}
-              />
-
-              <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider", overflowX: "auto", maxWidth: "100%" }}>
-                <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: "grey.100" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 48, minWidth: 48, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "16%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Created</TableCell>
-                      <TableCell sx={{ fontWeight: 800, width: "30%", minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Patient</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "18%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Doctor</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "22%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Diagnosis</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 800, width: 96, minWidth: 96, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Actions</TableCell>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6}>
+                        <Typography sx={{ py: 2 }} color="text.secondary">
+                          No appointments found.
+                        </Typography>
+                      </TableCell>
                     </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {consLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={6}>
-                          <Stack
-                            direction="row"
-                            spacing={1}
-                            alignItems="center"
-                            sx={{ py: 2 }}
-                          >
-                            <CircularProgress size={18} />
-                            <Typography color="text.secondary">
-                              Loading consultations…
-                            </Typography>
-                          </Stack>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            <TablePagination
+              component="div"
+              count={apptTotal}
+              page={apptPage}
+              onPageChange={(_, p) => setApptPage(p)}
+              rowsPerPage={apptRowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setApptRowsPerPage(parseInt(e.target.value, 10));
+                setApptPage(0);
+              }}
+              rowsPerPageOptions={[5, 10, 25, 50]}
+            />
+          </Box>
+        )}
+
+        {/* Tab 1: Consultations */}
+        {tab === 1 && (
+          <Box sx={{ p: 2, minWidth: 0, overflow: "hidden" }}>
+            <TextField
+              value={consSearch}
+              onChange={(e) => setConsSearch(e.target.value)}
+              placeholder="Search consultations (patient, symptoms, diagnosis)…"
+              size="small"
+              fullWidth
+              name="cons_search"
+              type="search"
+              autoComplete="off"
+              onFocus={() => setConsSearchLocked(false)}
+              onClick={() => setConsSearchLocked(false)}
+              InputProps={{ readOnly: consSearchLocked }}
+              inputProps={{
+                autoComplete: "off",
+                "data-lpignore": "true",
+                "data-1p-ignore": "true",
+              }}
+              sx={{ mb: 2 }}
+            />
+
+            <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider", overflowX: "auto", maxWidth: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: "grey.100" }}>
+                    <TableCell sx={{ fontWeight: 800, width: 48, minWidth: 48, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "16%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Created</TableCell>
+                    <TableCell sx={{ fontWeight: 800, width: "30%", minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Patient</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "18%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Doctor</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "22%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Diagnosis</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 800, width: 96, minWidth: 96, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {consLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={6}>
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          alignItems="center"
+                          sx={{ py: 2 }}
+                        >
+                          <CircularProgress size={18} />
+                          <Typography color="text.secondary">
+                            Loading consultations…
+                          </Typography>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  ) : consultations.length ? (
+                    consultations.map((c, idx) => (
+                      <TableRow key={c.id} hover>
+                        <TableCell
+                          sx={{ color: "text.secondary", fontWeight: 700 }}
+                        >
+                          {consPage * consRowsPerPage + idx + 1}
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
+                          {formatDateTime(c.createdAt)}
+                        </TableCell>
+                        <TableCell sx={{ minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
+                          {c.appointment?.patient?.full_name ||
+                            c.appointment?.patient?.user?.full_name ||
+                            "—"}
+                        </TableCell>
+                        <TableCell sx={{ display: { xs: "none", md: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
+                          {c.appointment?.doctor?.user?.full_name || "—"}
+                        </TableCell>
+                        <TableCell sx={{ display: { xs: "none", md: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
+                          {c.diagnosis
+                            ? String(c.diagnosis).slice(0, 32)
+                            : "—"}
+                        </TableCell>
+                        <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                          <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
+                            <Tooltip title="View">
+                              <IconButton
+                                onClick={() => openViewConsultation(c)}
+                                size="small"
+                              >
+                                <VisibilityIcon fontSize="inherit" />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
                         </TableCell>
                       </TableRow>
-                    ) : consultations.length ? (
-                      consultations.map((c, idx) => (
-                        <TableRow key={c.id} hover>
-                          <TableCell
-                            sx={{ color: "text.secondary", fontWeight: 700 }}
-                          >
-                            {consPage * consRowsPerPage + idx + 1}
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6}>
+                        <Typography sx={{ py: 2 }} color="text.secondary">
+                          No consultations found.
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            <TablePagination
+              component="div"
+              count={consTotal}
+              page={consPage}
+              onPageChange={(_, p) => setConsPage(p)}
+              rowsPerPage={consRowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setConsRowsPerPage(parseInt(e.target.value, 10));
+                setConsPage(0);
+              }}
+              rowsPerPageOptions={[5, 10, 25, 50]}
+            />
+          </Box>
+        )}
+
+        {/* Tab 2: Billing */}
+        {tab === 2 && (
+          <Box sx={{ p: 2, minWidth: 0, overflow: "hidden" }}>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
+              Bills for appointments only.
+            </Typography>
+            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: "grey.100" }}>
+                    <TableCell sx={{ fontWeight: 800, width: 48, minWidth: 48, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 800, width: "28%", minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Patient</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Total</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Paid</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Balance</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "14%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "14%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Created</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 800, width: 96, minWidth: 96, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {mainBillsLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} sx={{ py: 4 }}>
+                        <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
+                          <CircularProgress size={18} />
+                          <Typography color="text.secondary">Loading bills…</Typography>
+                        </Stack>
+                      </TableCell>
+                    </TableRow>
+                  ) : mainBills.length ? (
+                    mainBills.map((b, idx) => {
+                      const patientName = b?.patient?.full_name || b?.patient?.user?.full_name || "—";
+                      const total = Number(b?.total_amount ?? 0);
+                      const paidAmt = Number(b?.paid_amount ?? 0);
+                      const balance = Math.max(0, total - paidAmt);
+                      const status = b?.paid ? "paid" : (b?.status || "unpaid");
+                      return (
+                        <TableRow key={b.id} hover>
+                          <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>
+                            {mainBillsPage * mainBillsRowsPerPage + idx + 1}
                           </TableCell>
-                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
-                            {formatDateTime(c.createdAt)}
+                          <TableCell sx={{ fontWeight: 700, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{patientName}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{total.toFixed(2)}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{paidAmt.toFixed(2)}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{balance.toFixed(2)}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
+                            <Chip size="small" label={status} color={status === "paid" ? "success" : status === "partial" ? "warning" : "default"} />
                           </TableCell>
-                          <TableCell sx={{ minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
-                            {c.appointment?.patient?.full_name ||
-                              c.appointment?.patient?.user?.full_name ||
-                              "—"}
-                          </TableCell>
-                          <TableCell sx={{ display: { xs: "none", md: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
-                            {c.appointment?.doctor?.user?.full_name || "—"}
-                          </TableCell>
-                          <TableCell sx={{ display: { xs: "none", md: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
-                            {c.diagnosis
-                              ? String(c.diagnosis).slice(0, 32)
-                              : "—"}
-                          </TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{formatDateTime(b.createdAt)}</TableCell>
                           <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
                             <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
                               <Tooltip title="View">
-                                <IconButton
-                                  onClick={() => navigate("/appointments/consultation/" + c.id)}
-                                  size="small"
-                                >
+                                <IconButton size="small" color="primary" onClick={() => openMainBillView(b.id)} aria-label="View">
                                   <VisibilityIcon fontSize="inherit" />
                                 </IconButton>
                               </Tooltip>
                             </Box>
                           </TableCell>
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={6}>
-                          <Typography sx={{ py: 2 }} color="text.secondary">
-                            No consultations found.
-                          </Typography>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-
-              <TablePagination
-                component="div"
-                count={consTotal}
-                page={consPage}
-                onPageChange={(_, p) => setConsPage(p)}
-                rowsPerPage={consRowsPerPage}
-                onRowsPerPageChange={(e) => {
-                  setConsRowsPerPage(parseInt(e.target.value, 10));
-                  setConsPage(0);
-                }}
-                rowsPerPageOptions={[5, 10, 25, 50]}
-              />
-            </Box>
-          )}
-
-          {tab === 2 && (
-            <Box sx={{ p: 2, minWidth: 0, overflow: "hidden" }}>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
-                Bills for appointments only.
-              </Typography>
-<TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
-              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: "grey.100" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 48, minWidth: 48, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No</TableCell>
-                      <TableCell sx={{ fontWeight: 800, width: "28%", minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Patient</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Total</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Paid</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Balance</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "14%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Status</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "14%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Created</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 800, width: 96, minWidth: 96, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Actions</TableCell>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={8}>
+                        <Typography sx={{ py: 2 }} color="text.secondary">No appointment bills yet.</Typography>
+                      </TableCell>
                     </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {mainBillsLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={8} sx={{ py: 4 }}>
-                          <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
-                            <CircularProgress size={18} />
-                            <Typography color="text.secondary">Loading bills…</Typography>
-                          </Stack>
-                        </TableCell>
-                      </TableRow>
-                    ) : mainBills.length ? (
-                      mainBills.map((b, idx) => {
-                        const patientName = b?.patient?.full_name || b?.patient?.user?.full_name || "—";
-                        const total = Number(b?.total_amount ?? 0);
-                        const paidAmt = Number(b?.paid_amount ?? 0);
-                        const balance = Math.max(0, total - paidAmt);
-                        const status = b?.paid ? "paid" : (b?.status || "unpaid");
-                        return (
-                          <TableRow key={b.id} hover>
-                            <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>
-                              {mainBillsPage * mainBillsRowsPerPage + idx + 1}
-                            </TableCell>
-                            <TableCell sx={{ fontWeight: 700, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{patientName}</TableCell>
-                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{total.toFixed(2)}</TableCell>
-                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{paidAmt.toFixed(2)}</TableCell>
-                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{balance.toFixed(2)}</TableCell>
-                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
-                              <Chip size="small" label={status} color={status === "paid" ? "success" : status === "partial" ? "warning" : "default"} />
-                            </TableCell>
-                            <TableCell sx={{ display: { xs: "none", md: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{formatDateTime(b.createdAt)}</TableCell>
-                            <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
-                              <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
-                                <Tooltip title="View">
-                                  <IconButton size="small" color="primary" onClick={() => openMainBillView(b.id)} aria-label="View">
-                                    <VisibilityIcon fontSize="inherit" />
-                                  </IconButton>
-                                </Tooltip>
-                              </Box>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={8}>
-                          <Typography sx={{ py: 2 }} color="text.secondary">No appointment bills yet.</Typography>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              <TablePagination
-                component="div"
-                count={mainBillsTotal}
-                page={mainBillsPage}
-                onPageChange={(_, p) => setMainBillsPage(p)}
-                rowsPerPage={mainBillsRowsPerPage}
-                onRowsPerPageChange={(e) => { setMainBillsRowsPerPage(parseInt(e.target.value, 10)); setMainBillsPage(0); }}
-                rowsPerPageOptions={[5, 10, 25, 50]}
-              />
-            </Box>
-          )}
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              component="div"
+              count={mainBillsTotal}
+              page={mainBillsPage}
+              onPageChange={(_, p) => setMainBillsPage(p)}
+              rowsPerPage={mainBillsRowsPerPage}
+              onRowsPerPageChange={(e) => { setMainBillsRowsPerPage(parseInt(e.target.value, 10)); setMainBillsPage(0); }}
+              rowsPerPageOptions={[5, 10, 25, 50]}
+            />
+          </Box>
+        )}
 
-          {tab === 3 && (
-            <Box sx={{ p: 2, minWidth: 0, overflow: "hidden" }}>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
-                Payments recorded for appointment bills.
-              </Typography>
-<TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
+        {/* Tab 3: Payment */}
+        {tab === 3 && (
+          <Box sx={{ p: 2, minWidth: 0, overflow: "hidden" }}>
+            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
+              Payments recorded for appointment bills.
+            </Typography>
+            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
               <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: "grey.100" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 48, minWidth: 48, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "16%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Date</TableCell>
-                      <TableCell sx={{ fontWeight: 800, width: "28%", minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Patient</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Amount</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "14%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Method</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Bill</TableCell>
-                      <TableCell sx={{ fontWeight: 800, width: 96, minWidth: 96, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }} align="center">Action</TableCell>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: "grey.100" }}>
+                    <TableCell sx={{ fontWeight: 800, width: 48, minWidth: 48, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "16%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Date</TableCell>
+                    <TableCell sx={{ fontWeight: 800, width: "28%", minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Patient</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Amount</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "14%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Method</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Bill</TableCell>
+                    <TableCell sx={{ fontWeight: 800, width: 96, minWidth: 96, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }} align="center">Action</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {mainPaymentsLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={7} sx={{ py: 4 }}>
+                        <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
+                          <CircularProgress size={18} />
+                          <Typography color="text.secondary">Loading payments…</Typography>
+                        </Stack>
+                      </TableCell>
                     </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {mainPaymentsLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={7} sx={{ py: 4 }}>
-                          <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
-                            <CircularProgress size={18} />
-                            <Typography color="text.secondary">Loading payments…</Typography>
-                          </Stack>
-                        </TableCell>
-                      </TableRow>
-                    ) : mainPayments.length ? (
-                      mainPayments.map((p, idx) => {
-                        const patientName = p?.bill?.patient?.full_name || p?.bill?.patient?.user?.full_name || "—";
-                        return (
-                          <TableRow key={p.id} hover>
-                            <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>
-                              {mainPaymentsPage * mainPaymentsRowsPerPage + idx + 1}
-                            </TableCell>
-                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{formatDateTime(p.payment_date || p.createdAt)}</TableCell>
-                            <TableCell sx={{ fontWeight: 700, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{patientName}</TableCell>
-                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{Number(p.amount_paid ?? 0).toFixed(2)}</TableCell>
-                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{p.payment_method || "—"}</TableCell>
-                            <TableCell sx={{ display: { xs: "none", md: "table-cell" }, fontSize: "0.85rem", color: "text.secondary", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
-                              {p.bill_id ? `#${String(p.bill_id).slice(0, 8)}` : "—"}
-                            </TableCell>
-                            <TableCell align="center" sx={{ overflow: "hidden", minWidth: 96 }}>
-                              <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "center", justifyItems: { xs: "center" }, maxWidth: "100%" }}>
-                                <Tooltip title="View receipt">
-                                  <IconButton size="small" color="primary" onClick={() => setReceiptDialogPaymentId(p.id)} aria-label="View receipt">
-                                    <ReceiptIcon />
-                                  </IconButton>
-                                </Tooltip>
-                              </Box>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={7}>
-                          <Typography sx={{ py: 2 }} color="text.secondary">No payments for appointments yet. Record payment from the Billing tab.</Typography>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              <TablePagination
-                component="div"
-                count={mainPaymentsTotal}
-                page={mainPaymentsPage}
-                onPageChange={(_, p) => setMainPaymentsPage(p)}
-                rowsPerPage={mainPaymentsRowsPerPage}
-                onRowsPerPageChange={(e) => { setMainPaymentsRowsPerPage(parseInt(e.target.value, 10)); setMainPaymentsPage(0); }}
-                rowsPerPageOptions={[5, 10, 25, 50]}
-              />
-            </Box>
-          )}
-        </CardContent>
-      </Card>
+                  ) : mainPayments.length ? (
+                    mainPayments.map((p, idx) => {
+                      const patientName = p?.bill?.patient?.full_name || p?.bill?.patient?.user?.full_name || "—";
+                      return (
+                        <TableRow key={p.id} hover>
+                          <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>
+                            {mainPaymentsPage * mainPaymentsRowsPerPage + idx + 1}
+                          </TableCell>
+                          <TableCell sx={{ display: { xs: "none", sm: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{formatDateTime(p.payment_date || p.createdAt)}</TableCell>
+                          <TableCell sx={{ fontWeight: 700, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{patientName}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{Number(p.amount_paid ?? 0).toFixed(2)}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{p.payment_method || "—"}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" }, fontSize: "0.85rem", color: "text.secondary", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
+                            {p.bill_id ? `#${String(p.bill_id).slice(0, 8)}` : "—"}
+                          </TableCell>
+                          <TableCell align="center" sx={{ overflow: "hidden", minWidth: 96 }}>
+                            <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "center", justifyItems: { xs: "center" }, maxWidth: "100%" }}>
+                              <Tooltip title="View receipt">
+                                <IconButton size="small" color="primary" onClick={() => setReceiptDialogPaymentId(p.id)} aria-label="View receipt">
+                                  <ReceiptIcon />
+                                </IconButton>
+                              </Tooltip>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7}>
+                        <Typography sx={{ py: 2 }} color="text.secondary">No payments for appointments yet. Record payment from the Billing tab.</Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <TablePagination
+              component="div"
+              count={mainPaymentsTotal}
+              page={mainPaymentsPage}
+              onPageChange={(_, p) => setMainPaymentsPage(p)}
+              rowsPerPage={mainPaymentsRowsPerPage}
+              onRowsPerPageChange={(e) => { setMainPaymentsRowsPerPage(parseInt(e.target.value, 10)); setMainPaymentsPage(0); }}
+              rowsPerPageOptions={[5, 10, 25, 50]}
+            />
+          </Box>
+        )}
+      </CardContent>
 
       {/* Appointment bill view */}
       <Dialog
@@ -1916,138 +1831,6 @@ export default function VisitsManagement() {
         paymentId={receiptDialogPaymentId}
         getToken={getToken}
       />
-
-      {/* Create appointment */}
-      <Dialog
-        open={createApptOpen}
-        onClose={() => setCreateApptOpen(false)}
-        fullWidth
-        maxWidth="sm"
-        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
-      >
-        <DialogTitle sx={{ fontWeight: 900 }}>New Appointment</DialogTitle>
-        <DialogContent sx={{ overflowY: "auto" }}>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={walkIn}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setWalkIn(checked);
-                    if (checked) {
-                      const price = selectedService?.price;
-                      setBillAmount(price != null && price !== "" ? String(price) : "0");
-                    }
-                  }}
-                />
-              }
-              label="Walk-in (auto-create bill; confirmation after payment)"
-            />
-
-            <Autocomplete
-              options={patientOptions}
-              value={selectedPatient}
-              onChange={(_, v) => setSelectedPatient(v)}
-              loading={patientLoading}
-              getOptionLabel={(p) =>
-                `${p.full_name || p.user?.full_name || "—"} • ${p.phone || p.email || p.user?.phone || p.user?.email || ""}`
-              }
-              isOptionEqualToValue={(opt, val) => opt.id === val.id}
-              onInputChange={(_, v) => searchPatients(v)}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Patient"
-                  placeholder="Search patient…"
-                />
-              )}
-            />
-
-            <Autocomplete
-              options={doctorOptions}
-              value={selectedDoctor}
-              onChange={(_, v) => setSelectedDoctor(v)}
-              loading={doctorLoading}
-              getOptionLabel={(d) =>
-                `${d.user?.full_name || "—"} • ${d.staff_type || "staff"}${d.specialization ? ` • ${d.specialization}` : ""}`
-              }
-              isOptionEqualToValue={(opt, val) => opt.id === val.id}
-              onInputChange={(_, v) => searchDoctors(v, appointmentDate || undefined)}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Staff"
-                  placeholder={appointmentDate ? "Staff available at selected date & time" : "Select date & time first, or search…"}
-                />
-              )}
-            />
-
-            <Autocomplete
-              options={serviceOptions}
-              value={selectedService}
-              onChange={(_, v) => {
-                setSelectedService(v);
-                if (walkIn) {
-                  const price = v?.price;
-                  setBillAmount(price != null && price !== "" ? String(price) : "0");
-                }
-              }}
-              loading={serviceLoading}
-              getOptionLabel={(s) =>
-                `${s.name || "—"}${s.department?.name ? ` • ${s.department.name}` : ""}${s.price != null && s.price !== "" ? ` • ${s.price}` : ""}`
-              }
-              isOptionEqualToValue={(opt, val) => opt.id === val.id}
-              onInputChange={(_, v) => searchServices(v)}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Service (optional)"
-                  placeholder="Search service…"
-                />
-              )}
-            />
-
-            {walkIn && (
-              <TextField
-                label="Amount to bill"
-                value={billAmount}
-                onChange={(e) => setBillAmount(e.target.value)}
-                inputMode="decimal"
-                helperText="This amount will be used to create the unpaid bill for this walk-in appointment."
-                fullWidth
-              />
-            )}
-
-            <TextField
-              label="Appointment date & time"
-              type="datetime-local"
-              value={appointmentDate}
-              onChange={(e) => {
-                const next = e.target.value;
-                setAppointmentDate(next);
-                if (next) searchDoctors("", next);
-              }}
-              InputLabelProps={{ shrink: true }}
-              fullWidth
-              helperText="Staff list shows only those with a schedule at this time."
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCreateApptOpen(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={createAppointment}
-            sx={{
-              bgcolor: theme.palette.primary.main,
-              "&:hover": { bgcolor: theme.palette.primary.dark },
-            }}
-          >
-            Save
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* Appointment view + status + Billing tab */}
       <Dialog
@@ -2295,446 +2078,137 @@ export default function VisitsManagement() {
         </DialogActions>
       </Dialog>
 
-      {/* Consultation view */}
+      {/* Create appointment */}
       <Dialog
-        open={consViewOpen}
-        onClose={() => setConsViewOpen(false)}
-        fullWidth
-        maxWidth="md"
-        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
-      >
-        <DialogTitle sx={{ fontWeight: 900 }}>Consultation</DialogTitle>
-        <DialogContent dividers sx={{ overflowY: "auto" }}>
-          {consViewLoading ? (
-            <Stack
-              direction="row"
-              spacing={1}
-              alignItems="center"
-              sx={{ py: 2 }}
-            >
-              <CircularProgress size={18} />
-              <Typography color="text.secondary">Loading…</Typography>
-            </Stack>
-          ) : !consView ? (
-            <Typography color="text.secondary">No data.</Typography>
-          ) : (
-            <Stack spacing={2}>
-              {!isAssignedDoctor(consView) && (
-                <Alert severity="info">
-                  You can view this consultation, but only the doctor assigned to this appointment
-                  can update it, prescribe, initiate lab tests, or admit patient.
-                </Alert>
-              )}
-              <Typography sx={{ fontWeight: 900 }}>
-                {consView.appointment?.patient?.full_name ||
-                  consView.appointment?.patient?.user?.full_name ||
-                  "Patient"}{" "}
-                • {formatDateTime(consView.createdAt)}
-              </Typography>
-              <Typography color="text.secondary">
-                Doctor: {consView.appointment?.doctor?.user?.full_name || "—"}
-              </Typography>
-
-              <Box
-                sx={{
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: 2,
-                  p: 2,
-                }}
-              >
-                <Typography sx={{ fontWeight: 900, mb: 0.5 }}>
-                  Symptoms
-                </Typography>
-                <Typography
-                  color="text.secondary"
-                  sx={{ whiteSpace: "pre-wrap" }}
-                >
-                  {consView.symptoms || "—"}
-                </Typography>
-                <Divider sx={{ my: 1.5 }} />
-                <Typography sx={{ fontWeight: 900, mb: 0.5 }}>
-                  Diagnosis
-                </Typography>
-                <Typography
-                  color="text.secondary"
-                  sx={{ whiteSpace: "pre-wrap" }}
-                >
-                  {consView.diagnosis || "—"}
-                </Typography>
-                <Divider sx={{ my: 1.5 }} />
-                <Typography sx={{ fontWeight: 900, mb: 0.5 }}>Notes</Typography>
-                <Typography
-                  color="text.secondary"
-                  sx={{ whiteSpace: "pre-wrap" }}
-                >
-                  {consView.notes || "—"}
-                </Typography>
-              </Box>
-
-              <Stack direction={{ xs: "column", md: "row" }} spacing={1} flexWrap="wrap">
-                <Button
-                  startIcon={<EditIcon />}
-                  variant="outlined"
-                  onClick={openEditConsultation}
-                  disabled={!isAssignedDoctor(consView)}
-                >
-                  Update consultation
-                </Button>
-                <Button
-                  startIcon={<ScienceIcon />}
-                  variant="outlined"
-                  onClick={openLabDialog}
-                  disabled={!isAssignedDoctor(consView)}
-                >
-                  Initiate lab test
-                </Button>
-                <Button
-                  startIcon={<PharmacyIcon />}
-                  variant="outlined"
-                  onClick={openRxDialog}
-                  disabled={!isAssignedDoctor(consView)}
-                >
-                  Prescribe
-                </Button>
-                <Button
-                  startIcon={<AdmitIcon />}
-                  variant="outlined"
-                  onClick={openAdmitDialog}
-                  disabled={!isAssignedDoctor(consView) || consViewHasAdmission}
-                >
-                  {consViewHasAdmission ? "Already admitted" : "Admit patient"}
-                </Button>
-              </Stack>
-            </Stack>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button
-            variant="contained"
-            onClick={() => setConsViewOpen(false)}
-            sx={{ fontWeight: 900 }}
-          >
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Edit consultation */}
-      <Dialog
-        open={consEditOpen}
-        onClose={() => setConsEditOpen(false)}
+        open={createApptOpen}
+        onClose={() => setCreateApptOpen(false)}
         fullWidth
         maxWidth="sm"
         PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
       >
-        <DialogTitle sx={{ fontWeight: 900 }}>Update Consultation</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 900 }}>New Appointment</DialogTitle>
         <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              label="Symptoms"
-              fullWidth
-              multiline
-              minRows={2}
-              value={consEditForm.symptoms}
-              onChange={(e) =>
-                setConsEditForm((p) => ({ ...p, symptoms: e.target.value }))
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={walkIn}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setWalkIn(checked);
+                    if (checked) {
+                      const price = selectedService?.price;
+                      setBillAmount(price != null && price !== "" ? String(price) : "0");
+                    }
+                  }}
+                />
               }
+              label="Walk-in (auto-create bill; confirmation after payment)"
             />
-            <TextField
-              label="Diagnosis"
-              fullWidth
-              multiline
-              minRows={2}
-              value={consEditForm.diagnosis}
-              onChange={(e) =>
-                setConsEditForm((p) => ({ ...p, diagnosis: e.target.value }))
-              }
-            />
-            <TextField
-              label="Notes"
-              fullWidth
-              multiline
-              minRows={2}
-              value={consEditForm.notes}
-              onChange={(e) =>
-                setConsEditForm((p) => ({ ...p, notes: e.target.value }))
-              }
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button variant="outlined" onClick={() => setConsEditOpen(false)}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={saveConsultationEdits}
-            disabled={consEditSaving}
-            sx={{ fontWeight: 900 }}
-          >
-            {consEditSaving ? "Saving…" : "Save"}
-          </Button>
-        </DialogActions>
-      </Dialog>
 
-      {/* Lab order */}
-      <Dialog
-        open={labOpen}
-        onClose={() => setLabOpen(false)}
-        fullWidth
-        maxWidth="sm"
-        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
-      >
-        <DialogTitle sx={{ fontWeight: 900 }}>Initiate Lab Test</DialogTitle>
-        <DialogContent sx={{ overflowY: "auto" }}>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            {labTestsLoading ? (
-              <Stack direction="row" spacing={1} alignItems="center">
-                <CircularProgress size={18} />
-                <Typography color="text.secondary">
-                  Loading lab tests…
-                </Typography>
-              </Stack>
-            ) : null}
             <Autocomplete
-              multiple
-              options={labTests}
-              value={selectedLabTests}
-              onChange={(_, v) => setSelectedLabTests(v)}
-              getOptionLabel={(t) =>
-                `${t.test_name || "Test"}${t.test_code ? ` (${t.test_code})` : ""}`
+              options={patientOptions}
+              value={selectedPatient}
+              onChange={(_, v) => setSelectedPatient(v)}
+              loading={patientLoading}
+              getOptionLabel={(p) =>
+                `${p.full_name || p.user?.full_name || "—"} • ${p.phone || p.email || p.user?.phone || p.user?.email || ""}`
               }
               isOptionEqualToValue={(opt, val) => opt.id === val.id}
+              onInputChange={(_, v) => searchPatients(v)}
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label="Lab tests"
-                  placeholder="Select tests…"
+                  label="Patient"
+                  placeholder="Search patient…"
                 />
               )}
             />
-            <Alert severity="info">
-              This creates a lab order linked to the consultation.
-            </Alert>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button variant="outlined" onClick={() => setLabOpen(false)}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={createLabOrder}
-            disabled={labSaving}
-            sx={{ fontWeight: 900 }}
-          >
-            {labSaving ? "Creating…" : "Create lab order"}
-          </Button>
-        </DialogActions>
-      </Dialog>
 
-      {/* Prescription */}
-      <Dialog
-        open={rxOpen}
-        onClose={() => setRxOpen(false)}
-        fullWidth
-        maxWidth="md"
-        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
-      >
-        <DialogTitle sx={{ fontWeight: 900 }}>Prescription</DialogTitle>
-        <DialogContent sx={{ overflowY: "auto" }}>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            {medicationsLoading ? (
-              <Stack direction="row" spacing={1} alignItems="center">
-                <CircularProgress size={18} />
-                <Typography color="text.secondary">
-                  Loading medications…
-                </Typography>
-              </Stack>
-            ) : null}
-
-            {rxItems.map((it, idx) => (
-              <Box
-                key={idx}
-                sx={{
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: 2,
-                  p: 2,
-                }}
-              >
-                <Stack spacing={1.5}>
-                  <Autocomplete
-                    options={medications}
-                    value={it.medication}
-                    onChange={(_, v) =>
-                      setRxItems((prev) =>
-                        prev.map((p, i) =>
-                          i === idx ? { ...p, medication: v } : p,
-                        ),
-                      )
-                    }
-                    getOptionLabel={(m) => m?.name || "—"}
-                    isOptionEqualToValue={(opt, val) => opt.id === val.id}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="Medication"
-                        placeholder="Select medication…"
-                      />
-                    )}
-                  />
-                  <Stack direction={{ xs: "column", md: "row" }} spacing={1.5}>
-                    <TextField
-                      label="Dosage (optional)"
-                      fullWidth
-                      value={it.dosage}
-                      onChange={(e) =>
-                        setRxItems((prev) =>
-                          prev.map((p, i) =>
-                            i === idx ? { ...p, dosage: e.target.value } : p,
-                          ),
-                        )
-                      }
-                    />
-                    <TextField
-                      label="Frequency (optional)"
-                      fullWidth
-                      value={it.frequency}
-                      onChange={(e) =>
-                        setRxItems((prev) =>
-                          prev.map((p, i) =>
-                            i === idx ? { ...p, frequency: e.target.value } : p,
-                          ),
-                        )
-                      }
-                    />
-                    <TextField
-                      label="Duration (optional)"
-                      fullWidth
-                      value={it.duration}
-                      onChange={(e) =>
-                        setRxItems((prev) =>
-                          prev.map((p, i) =>
-                            i === idx ? { ...p, duration: e.target.value } : p,
-                          ),
-                        )
-                      }
-                    />
-                    <TextField
-                      label="Quantity"
-                      type="number"
-                      inputProps={{ min: 1, step: 1 }}
-                      value={it.quantity ?? 1}
-                      onChange={(e) =>
-                        setRxItems((prev) =>
-                          prev.map((p, i) =>
-                            i === idx ? { ...p, quantity: e.target.value } : p,
-                          ),
-                        )
-                      }
-                      sx={{ minWidth: 100 }}
-                    />
-                  </Stack>
-                  <Stack direction="row" spacing={1} justifyContent="flex-end">
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      onClick={() =>
-                        setRxItems((prev) => prev.filter((_, i) => i !== idx))
-                      }
-                      disabled={rxItems.length === 1}
-                    >
-                      Remove
-                    </Button>
-                  </Stack>
-                </Stack>
-              </Box>
-            ))}
-
-            <Button
-              variant="outlined"
-              onClick={() =>
-                setRxItems((p) => [
-                  ...p,
-                  { medication: null, dosage: "", frequency: "", duration: "", quantity: 1 },
-                ])
+            <Autocomplete
+              options={doctorOptions}
+              value={selectedDoctor}
+              onChange={(_, v) => setSelectedDoctor(v)}
+              loading={doctorLoading}
+              getOptionLabel={(d) =>
+                `${d.user?.full_name || "—"} • ${d.staff_type || "staff"}${d.specialization ? ` • ${d.specialization}` : ""}`
               }
-            >
-              Add medication
-            </Button>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button variant="outlined" onClick={() => setRxOpen(false)}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={createPrescription}
-            disabled={rxSaving}
-            sx={{ fontWeight: 900 }}
-          >
-            {rxSaving ? "Creating…" : "Create prescription"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+              isOptionEqualToValue={(opt, val) => opt.id === val.id}
+              onInputChange={(_, v) => searchDoctors(v, appointmentDate || undefined)}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Staff"
+                  placeholder={appointmentDate ? "Staff available at selected date & time" : "Select date & time first, or search…"}
+                />
+              )}
+            />
 
-      {/* Admit patient (from consultation) */}
-      <Dialog
-        open={admitOpen}
-        onClose={() => setAdmitOpen(false)}
-        fullWidth
-        maxWidth="sm"
-        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
-      >
-        <DialogTitle sx={{ fontWeight: 900 }}>Admit Patient</DialogTitle>
-        <DialogContent sx={{ overflowY: "auto" }}>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            {admitBedsLoading ? (
-              <Stack direction="row" spacing={1} alignItems="center">
-                <CircularProgress size={18} />
-                <Typography color="text.secondary">Loading available beds…</Typography>
-              </Stack>
-            ) : (
-              <>
-                <FormControl fullWidth size="small" required>
-                  <InputLabel>Bed (available only)</InputLabel>
-                  <Select
-                    value={admitBedId}
-                    label="Bed (available only)"
-                    onChange={(e) => setAdmitBedId(e.target.value)}
-                  >
-                    <MenuItem value="">Select bed</MenuItem>
-                    {availableBeds.map((b) => (
-                      <MenuItem key={b.id} value={b.id}>
-                        {bedLabel(b)}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                {availableBeds.length === 0 && (
-                  <Alert severity="info">No available beds. Add beds in Ward & Admissions.</Alert>
-                )}
-              </>
+            <Autocomplete
+              options={serviceOptions}
+              value={selectedService}
+              onChange={(_, v) => {
+                setSelectedService(v);
+                if (walkIn) {
+                  const price = v?.price;
+                  setBillAmount(price != null && price !== "" ? String(price) : "0");
+                }
+              }}
+              loading={serviceLoading}
+              getOptionLabel={(s) =>
+                `${s.name || "—"}${s.department?.name ? ` • ${s.department.name}` : ""}${s.price != null && s.price !== "" ? ` • ${s.price}` : ""}`
+              }
+              isOptionEqualToValue={(opt, val) => opt.id === val.id}
+              onInputChange={(_, v) => searchServices(v)}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Service (optional)"
+                  placeholder="Search service…"
+                />
+              )}
+            />
+
+            {walkIn && (
+              <TextField
+                label="Amount to bill"
+                value={billAmount}
+                onChange={(e) => setBillAmount(e.target.value)}
+                inputMode="decimal"
+                helperText="This amount will be used to create the unpaid bill for this walk-in appointment."
+                fullWidth
+              />
             )}
+
+            <TextField
+              label="Appointment date & time"
+              type="datetime-local"
+              value={appointmentDate}
+              onChange={(e) => {
+                const next = e.target.value;
+                setAppointmentDate(next);
+                if (next) searchDoctors("", next);
+              }}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+              helperText="Staff list shows only those with a schedule at this time."
+            />
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button variant="outlined" onClick={() => setAdmitOpen(false)}>
-            Cancel
-          </Button>
+          <Button onClick={() => setCreateApptOpen(false)}>Cancel</Button>
           <Button
             variant="contained"
-            onClick={createAdmission}
-            disabled={admitSaving || !admitBedId || admitBedsLoading}
-            sx={{ fontWeight: 900 }}
+            onClick={createAppointment}
+            sx={{
+              bgcolor: theme.palette.primary.main,
+              "&:hover": { bgcolor: theme.palette.primary.dark },
+            }}
           >
-            {admitSaving ? "Admitting…" : "Admit"}
+            Save
           </Button>
         </DialogActions>
       </Dialog>
-    </>
+    </Card>
   );
 }

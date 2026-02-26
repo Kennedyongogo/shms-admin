@@ -96,7 +96,11 @@ const PO_STATUS_OPTIONS = ["draft", "ordered", "received", "cancelled"];
 
 export default function InventoryManagement() {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isMobileQuery = useMediaQuery(theme.breakpoints.down("sm"), { noSsr: true });
+  const [isMobile, setIsMobile] = useState(true);
+  useEffect(() => {
+    setIsMobile(isMobileQuery);
+  }, [isMobileQuery]);
   const token = getToken();
 
   const [tab, setTab] = useState(0);
@@ -780,9 +784,9 @@ export default function InventoryManagement() {
   };
 
   return (
-    <Card sx={{ borderRadius: 3, overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.08)" }}>
-      <Box sx={{ p: 2.5, background: heroGradient, color: "white" }}>
-        <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }} justifyContent="space-between">
+    <Card sx={{ borderRadius: 3, overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.08)", width: "100%", minWidth: 0 }}>
+      <Box sx={{ p: 2.5, background: heroGradient, color: "white", width: "100%", minWidth: "100%", flexShrink: 0, boxSizing: "border-box" }}>
+        <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }} justifyContent="space-between" sx={{ width: "100%", minWidth: 0 }}>
           <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: 0.2 }}>
             Inventory
           </Typography>
@@ -791,7 +795,7 @@ export default function InventoryManagement() {
 
       <CardContent sx={{ p: 0 }}>
         {isMobile ? (
-          <FormControl fullWidth size="small" sx={{ px: 2, py: 1.5 }}>
+          <FormControl fullWidth size="small" sx={{ px: 2, pt: 3.5, pb: 1.5, "& .MuiInputLabel-shrink": { marginTop: 1 } }}>
             <InputLabel id="inventory-section-label">Section</InputLabel>
             <Select
               labelId="inventory-section-label"
@@ -857,16 +861,23 @@ export default function InventoryManagement() {
                     </TableRow>
                   ) : suppliers.length ? (
                     suppliers.map((s, idx) => (
-                      <TableRow key={s.id} hover>
+                      <TableRow
+                        key={s.id}
+                        hover
+                        onClick={isMobile ? () => openSupplierView(s.id) : undefined}
+                        sx={isMobile ? { cursor: "pointer" } : undefined}
+                      >
                         <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{suppliersPage * suppliersRowsPerPage + idx + 1}</TableCell>
                         <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "28vw", sm: 160, md: 220 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{s.name}</TableCell>
                         <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{s.phone || "—"}</TableCell>
                         <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{s.email || "—"}</TableCell>
-                        <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                        <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} onClick={(e) => e.stopPropagation()}>
                           <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
-                            <Tooltip title="View">
-                              <IconButton size="small" color="primary" onClick={() => openSupplierView(s.id)} aria-label="View"><VisibilityIcon fontSize="inherit" /></IconButton>
-                            </Tooltip>
+                            {!isMobile && (
+                              <Tooltip title="View">
+                                <IconButton size="small" color="primary" onClick={() => openSupplierView(s.id)} aria-label="View"><VisibilityIcon fontSize="inherit" /></IconButton>
+                              </Tooltip>
+                            )}
                             <Tooltip title="Edit">
                               <IconButton size="small" color="primary" onClick={() => openSupplierEdit(s)} aria-label="Edit"><EditIcon fontSize="inherit" /></IconButton>
                             </Tooltip>
@@ -926,18 +937,17 @@ export default function InventoryManagement() {
                   <TableRow sx={{ bgcolor: "rgba(0,0,0,0.02)" }}>
                     <TableCell sx={{ fontWeight: 900, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No</TableCell>
                     <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Name</TableCell>
-                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 120 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Category</TableCell>
                     <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 100 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Main store</TableCell>
                     <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 100 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>In pharmacy</TableCell>
                     <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 110 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Reorder level</TableCell>
                     <TableCell sx={{ fontWeight: 900, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 80 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Unit</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 160, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Actions</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 900, minWidth: 160, overflow: "visible", textOverflow: "clip", whiteSpace: "nowrap" }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {inventoryItemsLoading ? (
                     <TableRow>
-                      <TableCell colSpan={8} sx={{ py: 4 }}>
+                      <TableCell colSpan={7} sx={{ py: 4 }}>
                         <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
                           <CircularProgress size={18} />
                           <Typography color="text.secondary">Loading…</Typography>
@@ -946,19 +956,25 @@ export default function InventoryManagement() {
                     </TableRow>
                   ) : inventoryItems.length ? (
                     inventoryItems.map((item, idx) => (
-                      <TableRow key={item.id} hover>
+                      <TableRow
+                        key={item.id}
+                        hover
+                        onClick={isMobile ? () => openItemView(item.id) : undefined}
+                        sx={isMobile ? { cursor: "pointer" } : undefined}
+                      >
                         <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{inventoryItemsPage * inventoryItemsRowsPerPage + idx + 1}</TableCell>
                         <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "28vw", sm: 160, md: 220 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{item.name}</TableCell>
-                        <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{item.category || "—"}</TableCell>
                         <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{item.quantity_available ?? 0}</TableCell>
                         <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{item.quantity_in_pharmacy ?? 0}</TableCell>
                         <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{item.reorder_level ?? 0}</TableCell>
                         <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{item.unit || "—"}</TableCell>
-                        <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
-                          <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
-                            <Tooltip title="View">
-                              <IconButton size="small" onClick={() => openItemView(item.id)} color="inherit"><VisibilityIcon fontSize="small" /></IconButton>
-                            </Tooltip>
+                        <TableCell align="right" sx={{ overflow: "visible", minWidth: 160 }} onClick={(e) => e.stopPropagation()}>
+                          <Box sx={{ display: "flex", flexDirection: "row", flexWrap: "nowrap", gap: 0.5, justifyContent: "flex-end", alignItems: "center", maxWidth: "100%" }}>
+                            {!isMobile && (
+                              <Tooltip title="View">
+                                <IconButton size="small" onClick={() => openItemView(item.id)} color="inherit"><VisibilityIcon fontSize="small" /></IconButton>
+                              </Tooltip>
+                            )}
                             <Tooltip title="Edit">
                               <IconButton size="small" onClick={() => openItemEdit(item)} color="inherit"><EditIcon fontSize="small" /></IconButton>
                             </Tooltip>
@@ -966,18 +982,17 @@ export default function InventoryManagement() {
                               <IconButton size="small" onClick={() => deleteItem(item.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
                             </Tooltip>
                             <Tooltip title="Move stock to pharmacy">
-                              <IconButton size="small" color="primary" onClick={() => openTransferToPharmacy(item)} sx={{ display: { xs: "inline-flex", md: "none" } }} aria-label="Move stock to pharmacy">
+                              <IconButton size="small" color="primary" onClick={() => openTransferToPharmacy(item)} aria-label="Move stock to pharmacy">
                                 <StockIcon fontSize="small" />
                               </IconButton>
                             </Tooltip>
-                            <Button size="small" variant="outlined" startIcon={<StockIcon />} onClick={() => openTransferToPharmacy(item)} sx={{ fontWeight: 800, gridColumn: "1 / -1", justifySelf: "end", display: { xs: "none", md: "inline-flex" } }}>Move stock to pharmacy</Button>
                           </Box>
                         </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={8} sx={{ py: 3 }}>
+                      <TableCell colSpan={7} sx={{ py: 3 }}>
                         <Typography color="text.secondary">No inventory items found.</Typography>
                       </TableCell>
                     </TableRow>
@@ -1041,18 +1056,25 @@ export default function InventoryManagement() {
                     </TableRow>
                   ) : purchaseOrders.length ? (
                     purchaseOrders.map((po, idx) => (
-                      <TableRow key={po.id} hover>
+                      <TableRow
+                        key={po.id}
+                        hover
+                        onClick={isMobile ? () => openPOView(po.id) : undefined}
+                        sx={isMobile ? { cursor: "pointer" } : undefined}
+                      >
                         <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{purchaseOrdersPage * purchaseOrdersRowsPerPage + idx + 1}</TableCell>
                         <TableCell sx={{ fontWeight: 800 }}>{po.supplier?.name ?? "—"}</TableCell>
                         <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{formatDate(po.order_date)}</TableCell>
                         <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
                           <Chip size="small" label={po.status} color={po.status === "received" ? "success" : po.status === "cancelled" ? "default" : "primary"} variant="outlined" />
                         </TableCell>
-                        <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                        <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} onClick={(e) => e.stopPropagation()}>
                           <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
-                            <Tooltip title="View">
-                              <IconButton size="small" color="primary" onClick={() => openPOView(po.id)} aria-label="View"><VisibilityIcon fontSize="inherit" /></IconButton>
-                            </Tooltip>
+                            {!isMobile && (
+                              <Tooltip title="View">
+                                <IconButton size="small" color="primary" onClick={() => openPOView(po.id)} aria-label="View"><VisibilityIcon fontSize="inherit" /></IconButton>
+                              </Tooltip>
+                            )}
                             <Tooltip title="Edit">
                               <IconButton size="small" color="primary" onClick={() => openPOEdit(po)} aria-label="Edit"><EditIcon fontSize="inherit" /></IconButton>
                             </Tooltip>
