@@ -18,6 +18,7 @@ import ConsultationViewPage from "./ConsultationViewPage";
 import PatientReportsPage from "./PatientReportsPage";
 import AuditLogsPage from "./AuditLogsPage";
 import DashboardPage from "./DashboardPage";
+import SettingsPage from "./SettingsPage";
 
 function PageRoutes() {
   const [user, setUser] = useState(null);
@@ -63,6 +64,7 @@ function PageRoutes() {
             <Route path="diet" element={<DietManagement />} />
             <Route path="inventory" element={<InventoryManagement />} />
             <Route path="audit-logs" element={<AuditLogsPage />} />
+            <Route path="settings" element={<SettingsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         )}

@@ -1,5 +1,5 @@
 import React, { cloneElement, useEffect, useState } from "react";
-import { Assessment, EventNote, History, Hotel, Inventory, LocalHospital, LocalPharmacy, Logout, PeopleAlt, PersonalInjury, ReceiptLong, RestaurantMenu, Science } from "@mui/icons-material";
+import { Assessment, EventNote, History, Hotel, Inventory, LocalHospital, LocalPharmacy, Logout, PeopleAlt, PersonalInjury, ReceiptLong, RestaurantMenu, Science, Settings as SettingsIcon } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { styled, useTheme } from "@mui/material/styles";
 import MuiDrawer from "@mui/material/Drawer";
@@ -97,22 +97,47 @@ const Navbar = (props) => {
     return window.innerWidth >= theme.breakpoints.values.md;
   });
 
+  // Keys must match backend ALL_MENU_KEYS (constants/menuKeys.js)
   const adminItems = [
-    { text: "Dashboard", icon: <Assessment />, path: "/dashboard" },
-    { text: "Hospital", icon: <LocalHospital />, path: "/hospitals" },
-    { text: "Appointments", icon: <EventNote />, path: "/appointments" },
-    { text: "Patients", icon: <PersonalInjury />, path: "/patients" },
-    { text: "Laboratory", icon: <Science />, path: "/laboratory" },
-    { text: "Pharmacy", icon: <LocalPharmacy />, path: "/pharmacy" },
-    { text: "Ward & Admissions", icon: <Hotel />, path: "/ward" },
-    { text: "Diet & Meals", icon: <RestaurantMenu />, path: "/diet" },
-    { text: "Inventory", icon: <Inventory />, path: "/inventory" },
-    { text: "Billing & Payments", icon: <ReceiptLong />, path: "/billing" },
-    { text: "Users & Roles", icon: <PeopleAlt />, path: "/users" },
-    { text: "Audit log", icon: <History />, path: "/audit-logs" },
+    { key: "dashboard", text: "Dashboard", icon: <Assessment />, path: "/dashboard" },
+    { key: "hospitals", text: "Hospital", icon: <LocalHospital />, path: "/hospitals" },
+    { key: "appointments", text: "Appointments", icon: <EventNote />, path: "/appointments" },
+    { key: "patients", text: "Patients", icon: <PersonalInjury />, path: "/patients" },
+    { key: "laboratory", text: "Laboratory", icon: <Science />, path: "/laboratory" },
+    { key: "pharmacy", text: "Pharmacy", icon: <LocalPharmacy />, path: "/pharmacy" },
+    { key: "ward", text: "Ward & Admissions", icon: <Hotel />, path: "/ward" },
+    { key: "diet", text: "Diet & Meals", icon: <RestaurantMenu />, path: "/diet" },
+    { key: "inventory", text: "Inventory", icon: <Inventory />, path: "/inventory" },
+    { key: "billing", text: "Billing & Payments", icon: <ReceiptLong />, path: "/billing" },
+    { key: "users", text: "Users & Roles", icon: <PeopleAlt />, path: "/users" },
+    { key: "audit-logs", text: "Audit log", icon: <History />, path: "/audit-logs" },
+    { key: "settings", text: "Settings", icon: <SettingsIcon />, path: "/settings" },
   ];
-  // Derive menu items from user so sidebar doesn't pop in after first paint (avoids blink)
-  const menuItems = user ? adminItems : [];
+
+  const role = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("role") || "null");
+    } catch {
+      return null;
+    }
+  })();
+  const allowedMenuKeys = (() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("menuItems") || "null");
+      return Array.isArray(stored) ? stored : null;
+    } catch {
+      return null;
+    }
+  })();
+  const isAdmin = role?.name === "admin";
+  const visibleItems = !user
+    ? []
+    : isAdmin
+      ? adminItems
+      : allowedMenuKeys === null || allowedMenuKeys === undefined
+        ? adminItems
+        : adminItems.filter((item) => allowedMenuKeys.includes(item.key));
+  const menuItems = visibleItems;
 
   const handleDrawerOpen = () => setOpen(true);
   const handleDrawerClose = () => setOpen(false);
@@ -159,7 +184,7 @@ const Navbar = (props) => {
         <List>
           {menuItems.map((item) => (
             <ListItem
-              key={item.text}
+              key={item.key}
               button
               onClick={() => navigate(item.path)}
               selected={location.pathname === item.path}

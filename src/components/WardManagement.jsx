@@ -29,15 +29,16 @@ import {
   TextField,
   Typography,
   Tooltip,
+  useMediaQuery,
 } from "@mui/material";
 import {
   Add as AddIcon,
+  Build as BuildIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
   Hotel as WardIcon,
   SingleBed as BedIcon,
   PersonSearch as AdmissionIcon,
-  Refresh as RefreshIcon,
   Visibility as VisibilityIcon,
   Logout as DischargeIcon,
   NoteAdd as NoteAddIcon,
@@ -115,6 +116,7 @@ function patientLabel(p) {
 
 export default function WardManagement() {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const token = getToken();
   const isAdmin = getRoleName() === "admin";
 
@@ -687,31 +689,36 @@ export default function WardManagement() {
           <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: 0.2 }}>
             Ward & Admissions
           </Typography>
-          <Button
-            variant="outlined"
-            startIcon={<RefreshIcon />}
-            onClick={() => {
-              if (tab === 0) loadWards();
-              if (tab === 1) loadBeds();
-              if (tab === 2) loadAdmissions();
-              if (tab === 3) loadAdmissionBills();
-              if (tab === 4) loadAdmissionPayments();
-            }}
-            sx={{ borderColor: "rgba(255,255,255,0.55)", color: "white", fontWeight: 800, "&:hover": { borderColor: "rgba(255,255,255,0.85)", bgcolor: "rgba(255,255,255,0.08)" } }}
-          >
-            Refresh
-          </Button>
         </Stack>
       </Box>
 
       <CardContent sx={{ p: 0 }}>
-        <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ px: 2, "& .MuiTabs-indicator": { backgroundColor: theme.palette.primary.main } }}>
-          <Tab icon={<WardIcon />} iconPosition="start" label="Wards" />
-          <Tab icon={<BedIcon />} iconPosition="start" label="Beds" />
-          <Tab icon={<AdmissionIcon />} iconPosition="start" label="Admissions" />
-          <Tab icon={<ReceiptLongIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Billing" />
-          <Tab icon={<PaymentsIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Payment" />
-        </Tabs>
+        {isMobile ? (
+          <FormControl fullWidth size="small" sx={{ px: 2, py: 1.5 }}>
+            <InputLabel id="ward-section-label">Section</InputLabel>
+            <Select
+              labelId="ward-section-label"
+              value={tab}
+              label="Section"
+              onChange={(e) => setTab(Number(e.target.value))}
+              sx={{ borderRadius: 1 }}
+            >
+              <MenuItem value={0}>Wards</MenuItem>
+              <MenuItem value={1}>Beds</MenuItem>
+              <MenuItem value={2}>Admissions</MenuItem>
+              <MenuItem value={3}>Billing</MenuItem>
+              <MenuItem value={4}>Payment</MenuItem>
+            </Select>
+          </FormControl>
+        ) : (
+          <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ px: 2, "& .MuiTabs-indicator": { backgroundColor: theme.palette.primary.main } }}>
+            <Tab icon={<WardIcon />} iconPosition="start" label="Wards" />
+            <Tab icon={<BedIcon />} iconPosition="start" label="Beds" />
+            <Tab icon={<AdmissionIcon />} iconPosition="start" label="Admissions" />
+            <Tab icon={<ReceiptLongIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Billing" />
+            <Tab icon={<PaymentsIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Payment" />
+          </Tabs>
+        )}
         <Divider />
 
         {/* Wards tab */}
@@ -728,16 +735,16 @@ export default function WardManagement() {
             {!isAdmin && (
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>View only. Only admins can create, edit, or delete wards.</Typography>
             )}
-            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-              <Table size="small">
+            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: "rgba(0,0,0,0.02)" }}>
-                    <TableCell sx={{ fontWeight: 900, width: 64 }}>No</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Name</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Type</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Department</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Daily rate</TableCell>
-                    {isAdmin && <TableCell align="right" sx={{ fontWeight: 900 }}>Actions</TableCell>}
+                    <TableCell sx={{ fontWeight: 900, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "28vw", sm: 160, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Name</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Type</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 140 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Department</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Daily rate</TableCell>
+                    {isAdmin && <TableCell align="right" sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Actions</TableCell>}
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -754,16 +761,20 @@ export default function WardManagement() {
                     wards.map((w, idx) => (
                       <TableRow key={w.id} hover>
                         <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{wardsPage * wardsRowsPerPage + idx + 1}</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }}>{w.name}</TableCell>
-                        <TableCell>{w.type || "—"}</TableCell>
-                        <TableCell>{departmentOptions.find((d) => d.id === w.department_id)?.name ?? w.department?.name ?? "—"}</TableCell>
-                        <TableCell>{w.daily_rate != null ? Number(w.daily_rate).toLocaleString() : "—"}</TableCell>
+                        <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "28vw", sm: 160, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{w.name}</TableCell>
+                        <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{w.type || "—"}</TableCell>
+                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{departmentOptions.find((d) => d.id === w.department_id)?.name ?? w.department?.name ?? "—"}</TableCell>
+                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{w.daily_rate != null ? Number(w.daily_rate).toLocaleString() : "—"}</TableCell>
                         {isAdmin && (
-                          <TableCell align="right">
-                            <Stack direction="row" spacing={1} justifyContent="flex-end">
-                              <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => openWardEdit(w)} sx={{ fontWeight: 800 }}>Edit</Button>
-                              <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => deleteWard(w.id)} sx={{ fontWeight: 800 }}>Delete</Button>
-                            </Stack>
+                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
+                              <Tooltip title="Edit">
+                                <IconButton size="small" color="primary" onClick={() => openWardEdit(w)} aria-label="Edit"><EditIcon fontSize="inherit" /></IconButton>
+                              </Tooltip>
+                              <Tooltip title="Delete">
+                                <IconButton size="small" color="error" onClick={() => deleteWard(w.id)} aria-label="Delete"><DeleteIcon fontSize="inherit" /></IconButton>
+                              </Tooltip>
+                            </Box>
                           </TableCell>
                         )}
                       </TableRow>
@@ -796,15 +807,15 @@ export default function WardManagement() {
             {!isAdmin && (
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>View only. Only admins can create, edit, delete beds, or change status.</Typography>
             )}
-            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-              <Table size="small">
+            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: "rgba(0,0,0,0.02)" }}>
-                    <TableCell sx={{ fontWeight: 900, width: 64 }}>No</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Bed number</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Ward</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Status</TableCell>
-                    {isAdmin && <TableCell align="right" sx={{ fontWeight: 900 }}>Actions</TableCell>}
+                    <TableCell sx={{ fontWeight: 900, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 120, md: 160 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Bed number</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 140 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Ward</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Status</TableCell>
+                    {isAdmin && <TableCell align="right" sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Actions</TableCell>}
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -822,21 +833,27 @@ export default function WardManagement() {
                       <TableRow key={b.id} hover>
                         <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{bedsPage * bedsRowsPerPage + idx + 1}</TableCell>
                         <TableCell sx={{ fontWeight: 800 }}>{b.bed_number}</TableCell>
-                        <TableCell>{wardOptions.find((w) => w.id === b.ward_id)?.name ?? b.ward?.name ?? "—"}</TableCell>
-                        <TableCell>
+                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{wardOptions.find((w) => w.id === b.ward_id)?.name ?? b.ward?.name ?? "—"}</TableCell>
+                        <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
                           <Chip size="small" label={b.status} color={b.status === "available" ? "success" : b.status === "maintenance" ? "warning" : "default"} variant="outlined" />
                         </TableCell>
                         {isAdmin && (
-                          <TableCell align="right">
-                            <Stack direction="row" spacing={1} justifyContent="flex-end" flexWrap="wrap">
-                              <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => openBedEdit(b)} sx={{ fontWeight: 800 }}>Edit</Button>
+                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
+                              <Tooltip title="Edit">
+                                <IconButton size="small" color="primary" onClick={() => openBedEdit(b)} aria-label="Edit"><EditIcon fontSize="inherit" /></IconButton>
+                              </Tooltip>
                               {b.status !== "maintenance" && (
-                                <Button size="small" variant="outlined" onClick={() => updateBedStatus(b.id, b.status === "available" ? "maintenance" : "available")} sx={{ fontWeight: 800 }}>
-                                  {b.status === "available" ? "Set maintenance" : "Set available"}
-                                </Button>
+                                <Tooltip title={b.status === "available" ? "Set maintenance" : "Set available"}>
+                                  <IconButton size="small" onClick={() => updateBedStatus(b.id, b.status === "available" ? "maintenance" : "available")} aria-label={b.status === "available" ? "Set maintenance" : "Set available"}>
+                                    <BuildIcon fontSize="inherit" />
+                                  </IconButton>
+                                </Tooltip>
                               )}
-                              <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => deleteBed(b.id)} sx={{ fontWeight: 800 }}>Delete</Button>
-                            </Stack>
+                              <Tooltip title="Delete">
+                                <IconButton size="small" color="error" onClick={() => deleteBed(b.id)} aria-label="Delete"><DeleteIcon fontSize="inherit" /></IconButton>
+                              </Tooltip>
+                            </Box>
                           </TableCell>
                         )}
                       </TableRow>
@@ -868,17 +885,17 @@ export default function WardManagement() {
                 </Select>
               </FormControl>
             </Stack>
-            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-              <Table size="small">
+            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: "rgba(0,0,0,0.02)" }}>
-                    <TableCell sx={{ fontWeight: 900, width: 64 }}>No</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Patient</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Bed</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Ward</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Admission date</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Discharge date</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 900, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 140, md: 200 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Patient</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Bed</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Ward</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Admission date</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Discharge date</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Status</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 900 }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
@@ -897,16 +914,18 @@ export default function WardManagement() {
                       <TableRow key={a.id} hover>
                         <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{admissionsPage * admissionsRowsPerPage + idx + 1}</TableCell>
                         <TableCell sx={{ fontWeight: 800 }}>{patientLabel(a.patient)}</TableCell>
-                        <TableCell>{a.bed?.bed_number ?? "—"}</TableCell>
-                        <TableCell>{a.bed?.ward?.name ?? "—"}</TableCell>
-                        <TableCell>{formatDateTime(a.admission_date)}</TableCell>
-                        <TableCell>{formatDateTime(a.discharge_date)}</TableCell>
-                        <TableCell>
+                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{a.bed?.bed_number ?? "—"}</TableCell>
+                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{a.bed?.ward?.name ?? "—"}</TableCell>
+                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{formatDateTime(a.admission_date)}</TableCell>
+                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{formatDateTime(a.discharge_date)}</TableCell>
+                        <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
                           <Chip size="small" label={a.status} color={a.status === "admitted" ? "primary" : "default"} variant="outlined" />
                         </TableCell>
                         <TableCell align="right">
                           <Tooltip title="View admission, generate billing, add notes, and discharge">
-                            <Button size="small" variant="outlined" startIcon={<VisibilityIcon />} onClick={() => openAdmissionView(a.id)} sx={{ fontWeight: 800 }}>View</Button>
+                            <IconButton size="small" color="primary" onClick={() => openAdmissionView(a.id)} aria-label="View">
+                              <VisibilityIcon fontSize="inherit" />
+                            </IconButton>
                           </Tooltip>
                         </TableCell>
                       </TableRow>
@@ -931,18 +950,18 @@ export default function WardManagement() {
             <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
               Bills for ward admissions. When you admit a patient and generate billing, the bill appears here. View and record payment in Admissions or here.
             </Typography>
-            <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
-              <Table size="small">
+            <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider", overflowX: "auto", maxWidth: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: "rgba(0,0,0,0.02)" }}>
-                    <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Patient</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Total</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Paid</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Balance</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Created</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 800 }}>Actions</TableCell>
+                    <TableCell sx={{ fontWeight: 800, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 140, md: 200 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Patient</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Total</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Paid</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Balance</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Created</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -965,16 +984,20 @@ export default function WardManagement() {
                       return (
                         <TableRow key={b.id} hover>
                           <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{admissionBillsPage * admissionBillsRowsPerPage + idx + 1}</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>{patientName}</TableCell>
-                          <TableCell>{total.toFixed(2)}</TableCell>
-                          <TableCell>{paidAmt.toFixed(2)}</TableCell>
-                          <TableCell>{balance.toFixed(2)}</TableCell>
-                          <TableCell>
+                          <TableCell sx={{ fontWeight: 700, maxWidth: { xs: "28vw", sm: 160, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{patientName}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{total.toFixed(2)}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{paidAmt.toFixed(2)}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{balance.toFixed(2)}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
                             <Chip size="small" label={status} color={status === "paid" ? "success" : status === "partial" ? "warning" : "default"} />
                           </TableCell>
-                          <TableCell>{formatDateTime(b.createdAt)}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{formatDateTime(b.createdAt)}</TableCell>
                           <TableCell align="right">
-                            <Button size="small" variant="outlined" onClick={() => openAdmissionBillView(b.id)}>View</Button>
+                            <Tooltip title="View">
+                              <IconButton size="small" color="primary" onClick={() => openAdmissionBillView(b.id)} aria-label="View">
+                                <VisibilityIcon fontSize="inherit" />
+                              </IconButton>
+                            </Tooltip>
                           </TableCell>
                         </TableRow>
                       );
@@ -999,17 +1022,17 @@ export default function WardManagement() {
             <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
               Payments recorded for admission (ward) bills.
             </Typography>
-            <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
-              <Table size="small">
+            <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider", overflowX: "auto", maxWidth: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: "rgba(0,0,0,0.02)" }}>
-                    <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Patient</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Amount</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Method</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Bill</TableCell>
-                    <TableCell sx={{ fontWeight: 800, width: 72 }} align="center">Action</TableCell>
+                    <TableCell sx={{ fontWeight: 800, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Date</TableCell>
+                    <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 140, md: 200 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Patient</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Amount</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Method</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 80 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Bill</TableCell>
+                    <TableCell sx={{ fontWeight: 800, width: 72, maxWidth: { xs: "18vw", sm: 72 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} align="center">Action</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -1028,11 +1051,11 @@ export default function WardManagement() {
                       return (
                         <TableRow key={p.id} hover>
                           <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{admissionPaymentsPage * admissionPaymentsRowsPerPage + idx + 1}</TableCell>
-                          <TableCell>{formatDateTime(p.payment_date || p.createdAt)}</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>{patientName}</TableCell>
-                          <TableCell>{Number(p.amount_paid ?? 0).toFixed(2)}</TableCell>
-                          <TableCell>{p.payment_method || "—"}</TableCell>
-                          <TableCell sx={{ fontSize: "0.85rem", color: "text.secondary" }}>{p.bill_id ? `#${String(p.bill_id).slice(0, 8)}` : "—"}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{formatDateTime(p.payment_date || p.createdAt)}</TableCell>
+                          <TableCell sx={{ fontWeight: 700, maxWidth: { xs: "28vw", sm: 160, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{patientName}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{Number(p.amount_paid ?? 0).toFixed(2)}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{p.payment_method || "—"}</TableCell>
+                          <TableCell sx={{ fontSize: "0.85rem", color: "text.secondary", display: { xs: "none", md: "table-cell" } }}>{p.bill_id ? `#${String(p.bill_id).slice(0, 8)}` : "—"}</TableCell>
                           <TableCell align="center">
                             <Tooltip title="View receipt">
                               <IconButton size="small" color="primary" onClick={() => setReceiptDialogPaymentId(p.id)} aria-label="View receipt">
@@ -1059,9 +1082,9 @@ export default function WardManagement() {
       </CardContent>
 
       {/* Admission bill view dialog */}
-      <Dialog open={admissionBillView.open} onClose={() => setAdmissionBillView({ open: false, bill: null, loading: false })} fullWidth maxWidth="sm">
+      <Dialog open={admissionBillView.open} onClose={() => setAdmissionBillView({ open: false, bill: null, loading: false })} fullWidth maxWidth="sm" PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle sx={{ fontWeight: 900 }}>Admission bill</DialogTitle>
-        <DialogContent dividers>
+        <DialogContent dividers sx={{ overflowY: "auto" }}>
           {admissionBillView.loading ? (
             <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
               <CircularProgress size={18} />
@@ -1078,7 +1101,7 @@ export default function WardManagement() {
               {Array.isArray(admissionBillView.bill.payments) && admissionBillView.bill.payments.length > 0 && (
                 <Box>
                   <Typography sx={{ fontWeight: 800, mb: 1 }}>Payments</Typography>
-                  <Table size="small">
+                  <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                     <TableHead>
                       <TableRow>
                         <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
@@ -1113,9 +1136,9 @@ export default function WardManagement() {
       </Dialog>
 
       {/* Ward create/edit dialog */}
-      <Dialog open={wardDialog.open} onClose={() => setWardDialog((p) => ({ ...p, open: false }))} maxWidth="sm" fullWidth>
+      <Dialog open={wardDialog.open} onClose={() => setWardDialog((p) => ({ ...p, open: false }))} maxWidth="sm" fullWidth PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle>{wardDialog.mode === "create" ? "Add Ward" : "Edit Ward"}</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <FormControl fullWidth size="small" required>
               <InputLabel>Department</InputLabel>
@@ -1148,9 +1171,9 @@ export default function WardManagement() {
       </Dialog>
 
       {/* Bed create/edit dialog */}
-      <Dialog open={bedDialog.open} onClose={() => setBedDialog((p) => ({ ...p, open: false }))} maxWidth="sm" fullWidth>
+      <Dialog open={bedDialog.open} onClose={() => setBedDialog((p) => ({ ...p, open: false }))} maxWidth="sm" fullWidth PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle>{bedDialog.mode === "create" ? "Add Bed" : "Edit Bed"}</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <FormControl fullWidth size="small" required>
               <InputLabel>Ward</InputLabel>
@@ -1181,9 +1204,9 @@ export default function WardManagement() {
       </Dialog>
 
       {/* Admission view (with notes) */}
-      <Dialog open={admissionView.open} onClose={() => setAdmissionView((p) => ({ ...p, open: false }))} maxWidth="md" fullWidth>
+      <Dialog open={admissionView.open} onClose={() => setAdmissionView((p) => ({ ...p, open: false }))} maxWidth="md" fullWidth PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle>Admission details</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           {admissionView.loading ? (
             <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ py: 4 }}>
               <CircularProgress size={24} />
@@ -1302,31 +1325,31 @@ export default function WardManagement() {
               )}
               <Box sx={{ width: "100%", overflow: "auto" }}>
                 {admissionView.admission.nursingNotes?.length ? (
-                  <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, width: "100%" }}>
-                    <Table size="small" sx={{ minWidth: 720 }}>
+                  <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, width: "100%", overflowX: "auto" }}>
+                    <Table size="small" sx={{ minWidth: 400 }}>
                       <TableHead>
                         <TableRow sx={{ bgcolor: "rgba(0,0,0,0.03)" }}>
                           <TableCell sx={{ fontWeight: 800 }}>Date / time</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>Temp</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>BP</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>Pulse</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>RR</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>Pain</TableCell>
+                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" } }}>Temp</TableCell>
+                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" } }}>BP</TableCell>
+                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" } }}>Pulse</TableCell>
+                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" } }}>RR</TableCell>
+                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" } }}>Pain</TableCell>
                           <TableCell sx={{ fontWeight: 800 }}>Notes</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>Recorded by</TableCell>
+                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" } }}>Recorded by</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
                         {admissionView.admission.nursingNotes.map((n) => (
                           <TableRow key={n.id}>
                             <TableCell>{formatDateTime(n.date_time || n.recorded_at)}</TableCell>
-                            <TableCell>{n.temperature != null ? n.temperature : "—"}</TableCell>
-                            <TableCell>{n.blood_pressure || "—"}</TableCell>
-                            <TableCell>{n.pulse != null ? n.pulse : "—"}</TableCell>
-                            <TableCell>{n.respiratory_rate != null ? n.respiratory_rate : "—"}</TableCell>
-                            <TableCell>{n.pain_scale != null ? n.pain_scale : "—"}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{n.temperature != null ? n.temperature : "—"}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{n.blood_pressure || "—"}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{n.pulse != null ? n.pulse : "—"}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{n.respiratory_rate != null ? n.respiratory_rate : "—"}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{n.pain_scale != null ? n.pain_scale : "—"}</TableCell>
                             <TableCell sx={{ maxWidth: 200 }}>{n.notes || "—"}</TableCell>
-                            <TableCell>{n.nurse?.user?.full_name ?? "—"}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{n.nurse?.user?.full_name ?? "—"}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -1364,9 +1387,9 @@ export default function WardManagement() {
       />
 
       {/* Add nursing note dialog */}
-      <Dialog open={noteDialogOpen} onClose={() => setNoteDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={noteDialogOpen} onClose={() => setNoteDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle>Add nursing note</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <TextField
               fullWidth

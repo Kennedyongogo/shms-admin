@@ -34,12 +34,12 @@ import {
   Autocomplete,
   Switch,
   FormControlLabel,
+  useMediaQuery,
 } from "@mui/material";
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
   EventNote as EventNoteIcon,
-  Refresh as RefreshIcon,
   Visibility as VisibilityIcon,
   NoteAdd as NoteAddIcon,
   Edit as EditIcon,
@@ -126,6 +126,7 @@ const toLocalDateTimeInputValue = (date = new Date()) => {
 
 export default function VisitsManagement() {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const navigate = useNavigate();
   const token = getToken();
   const currentUser = getUser();
@@ -1278,7 +1279,7 @@ export default function VisitsManagement() {
   };
 
   return (
-    <Box sx={{ width: "100%" }}>
+    <Box sx={{ width: "100%", minWidth: 0, maxWidth: "100%", overflow: "hidden" }}>
       <Card
         elevation={0}
         sx={{
@@ -1287,6 +1288,7 @@ export default function VisitsManagement() {
           border: "1px solid",
           borderColor: "divider",
           overflow: "hidden",
+          maxWidth: "100%",
         }}
       >
         <Box
@@ -1336,22 +1338,6 @@ export default function VisitsManagement() {
               </Typography>
             </Box>
             <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", justifyContent: { xs: "flex-start", md: "flex-end" }, flexShrink: 0 }}>
-              <Tooltip title="Refresh">
-                <IconButton
-                  onClick={() => {
-                    loadAppointments();
-                    loadConsultations();
-                    if (tab === 2) loadMainBills();
-                    if (tab === 3) loadMainPayments();
-                  }}
-                  sx={{
-                    color: "white",
-                    border: "1px solid rgba(255,255,255,0.25)",
-                  }}
-                >
-                  <RefreshIcon />
-                </IconButton>
-              </Tooltip>
               <Button
                 variant="contained"
                 startIcon={<AddIcon />}
@@ -1372,42 +1358,60 @@ export default function VisitsManagement() {
           </Stack>
         </Box>
 
-        <CardContent sx={{ p: 0 }}>
-          <Tabs
-            value={tab}
-            onChange={(_, v) => setTab(v)}
-            sx={{
-              px: 2,
-              "& .MuiTabs-indicator": {
-                backgroundColor: theme.palette.primary.main,
-              },
-            }}
-          >
-            <Tab
-              icon={<EventNoteIcon />}
-              iconPosition="start"
-              label="Appointments"
-            />
-            <Tab
-              icon={<NoteAddIcon />}
-              iconPosition="start"
-              label="Consultations"
-            />
-            <Tab
-              icon={<ReceiptIcon />}
-              iconPosition="start"
-              label="Billing"
-            />
-            <Tab
-              icon={<PaymentIcon />}
-              iconPosition="start"
-              label="Payment"
-            />
-          </Tabs>
+        <CardContent sx={{ p: 0, minWidth: 0, overflow: "hidden" }}>
+          {isMobile ? (
+            <FormControl fullWidth size="small" sx={{ px: 2, py: 1.5 }}>
+              <InputLabel id="visits-section-label">Section</InputLabel>
+              <Select
+                labelId="visits-section-label"
+                value={tab}
+                label="Section"
+                onChange={(e) => setTab(Number(e.target.value))}
+                sx={{ borderRadius: 1 }}
+              >
+                <MenuItem value={0}>Appointments</MenuItem>
+                <MenuItem value={1}>Consultations</MenuItem>
+                <MenuItem value={2}>Billing</MenuItem>
+                <MenuItem value={3}>Payment</MenuItem>
+              </Select>
+            </FormControl>
+          ) : (
+            <Tabs
+              value={tab}
+              onChange={(_, v) => setTab(v)}
+              sx={{
+                px: 2,
+                "& .MuiTabs-indicator": {
+                  backgroundColor: theme.palette.primary.main,
+                },
+              }}
+            >
+              <Tab
+                icon={<EventNoteIcon />}
+                iconPosition="start"
+                label="Appointments"
+              />
+              <Tab
+                icon={<NoteAddIcon />}
+                iconPosition="start"
+                label="Consultations"
+              />
+              <Tab
+                icon={<ReceiptIcon />}
+                iconPosition="start"
+                label="Billing"
+              />
+              <Tab
+                icon={<PaymentIcon />}
+                iconPosition="start"
+                label="Payment"
+              />
+            </Tabs>
+          )}
           <Divider />
 
           {tab === 0 && (
-            <Box sx={{ p: 2 }}>
+            <Box sx={{ p: 2, minWidth: 0, overflow: "hidden" }}>
               <Stack
                 direction={{ xs: "column", md: "row" }}
                 spacing={1.5}
@@ -1448,26 +1452,16 @@ export default function VisitsManagement() {
                 </FormControl>
               </Stack>
 
-              <TableContainer
-                sx={{
-                  borderRadius: 2,
-                  border: "1px solid",
-                  borderColor: "divider",
-                }}
-              >
-                <Table size="small">
+              <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider", overflowX: "auto", maxWidth: "100%" }}>
+                <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                   <TableHead>
-                    <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>
-                        No
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Patient</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Doctor</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Status</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 800 }}>
-                        Actions
-                      </TableCell>
+                    <TableRow sx={{ bgcolor: "grey.100" }}>
+                      <TableCell sx={{ fontWeight: 800, width: 48, minWidth: 48, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "18%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Date</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: "30%", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Patient</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "18%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Doctor</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "14%", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Status</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800, width: 96, minWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1495,18 +1489,16 @@ export default function VisitsManagement() {
                           >
                             {apptPage * apptRowsPerPage + idx + 1}
                           </TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>
+                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" } }}>
                             {formatDateTime(a.appointment_date)}
                           </TableCell>
-                          <TableCell>
-                            {a.patient?.full_name ||
-                              a.patient?.user?.full_name ||
-                              "—"}
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                              sx={{ display: "block" }}
-                            >
+                          <TableCell sx={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            <Typography noWrap sx={{ fontWeight: 800 }}>
+                              {a.patient?.full_name ||
+                                a.patient?.user?.full_name ||
+                                "—"}
+                            </Typography>
+                            <Typography noWrap variant="caption" color="text.secondary">
                               {a.patient?.phone ||
                                 a.patient?.email ||
                                 a.patient?.user?.phone ||
@@ -1514,12 +1506,12 @@ export default function VisitsManagement() {
                                 ""}
                             </Typography>
                           </TableCell>
-                          <TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {a.doctor?.user?.full_name ||
                               a.doctor?.staff_type ||
                               "—"}
                           </TableCell>
-                          <TableCell>
+                          <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
                             <Chip
                               size="small"
                               label={a.status}
@@ -1535,46 +1527,48 @@ export default function VisitsManagement() {
                               }
                             />
                           </TableCell>
-                          <TableCell align="right">
-                            <Tooltip title="View">
-                              <IconButton
-                                onClick={() => openViewAppointment(a)}
-                                size="small"
-                              >
-                                <VisibilityIcon fontSize="inherit" />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip
-                              title={
-                                a.status !== "confirmed" && a.status !== "completed"
-                                  ? "Payment required before consultation"
-                                  : "Record consultation"
-                              }
-                            >
-                              <span>
+                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
+                              <Tooltip title="View">
                                 <IconButton
-                                  onClick={() => openRecordConsultation(a)}
+                                  onClick={() => openViewAppointment(a)}
                                   size="small"
-                                  disabled={
-                                    !isAssignedDoctor(a) ||
-                                    (a.status !== "confirmed" && a.status !== "completed")
-                                  }
                                 >
-                                  <NoteAddIcon fontSize="inherit" />
-                                </IconButton>
-                              </span>
-                            </Tooltip>
-                            {isAdmin && (
-                              <Tooltip title="Delete">
-                                <IconButton
-                                  onClick={() => deleteAppointment(a)}
-                                  size="small"
-                                  color="error"
-                                >
-                                  <DeleteIcon fontSize="inherit" />
+                                  <VisibilityIcon fontSize="inherit" />
                                 </IconButton>
                               </Tooltip>
-                            )}
+                              <Tooltip
+                                title={
+                                  a.status !== "confirmed" && a.status !== "completed"
+                                    ? "Payment required before consultation"
+                                    : "Record consultation"
+                                }
+                              >
+                                <span>
+                                  <IconButton
+                                    onClick={() => openRecordConsultation(a)}
+                                    size="small"
+                                    disabled={
+                                      !isAssignedDoctor(a) ||
+                                      (a.status !== "confirmed" && a.status !== "completed")
+                                    }
+                                  >
+                                    <NoteAddIcon fontSize="inherit" />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                              {isAdmin && (
+                                <Tooltip title="Delete">
+                                  <IconButton
+                                    onClick={() => deleteAppointment(a)}
+                                    size="small"
+                                    color="error"
+                                  >
+                                    <DeleteIcon fontSize="inherit" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
+                            </Box>
                           </TableCell>
                         </TableRow>
                       ))
@@ -1607,7 +1601,7 @@ export default function VisitsManagement() {
           )}
 
           {tab === 1 && (
-            <Box sx={{ p: 2 }}>
+            <Box sx={{ p: 2, minWidth: 0, overflow: "hidden" }}>
               <TextField
                 value={consSearch}
                 onChange={(e) => setConsSearch(e.target.value)}
@@ -1628,26 +1622,16 @@ export default function VisitsManagement() {
                 sx={{ mb: 2 }}
               />
 
-              <TableContainer
-                sx={{
-                  borderRadius: 2,
-                  border: "1px solid",
-                  borderColor: "divider",
-                }}
-              >
-                <Table size="small">
+              <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider", overflowX: "auto", maxWidth: "100%" }}>
+                <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                   <TableHead>
-                    <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>
-                        No
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Created</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Patient</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Doctor</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Diagnosis</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 800 }}>
-                        Actions
-                      </TableCell>
+                    <TableRow sx={{ bgcolor: "grey.100" }}>
+                      <TableCell sx={{ fontWeight: 800, width: 48, minWidth: 48, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "16%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Created</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: "30%", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Patient</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "18%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Doctor</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "22%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Diagnosis</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800, width: 96, minWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1675,31 +1659,33 @@ export default function VisitsManagement() {
                           >
                             {consPage * consRowsPerPage + idx + 1}
                           </TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>
+                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {formatDateTime(c.createdAt)}
                           </TableCell>
-                          <TableCell>
+                          <TableCell sx={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {c.appointment?.patient?.full_name ||
                               c.appointment?.patient?.user?.full_name ||
                               "—"}
                           </TableCell>
-                          <TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {c.appointment?.doctor?.user?.full_name || "—"}
                           </TableCell>
-                          <TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {c.diagnosis
                               ? String(c.diagnosis).slice(0, 32)
                               : "—"}
                           </TableCell>
-                          <TableCell align="right">
-                            <Tooltip title="View">
-                              <IconButton
-                                onClick={() => navigate("/appointments/consultation/" + c.id)}
-                                size="small"
-                              >
-                                <VisibilityIcon fontSize="inherit" />
-                              </IconButton>
-                            </Tooltip>
+                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
+                              <Tooltip title="View">
+                                <IconButton
+                                  onClick={() => navigate("/appointments/consultation/" + c.id)}
+                                  size="small"
+                                >
+                                  <VisibilityIcon fontSize="inherit" />
+                                </IconButton>
+                              </Tooltip>
+                            </Box>
                           </TableCell>
                         </TableRow>
                       ))
@@ -1732,22 +1718,22 @@ export default function VisitsManagement() {
           )}
 
           {tab === 2 && (
-            <Box sx={{ p: 2 }}>
+            <Box sx={{ p: 2, minWidth: 0, overflow: "hidden" }}>
               <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
                 Bills for appointments only.
               </Typography>
-              <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-                <Table size="small">
+<TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                   <TableHead>
-                    <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Patient</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Total</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Paid</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Balance</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Status</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Created</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 800 }}>Actions</TableCell>
+                    <TableRow sx={{ bgcolor: "grey.100" }}>
+                      <TableCell sx={{ fontWeight: 800, width: 48, minWidth: 48, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: "28%", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Patient</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Total</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Paid</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Balance</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "14%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Status</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "14%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Created</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800, width: 96, minWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1772,16 +1758,22 @@ export default function VisitsManagement() {
                             <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>
                               {mainBillsPage * mainBillsRowsPerPage + idx + 1}
                             </TableCell>
-                            <TableCell sx={{ fontWeight: 700 }}>{patientName}</TableCell>
-                            <TableCell>{total.toFixed(2)}</TableCell>
-                            <TableCell>{paidAmt.toFixed(2)}</TableCell>
-                            <TableCell>{balance.toFixed(2)}</TableCell>
-                            <TableCell>
+                            <TableCell sx={{ fontWeight: 700, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{patientName}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{total.toFixed(2)}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{paidAmt.toFixed(2)}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{balance.toFixed(2)}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
                               <Chip size="small" label={status} color={status === "paid" ? "success" : status === "partial" ? "warning" : "default"} />
                             </TableCell>
-                            <TableCell>{formatDateTime(b.createdAt)}</TableCell>
-                            <TableCell align="right">
-                              <Button size="small" variant="outlined" onClick={() => openMainBillView(b.id)}>View</Button>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{formatDateTime(b.createdAt)}</TableCell>
+                            <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
+                                <Tooltip title="View">
+                                  <IconButton size="small" color="primary" onClick={() => openMainBillView(b.id)} aria-label="View">
+                                    <VisibilityIcon fontSize="inherit" />
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
                             </TableCell>
                           </TableRow>
                         );
@@ -1809,21 +1801,21 @@ export default function VisitsManagement() {
           )}
 
           {tab === 3 && (
-            <Box sx={{ p: 2 }}>
+            <Box sx={{ p: 2, minWidth: 0, overflow: "hidden" }}>
               <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
                 Payments recorded for appointment bills.
               </Typography>
-              <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-                <Table size="small">
+<TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                   <TableHead>
-                    <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Patient</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Amount</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Method</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Bill</TableCell>
-                      <TableCell sx={{ fontWeight: 800, width: 72 }} align="center">Action</TableCell>
+                    <TableRow sx={{ bgcolor: "grey.100" }}>
+                      <TableCell sx={{ fontWeight: 800, width: 48, minWidth: 48, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "16%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Date</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: "28%", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Patient</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Amount</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "14%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Method</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Bill</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: 96, minWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} align="center">Action</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1844,19 +1836,21 @@ export default function VisitsManagement() {
                             <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>
                               {mainPaymentsPage * mainPaymentsRowsPerPage + idx + 1}
                             </TableCell>
-                            <TableCell>{formatDateTime(p.payment_date || p.createdAt)}</TableCell>
-                            <TableCell sx={{ fontWeight: 700 }}>{patientName}</TableCell>
-                            <TableCell>{Number(p.amount_paid ?? 0).toFixed(2)}</TableCell>
-                            <TableCell>{p.payment_method || "—"}</TableCell>
-                            <TableCell sx={{ fontSize: "0.85rem", color: "text.secondary" }}>
+                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{formatDateTime(p.payment_date || p.createdAt)}</TableCell>
+                            <TableCell sx={{ fontWeight: 700, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{patientName}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{Number(p.amount_paid ?? 0).toFixed(2)}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{p.payment_method || "—"}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" }, fontSize: "0.85rem", color: "text.secondary", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {p.bill_id ? `#${String(p.bill_id).slice(0, 8)}` : "—"}
                             </TableCell>
-                            <TableCell align="center">
-                              <Tooltip title="View receipt">
-                                <IconButton size="small" color="primary" onClick={() => setReceiptDialogPaymentId(p.id)} aria-label="View receipt">
-                                  <ReceiptIcon />
-                                </IconButton>
-                              </Tooltip>
+                            <TableCell align="center" sx={{ overflow: "hidden", minWidth: 96 }}>
+                              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "center", justifyItems: "center", maxWidth: "100%" }}>
+                                <Tooltip title="View receipt">
+                                  <IconButton size="small" color="primary" onClick={() => setReceiptDialogPaymentId(p.id)} aria-label="View receipt">
+                                    <ReceiptIcon />
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
                             </TableCell>
                           </TableRow>
                         );
@@ -1891,9 +1885,10 @@ export default function VisitsManagement() {
         onClose={() => setMainBillView({ open: false, bill: null, loading: false })}
         fullWidth
         maxWidth="sm"
+        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
       >
         <DialogTitle sx={{ fontWeight: 900 }}>Appointment bill</DialogTitle>
-        <DialogContent dividers>
+        <DialogContent dividers sx={{ overflowY: "auto" }}>
           {mainBillView.loading ? (
             <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
               <CircularProgress size={18} />
@@ -1922,8 +1917,8 @@ export default function VisitsManagement() {
                   <Table size="small">
                     <TableHead>
                       <TableRow sx={{ bgcolor: "rgba(0,0,0,0.03)" }}>
-                        <TableCell sx={{ fontWeight: 700 }}>Description</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 700 }}>Amount</TableCell>
+                        <TableCell sx={{ fontWeight: 700, maxWidth: { xs: "50vw", sm: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Description</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700, maxWidth: { xs: "22vw", sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Amount</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -1971,9 +1966,10 @@ export default function VisitsManagement() {
         onClose={() => setCreateApptOpen(false)}
         fullWidth
         maxWidth="sm"
+        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
       >
         <DialogTitle sx={{ fontWeight: 900 }}>New Appointment</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <FormControlLabel
               control={
@@ -2102,9 +2098,10 @@ export default function VisitsManagement() {
         onClose={() => setApptViewOpen(false)}
         fullWidth
         maxWidth="sm"
+        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
       >
         <DialogTitle sx={{ fontWeight: 900 }}>Appointment</DialogTitle>
-        <DialogContent dividers>
+        <DialogContent dividers sx={{ overflowY: "auto" }}>
           {apptViewLoading ? (
             <Stack
               direction="row"
@@ -2119,18 +2116,34 @@ export default function VisitsManagement() {
             <Typography color="text.secondary">No data.</Typography>
           ) : (
             <>
-              <Tabs
-                value={apptViewInnerTab}
-                onChange={(_, v) => setApptViewInnerTab(v)}
-                sx={{
-                  mb: 2,
-                  minHeight: 40,
-                  "& .MuiTabs-indicator": { backgroundColor: theme.palette.primary.main },
-                }}
-              >
-                <Tab icon={<EventNoteIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Details" />
-                <Tab icon={<ReceiptIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Billing & payment" />
-              </Tabs>
+              {isMobile ? (
+                <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+                  <InputLabel id="appt-view-tab-label">View</InputLabel>
+                  <Select
+                    labelId="appt-view-tab-label"
+                    value={apptViewInnerTab}
+                    label="View"
+                    onChange={(e) => setApptViewInnerTab(Number(e.target.value))}
+                    sx={{ borderRadius: 1 }}
+                  >
+                    <MenuItem value={0}>Details</MenuItem>
+                    <MenuItem value={1}>Billing & payment</MenuItem>
+                  </Select>
+                </FormControl>
+              ) : (
+                <Tabs
+                  value={apptViewInnerTab}
+                  onChange={(_, v) => setApptViewInnerTab(v)}
+                  sx={{
+                    mb: 2,
+                    minHeight: 40,
+                    "& .MuiTabs-indicator": { backgroundColor: theme.palette.primary.main },
+                  }}
+                >
+                  <Tab icon={<EventNoteIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Details" />
+                  <Tab icon={<ReceiptIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Billing & payment" />
+                </Tabs>
+              )}
 
               {apptViewInnerTab === 0 && (
                 <Stack spacing={2} sx={{ mt: 1 }}>
@@ -2222,8 +2235,8 @@ export default function VisitsManagement() {
                           <Table size="small">
                             <TableHead>
                               <TableRow sx={{ bgcolor: "rgba(0,0,0,0.03)" }}>
-                                <TableCell sx={{ fontWeight: 700 }}>Description</TableCell>
-                                <TableCell align="right" sx={{ fontWeight: 700 }}>Amount</TableCell>
+                                <TableCell sx={{ fontWeight: 700, maxWidth: { xs: "50vw", sm: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Description</TableCell>
+                                <TableCell align="right" sx={{ fontWeight: 700, maxWidth: { xs: "22vw", sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Amount</TableCell>
                               </TableRow>
                             </TableHead>
                             <TableBody>
@@ -2331,9 +2344,10 @@ export default function VisitsManagement() {
         onClose={() => setConsViewOpen(false)}
         fullWidth
         maxWidth="md"
+        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
       >
         <DialogTitle sx={{ fontWeight: 900 }}>Consultation</DialogTitle>
-        <DialogContent dividers>
+        <DialogContent dividers sx={{ overflowY: "auto" }}>
           {consViewLoading ? (
             <Stack
               direction="row"
@@ -2455,9 +2469,10 @@ export default function VisitsManagement() {
         onClose={() => setConsEditOpen(false)}
         fullWidth
         maxWidth="sm"
+        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
       >
         <DialogTitle sx={{ fontWeight: 900 }}>Update Consultation</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
               label="Symptoms"
@@ -2512,9 +2527,10 @@ export default function VisitsManagement() {
         onClose={() => setLabOpen(false)}
         fullWidth
         maxWidth="sm"
+        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
       >
         <DialogTitle sx={{ fontWeight: 900 }}>Initiate Lab Test</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ mt: 1 }}>
             {labTestsLoading ? (
               <Stack direction="row" spacing={1} alignItems="center">
@@ -2567,9 +2583,10 @@ export default function VisitsManagement() {
         onClose={() => setRxOpen(false)}
         fullWidth
         maxWidth="md"
+        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
       >
         <DialogTitle sx={{ fontWeight: 900 }}>Prescription</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ mt: 1 }}>
             {medicationsLoading ? (
               <Stack direction="row" spacing={1} alignItems="center">
@@ -2713,9 +2730,10 @@ export default function VisitsManagement() {
         onClose={() => setAdmitOpen(false)}
         fullWidth
         maxWidth="sm"
+        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
       >
         <DialogTitle sx={{ fontWeight: 900 }}>Admit Patient</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ mt: 1 }}>
             {admitBedsLoading ? (
               <Stack direction="row" spacing={1} alignItems="center">

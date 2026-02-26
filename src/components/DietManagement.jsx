@@ -12,6 +12,7 @@ import {
   DialogTitle,
   Divider,
   FormControl,
+  IconButton,
   InputLabel,
   MenuItem,
   Select,
@@ -26,7 +27,9 @@ import {
   TablePagination,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -34,7 +37,6 @@ import {
   Edit as EditIcon,
   GetApp as DownloadIcon,
   Print as PrintIcon,
-  Refresh as RefreshIcon,
   RestaurantMenu as DietIcon,
   Assignment as OrderIcon,
   MenuBook as MealPlanIcon,
@@ -95,6 +97,7 @@ function dietOrderStatus(row) {
 
 export default function DietManagement() {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const token = getToken();
   const [tab, setTab] = useState(0);
 
@@ -566,25 +569,36 @@ export default function DietManagement() {
             Diet & Meals
           </Typography>
           <Typography variant="body2" sx={{ opacity: 0.9 }}>Inpatient diet types, orders, meal plans, and delivery logs</Typography>
-          <Button
-            variant="outlined"
-            startIcon={<RefreshIcon />}
-            onClick={refreshCurrent}
-            sx={{ borderColor: "rgba(255,255,255,0.55)", color: "white", fontWeight: 800, "&:hover": { borderColor: "rgba(255,255,255,0.85)", bgcolor: "rgba(255,255,255,0.08)" } }}
-          >
-            Refresh
-          </Button>
         </Stack>
       </Box>
 
       <CardContent sx={{ p: 0 }}>
-        <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ px: 2, "& .MuiTabs-indicator": { backgroundColor: theme.palette.primary.main } }}>
-          <Tab icon={<DietIcon />} iconPosition="start" label="Diet types" />
-          <Tab icon={<OrderIcon />} iconPosition="start" label="Diet orders" />
-          <Tab icon={<MealPlanIcon />} iconPosition="start" label="Meal plans" />
-          <Tab icon={<DeliveryIcon />} iconPosition="start" label="Delivery logs" />
-          <Tab icon={<PrintIcon />} iconPosition="start" label="Round sheet" />
-        </Tabs>
+        {isMobile ? (
+          <FormControl fullWidth size="small" sx={{ px: 2, py: 1.5 }}>
+            <InputLabel id="diet-section-label">Section</InputLabel>
+            <Select
+              labelId="diet-section-label"
+              value={tab}
+              label="Section"
+              onChange={(e) => setTab(Number(e.target.value))}
+              sx={{ borderRadius: 1 }}
+            >
+              <MenuItem value={0}>Diet types</MenuItem>
+              <MenuItem value={1}>Diet orders</MenuItem>
+              <MenuItem value={2}>Meal plans</MenuItem>
+              <MenuItem value={3}>Delivery logs</MenuItem>
+              <MenuItem value={4}>Round sheet</MenuItem>
+            </Select>
+          </FormControl>
+        ) : (
+          <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ px: 2, "& .MuiTabs-indicator": { backgroundColor: theme.palette.primary.main } }}>
+            <Tab icon={<DietIcon />} iconPosition="start" label="Diet types" />
+            <Tab icon={<OrderIcon />} iconPosition="start" label="Diet orders" />
+            <Tab icon={<MealPlanIcon />} iconPosition="start" label="Meal plans" />
+            <Tab icon={<DeliveryIcon />} iconPosition="start" label="Delivery logs" />
+            <Tab icon={<PrintIcon />} iconPosition="start" label="Round sheet" />
+          </Tabs>
+        )}
         <Divider />
 
         {/* Tab 0: Diet types */}
@@ -594,14 +608,14 @@ export default function DietManagement() {
               <TextField size="small" fullWidth label="Search (name, description)" value={dietTypesSearch} onChange={(e) => { setDietTypesSearch(e.target.value); setDietTypesPage(0); }} />
               <Button variant="contained" startIcon={<AddIcon />} onClick={openTypeCreate} sx={{ fontWeight: 900, minWidth: { xs: "100%", md: 140 } }}>Add type</Button>
             </Stack>
-            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-              <Table size="small">
+            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: "rgba(0,0,0,0.04)" }}>
-                    <TableCell sx={{ fontWeight: 900, width: 64 }}>No</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Name</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Description</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 900 }}>Actions</TableCell>
+                    <TableCell sx={{ fontWeight: 900, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Name</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Description</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -619,12 +633,16 @@ export default function DietManagement() {
                       <TableRow key={row.id} hover>
                         <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{dietTypesPage * dietTypesRowsPerPage + idx + 1}</TableCell>
                         <TableCell sx={{ fontWeight: 800 }}>{row.name}</TableCell>
-                        <TableCell sx={{ maxWidth: 360 }}>{row.description || "—"}</TableCell>
-                        <TableCell align="right">
-                          <Stack direction="row" spacing={1} justifyContent="flex-end">
-                            <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => openTypeEdit(row)} sx={{ fontWeight: 800 }}>Edit</Button>
-                            <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => deleteType(row.id)} sx={{ fontWeight: 800 }}>Delete</Button>
-                          </Stack>
+                        <TableCell sx={{ maxWidth: 360, display: { xs: "none", md: "table-cell" } }}>{row.description || "—"}</TableCell>
+                        <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                          <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
+                            <Tooltip title="Edit">
+                              <IconButton size="small" color="primary" onClick={() => openTypeEdit(row)} aria-label="Edit"><EditIcon fontSize="inherit" /></IconButton>
+                            </Tooltip>
+                            <Tooltip title="Delete">
+                              <IconButton size="small" color="error" onClick={() => deleteType(row.id)} aria-label="Delete"><DeleteIcon fontSize="inherit" /></IconButton>
+                            </Tooltip>
+                          </Box>
                         </TableCell>
                       </TableRow>
                     ))
@@ -658,18 +676,18 @@ export default function DietManagement() {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
               You can add multiple diet orders per admission. Edit an order to extend the end date, or add a new order when the patient stays longer.
             </Typography>
-            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-              <Table size="small">
+            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: "rgba(0,0,0,0.04)" }}>
-                    <TableCell sx={{ fontWeight: 900, width: 64 }}>No</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Admission</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Diet type</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Start</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>End</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Prescribed by</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 900 }}>Actions</TableCell>
+                    <TableCell sx={{ fontWeight: 900, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Admission</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Diet type</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Start</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>End</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 140 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Prescribed by</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -689,18 +707,22 @@ export default function DietManagement() {
                         <TableRow key={row.id} hover>
                           <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{ordersPage * ordersRowsPerPage + idx + 1}</TableCell>
                           <TableCell>{admissionLabel(row.admission)}</TableCell>
-                          <TableCell>{row.dietType?.name ?? "—"}</TableCell>
-                          <TableCell>{formatDate(row.start_date)}</TableCell>
-                          <TableCell>{formatDate(row.end_date)}</TableCell>
-                          <TableCell>
+                          <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{row.dietType?.name ?? "—"}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{formatDate(row.start_date)}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{formatDate(row.end_date)}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
                             <Chip size="small" label={status} color={status === "Active" ? "success" : "default"} variant="outlined" />
                           </TableCell>
-                          <TableCell>{row.prescribedBy?.user?.full_name ?? "—"}</TableCell>
-                          <TableCell align="right">
-                            <Stack direction="row" spacing={1} justifyContent="flex-end">
-                              <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => openOrderEdit(row)} sx={{ fontWeight: 800 }}>Edit</Button>
-                              <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => deleteOrder(row.id)} sx={{ fontWeight: 800 }}>Delete</Button>
-                            </Stack>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{row.prescribedBy?.user?.full_name ?? "—"}</TableCell>
+                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
+                              <Tooltip title="Edit">
+                                <IconButton size="small" color="primary" onClick={() => openOrderEdit(row)} aria-label="Edit"><EditIcon fontSize="inherit" /></IconButton>
+                              </Tooltip>
+                              <Tooltip title="Delete">
+                                <IconButton size="small" color="error" onClick={() => deleteOrder(row.id)} aria-label="Delete"><DeleteIcon fontSize="inherit" /></IconButton>
+                              </Tooltip>
+                            </Box>
                           </TableCell>
                         </TableRow>
                       );
@@ -757,9 +779,13 @@ export default function DietManagement() {
                         <Chip label={mealPlansPage * mealPlansRowsPerPage + idx + 1} size="small" sx={{ fontWeight: 800, minWidth: 32 }} />
                         <Typography variant="h6" sx={{ fontWeight: 800 }}>{row.dietType?.name ?? "—"}</Typography>
                       </Stack>
-                      <Stack direction="row" spacing={1}>
-                        <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => openPlanEdit(row)} sx={{ fontWeight: 700 }}>Edit</Button>
-                        <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => deletePlan(row.id)} sx={{ fontWeight: 700 }}>Delete</Button>
+                      <Stack direction="row" spacing={0.5}>
+                        <Tooltip title="Edit">
+                          <IconButton size="small" color="primary" onClick={() => openPlanEdit(row)} aria-label="Edit"><EditIcon fontSize="inherit" /></IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete">
+                          <IconButton size="small" color="error" onClick={() => deletePlan(row.id)} aria-label="Delete"><DeleteIcon fontSize="inherit" /></IconButton>
+                        </Tooltip>
                       </Stack>
                     </Box>
                     <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
@@ -811,17 +837,17 @@ export default function DietManagement() {
               </FormControl>
               <Button variant="contained" startIcon={<AddIcon />} onClick={openLogCreate} sx={{ fontWeight: 900 }}>Log delivery</Button>
             </Stack>
-            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-              <Table size="small">
+            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: "rgba(0,0,0,0.04)" }}>
-                    <TableCell sx={{ fontWeight: 900, width: 64 }}>No</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Admission</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Meal</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Date</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Delivered by</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Status</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 900 }}>Actions</TableCell>
+                    <TableCell sx={{ fontWeight: 900, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Admission</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Meal</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 110 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Date</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 140 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Delivered by</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Status</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -839,15 +865,19 @@ export default function DietManagement() {
                       <TableRow key={row.id} hover>
                         <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{deliveryLogsPage * deliveryLogsRowsPerPage + idx + 1}</TableCell>
                         <TableCell>{admissionLabel(row.admission)}</TableCell>
-                        <TableCell sx={{ textTransform: "capitalize" }}>{row.meal_type}</TableCell>
-                        <TableCell>{formatDate(row.date)}</TableCell>
-                        <TableCell>{row.deliveredBy?.user?.full_name ?? "—"}</TableCell>
-                        <TableCell><Chip size="small" label={row.status} color={row.status === "delivered" ? "success" : "default"} variant="outlined" /></TableCell>
-                        <TableCell align="right">
-                          <Stack direction="row" spacing={1} justifyContent="flex-end">
-                            <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => openLogEdit(row)} sx={{ fontWeight: 800 }}>Edit</Button>
-                            <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => deleteLog(row.id)} sx={{ fontWeight: 800 }}>Delete</Button>
-                          </Stack>
+                        <TableCell sx={{ textTransform: "capitalize", display: { xs: "none", sm: "table-cell" } }}>{row.meal_type}</TableCell>
+                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{formatDate(row.date)}</TableCell>
+                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{row.deliveredBy?.user?.full_name ?? "—"}</TableCell>
+                        <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}><Chip size="small" label={row.status} color={row.status === "delivered" ? "success" : "default"} variant="outlined" /></TableCell>
+                        <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                          <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
+                            <Tooltip title="Edit">
+                              <IconButton size="small" color="primary" onClick={() => openLogEdit(row)} aria-label="Edit"><EditIcon fontSize="inherit" /></IconButton>
+                            </Tooltip>
+                            <Tooltip title="Delete">
+                              <IconButton size="small" color="error" onClick={() => deleteLog(row.id)} aria-label="Delete"><DeleteIcon fontSize="inherit" /></IconButton>
+                            </Tooltip>
+                          </Box>
                         </TableCell>
                       </TableRow>
                     ))

@@ -32,6 +32,7 @@ import {
   TextField,
   Tooltip,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -44,7 +45,6 @@ import {
   Event as EventIcon,
   Article as ArticleIcon,
   PeopleAlt as PeopleAltIcon,
-  Refresh as RefreshIcon,
   Schedule as ScheduleIcon,
   Visibility as VisibilityIcon,
 } from "@mui/icons-material";
@@ -173,6 +173,7 @@ const slugify = (value) =>
 
 export default function HospitalsManagement() {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const token = getToken();
   const isAdmin = getRoleName() === "admin";
 
@@ -230,6 +231,9 @@ export default function HospitalsManagement() {
   const [staffSchedules, setStaffSchedules] = useState([]);
   const [staffSchedulesLoading, setStaffSchedulesLoading] = useState(false);
   const [scheduleForm, setScheduleForm] = useState({ day_of_week: 1, start_time: "09:00", end_time: "17:00" });
+  const [currentStaffId, setCurrentStaffId] = useState(null);
+  const [editScheduleSlot, setEditScheduleSlot] = useState(null);
+  const [editScheduleForm, setEditScheduleForm] = useState({ day_of_week: 0, start_time: "09:00", end_time: "17:00" });
 
   // Lookup options
   const [userOptions, setUserOptions] = useState([]);
@@ -861,7 +865,16 @@ export default function HospitalsManagement() {
   const openScheduleDialog = (s) => {
     setScheduleDialog({ open: true, staff: s });
     setScheduleForm({ day_of_week: 1, start_time: "09:00", end_time: "17:00" });
+    setEditScheduleSlot(null);
     loadStaffSchedules(s.id);
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    if (user?.id) {
+      fetchJson(`${API.staff}?user_id=${user.id}&limit=1`, { token: getToken() })
+        .then((r) => setCurrentStaffId(r.data?.[0]?.id ?? null))
+        .catch(() => setCurrentStaffId(null));
+    } else {
+      setCurrentStaffId(null);
+    }
   };
   const addSchedule = async () => {
     if (!scheduleDialog.staff?.id) return;
@@ -905,6 +918,43 @@ export default function HospitalsManagement() {
       await fetchJson(`${API.schedules}/${scheduleId}`, { method: "DELETE", token });
       Swal.fire({ icon: "success", title: "Removed", text: "Schedule slot removed." });
       if (scheduleDialog.staff?.id) await loadStaffSchedules(scheduleDialog.staff.id);
+      setEditScheduleSlot(null);
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Failed", text: e.message });
+    }
+  };
+
+  const canEditSchedules = isAdmin || (Boolean(currentStaffId) && scheduleDialog.staff?.id === currentStaffId);
+
+  const startEditSchedule = (slot) => {
+    setEditScheduleSlot(slot);
+    setEditScheduleForm({
+      day_of_week: Number(slot.day_of_week),
+      start_time: String(slot.start_time).slice(0, 5),
+      end_time: String(slot.end_time).slice(0, 5),
+    });
+  };
+
+  const saveEditSchedule = async () => {
+    if (!editScheduleSlot?.id) return;
+    const start = editScheduleForm.start_time;
+    const end = editScheduleForm.end_time;
+    if (!start || !end) return Swal.fire({ icon: "warning", title: "Required", text: "Start and end time are required." });
+    const isMidnight = end === "00:00" || end.startsWith("00:00:");
+    if (!isMidnight && start >= end) return Swal.fire({ icon: "warning", title: "Invalid times", text: "End time must be after start time." });
+    try {
+      await fetchJson(`${API.schedules}/${editScheduleSlot.id}`, {
+        method: "PUT",
+        token: getToken(),
+        body: {
+          day_of_week: editScheduleForm.day_of_week,
+          start_time: start.length === 5 ? `${start}:00` : start,
+          end_time: end.length === 5 ? `${end}:00` : end,
+        },
+      });
+      Swal.fire({ icon: "success", title: "Updated", text: "Schedule slot updated." });
+      if (scheduleDialog.staff?.id) await loadStaffSchedules(scheduleDialog.staff.id);
+      setEditScheduleSlot(null);
     } catch (e) {
       Swal.fire({ icon: "error", title: "Failed", text: e.message });
     }
@@ -1306,23 +1356,6 @@ export default function HospitalsManagement() {
               <Typography sx={{ opacity: 0.92, mt: 0.5 }}>Manage your hospital profile, departments, staff, and updates.</Typography>
             </Box>
             <Stack direction="row" spacing={1}>
-              <Tooltip title="Refresh">
-                <IconButton
-                  onClick={() => {
-                    if (tab === 0) loadHospitals();
-                    if (tab === 1) loadDepartmentsList();
-                    if (tab === 2) loadStaff();
-                    if (tab === 3) loadServicesList();
-                    if (tab === 4) {
-                      if (contentTab === 0) loadNews();
-                      if (contentTab === 1) loadEvents();
-                    }
-                  }}
-                  sx={{ color: "white", border: "1px solid rgba(255,255,255,0.3)" }}
-                >
-                  <RefreshIcon />
-                </IconButton>
-              </Tooltip>
               {isAdmin && tab === 0 && !hospitalsLoading && hospitals.length === 0 && (
                 <Button
                   variant="contained"
@@ -1408,22 +1441,41 @@ export default function HospitalsManagement() {
         </Box>
 
         <CardContent sx={{ p: 0 }}>
-          <Tabs
-            value={tab}
-            onChange={(_, v) => setTab(v)}
-            sx={{
-              px: 2,
-              "& .MuiTabs-indicator": { backgroundColor: "primary.main" },
-              "& .MuiTab-root.Mui-selected": { color: "primary.main", fontWeight: 700 },
-              "& .MuiTab-root": { color: "text.secondary" },
-            }}
-          >
-            <Tab icon={<LocalHospitalIcon />} iconPosition="start" label="Hospital" />
-            <Tab icon={<PeopleAltIcon />} iconPosition="start" label="Departments" />
-            <Tab icon={<PeopleAltIcon />} iconPosition="start" label="Staff" />
-            <Tab icon={<MedicalServicesIcon />} iconPosition="start" label="Services" />
-            <Tab icon={<CampaignIcon />} iconPosition="start" label="News & Events" />
-          </Tabs>
+          {isMobile ? (
+            <FormControl fullWidth size="small" sx={{ px: 2, py: 1.5 }}>
+              <InputLabel id="hospitals-section-label">Section</InputLabel>
+              <Select
+                labelId="hospitals-section-label"
+                value={tab}
+                label="Section"
+                onChange={(e) => setTab(Number(e.target.value))}
+                sx={{ borderRadius: 1 }}
+              >
+                <MenuItem value={0}>Hospital</MenuItem>
+                <MenuItem value={1}>Departments</MenuItem>
+                <MenuItem value={2}>Staff</MenuItem>
+                <MenuItem value={3}>Services</MenuItem>
+                <MenuItem value={4}>News & Events</MenuItem>
+              </Select>
+            </FormControl>
+          ) : (
+            <Tabs
+              value={tab}
+              onChange={(_, v) => setTab(v)}
+              sx={{
+                px: 2,
+                "& .MuiTabs-indicator": { backgroundColor: "primary.main" },
+                "& .MuiTab-root.Mui-selected": { color: "primary.main", fontWeight: 700 },
+                "& .MuiTab-root": { color: "text.secondary" },
+              }}
+            >
+              <Tab icon={<LocalHospitalIcon />} iconPosition="start" label="Hospital" />
+              <Tab icon={<PeopleAltIcon />} iconPosition="start" label="Departments" />
+              <Tab icon={<PeopleAltIcon />} iconPosition="start" label="Staff" />
+              <Tab icon={<MedicalServicesIcon />} iconPosition="start" label="Services" />
+              <Tab icon={<CampaignIcon />} iconPosition="start" label="News & Events" />
+            </Tabs>
+          )}
           <Divider />
 
           {/* Hospital */}
@@ -1532,14 +1584,14 @@ export default function HospitalsManagement() {
                 />
               </Stack>
 
-              <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
-                <Table size="small">
+              <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider", overflowX: "auto", maxWidth: "100%" }}>
+                <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                   <TableHead>
                     <TableRow sx={{ bgcolor: "grey.100" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Department</TableCell>
-                      <TableCell sx={{ fontWeight: 800, width: 360 }}>Description</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 800, whiteSpace: "nowrap" }}>
+                      <TableCell sx={{ fontWeight: 800, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Department</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: 360, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 280 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Description</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800, whiteSpace: "nowrap", maxWidth: { xs: "22vw", sm: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
                         Actions
                       </TableCell>
                     </TableRow>
@@ -1558,38 +1610,42 @@ export default function HospitalsManagement() {
                       departments.map((d, idx) => (
                         <TableRow key={d.id} hover>
                           <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{deptPage * deptRowsPerPage + idx + 1}</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>{d.name}</TableCell>
+                          <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "28vw", sm: 160, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</TableCell>
                           <TableCell
                             sx={{
-                              maxWidth: 360,
+                              maxWidth: { md: 280 },
                               whiteSpace: "nowrap",
                               overflow: "hidden",
                               textOverflow: "ellipsis",
+                              display: { xs: "none", md: "table-cell" },
+                              minWidth: 0,
                             }}
                             title={d.description || ""}
                           >
                             {d.description || "—"}
                           </TableCell>
-                          <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
-                            <Tooltip title="View">
-                              <IconButton onClick={() => openViewDept(d)} size="small">
-                                <VisibilityIcon fontSize="inherit" />
-                              </IconButton>
-                            </Tooltip>
-                            {isAdmin && (
-                              <>
-                                <Tooltip title="Edit">
-                                  <IconButton onClick={() => openEditDept(d)} size="small">
-                                    <EditIcon fontSize="inherit" />
-                                  </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Delete">
-                                  <IconButton onClick={() => deleteDept(d)} size="small" color="error">
-                                    <DeleteIcon fontSize="inherit" />
-                                  </IconButton>
-                                </Tooltip>
-                              </>
-                            )}
+                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
+                              <Tooltip title="View">
+                                <IconButton onClick={() => openViewDept(d)} size="small">
+                                  <VisibilityIcon fontSize="inherit" />
+                                </IconButton>
+                              </Tooltip>
+                              {isAdmin && (
+                                <>
+                                  <Tooltip title="Edit">
+                                    <IconButton onClick={() => openEditDept(d)} size="small">
+                                      <EditIcon fontSize="inherit" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Delete">
+                                    <IconButton onClick={() => deleteDept(d)} size="small" color="error">
+                                      <DeleteIcon fontSize="inherit" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </>
+                              )}
+                            </Box>
                           </TableCell>
                         </TableRow>
                       ))
@@ -1815,16 +1871,16 @@ export default function HospitalsManagement() {
                 </Alert>
               )}
 
-              <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
-                <Table size="small">
+              <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider", overflowX: "auto", maxWidth: "100%" }}>
+                <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                   <TableHead>
                     <TableRow sx={{ bgcolor: "grey.100" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Service</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Department</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Price</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Status</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 800, whiteSpace: "nowrap" }}>
+                      <TableCell sx={{ fontWeight: 800, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+<TableCell sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Service</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 140 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Department</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Price</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Status</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800, whiteSpace: "nowrap", maxWidth: { xs: "22vw", sm: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
                         Actions
                       </TableCell>
                     </TableRow>
@@ -1860,31 +1916,33 @@ export default function HospitalsManagement() {
                               </Box>
                             </Stack>
                           </TableCell>
-                          <TableCell>{s.department?.name || "—"}</TableCell>
-                          <TableCell>{s.price != null && s.price !== "" ? s.price : "—"}</TableCell>
-                          <TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{s.department?.name || "—"}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{s.price != null && s.price !== "" ? s.price : "—"}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
                             <Chip size="small" label={s.status} color={s.status === "active" ? "success" : "default"} variant={s.status === "active" ? "filled" : "outlined"} />
                           </TableCell>
-                          <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
-                            <Tooltip title="View">
-                              <IconButton onClick={() => openViewService(s)} size="small">
-                                <VisibilityIcon fontSize="inherit" />
-                              </IconButton>
-                            </Tooltip>
-                            {isAdmin && (
-                              <>
-                                <Tooltip title="Edit">
-                                  <IconButton onClick={() => openEditService(s)} size="small">
-                                    <EditIcon fontSize="inherit" />
-                                  </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Delete">
-                                  <IconButton onClick={() => deleteService(s)} size="small" color="error">
-                                    <DeleteIcon fontSize="inherit" />
-                                  </IconButton>
-                                </Tooltip>
-                              </>
-                            )}
+                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
+                              <Tooltip title="View">
+                                <IconButton onClick={() => openViewService(s)} size="small">
+                                  <VisibilityIcon fontSize="inherit" />
+                                </IconButton>
+                              </Tooltip>
+                              {isAdmin && (
+                                <>
+                                  <Tooltip title="Edit">
+                                    <IconButton onClick={() => openEditService(s)} size="small">
+                                      <EditIcon fontSize="inherit" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Delete">
+                                    <IconButton onClick={() => deleteService(s)} size="small" color="error">
+                                      <DeleteIcon fontSize="inherit" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </>
+                              )}
+                            </Box>
                           </TableCell>
                         </TableRow>
                       ))
@@ -1919,14 +1977,30 @@ export default function HospitalsManagement() {
           {/* News & Events */}
           {tab === 4 && (
             <Box sx={{ p: 2 }}>
-              <Tabs
-                value={contentTab}
-                onChange={(_, v) => setContentTab(v)}
-                sx={{ mb: 2, "& .MuiTabs-indicator": { backgroundColor: "primary.main" }, "& .MuiTab-root.Mui-selected": { color: "primary.main", fontWeight: 700 }, "& .MuiTab-root": { color: "text.secondary" } }}
-              >
-                <Tab icon={<ArticleIcon />} iconPosition="start" label="News" />
-                <Tab icon={<EventIcon />} iconPosition="start" label="Events" />
-              </Tabs>
+              {isMobile ? (
+                <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+                  <InputLabel id="news-events-label">Content</InputLabel>
+                  <Select
+                    labelId="news-events-label"
+                    value={contentTab}
+                    label="Content"
+                    onChange={(e) => setContentTab(Number(e.target.value))}
+                    sx={{ borderRadius: 1 }}
+                  >
+                    <MenuItem value={0}>News</MenuItem>
+                    <MenuItem value={1}>Events</MenuItem>
+                  </Select>
+                </FormControl>
+              ) : (
+                <Tabs
+                  value={contentTab}
+                  onChange={(_, v) => setContentTab(v)}
+                  sx={{ mb: 2, "& .MuiTabs-indicator": { backgroundColor: "primary.main" }, "& .MuiTab-root.Mui-selected": { color: "primary.main", fontWeight: 700 }, "& .MuiTab-root": { color: "text.secondary" } }}
+                >
+                  <Tab icon={<ArticleIcon />} iconPosition="start" label="News" />
+                  <Tab icon={<EventIcon />} iconPosition="start" label="Events" />
+                </Tabs>
+              )}
               <Divider sx={{ mb: 2 }} />
 
               {contentTab === 0 && (
@@ -1947,16 +2021,16 @@ export default function HospitalsManagement() {
                     sx={{ mb: 2 }}
                   />
 
-                  <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
-                    <Table size="small">
+                  <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider", overflowX: "auto", maxWidth: "100%" }}>
+                    <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                       <TableHead>
                         <TableRow sx={{ bgcolor: "grey.100" }}>
-                          <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>Title</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>Hospital</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>Category</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>Status</TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 800 }}>
+                          <TableCell sx={{ fontWeight: 800, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                          <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Title</TableCell>
+                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 140 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Hospital</TableCell>
+                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Category</TableCell>
+                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Status</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             Actions
                           </TableCell>
                         </TableRow>
@@ -1976,31 +2050,33 @@ export default function HospitalsManagement() {
                             <TableRow key={n.id} hover>
                               <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{newsPage * newsRowsPerPage + idx + 1}</TableCell>
                               <TableCell sx={{ fontWeight: 800 }}>{n.title}</TableCell>
-                              <TableCell>{hospitals.find((h) => h.id === n.hospital_id)?.name || "—"}</TableCell>
-                              <TableCell>{n.category}</TableCell>
-                              <TableCell>
+                              <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{hospitals.find((h) => h.id === n.hospital_id)?.name || "—"}</TableCell>
+                              <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{n.category}</TableCell>
+                              <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
                                 <Chip size="small" label={n.status} sx={{ fontWeight: 800 }} />
                               </TableCell>
-                              <TableCell align="right">
-                                <Tooltip title="View">
-                                  <IconButton onClick={() => openViewNews(n)} size="small">
-                                    <VisibilityIcon fontSize="inherit" />
-                                  </IconButton>
-                                </Tooltip>
-                                {isAdmin && (
-                                  <>
-                                    <Tooltip title="Edit">
-                                      <IconButton onClick={() => openEditNews(n)} size="small">
-                                        <EditIcon fontSize="inherit" />
-                                      </IconButton>
-                                    </Tooltip>
-                                    <Tooltip title="Delete">
-                                      <IconButton onClick={() => deleteNews(n)} size="small" color="error">
-                                        <DeleteIcon fontSize="inherit" />
-                                      </IconButton>
-                                    </Tooltip>
-                                  </>
-                                )}
+                              <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                                <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
+                                  <Tooltip title="View">
+                                    <IconButton onClick={() => openViewNews(n)} size="small">
+                                      <VisibilityIcon fontSize="inherit" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  {isAdmin && (
+                                    <>
+                                      <Tooltip title="Edit">
+                                        <IconButton onClick={() => openEditNews(n)} size="small">
+                                          <EditIcon fontSize="inherit" />
+                                        </IconButton>
+                                      </Tooltip>
+                                      <Tooltip title="Delete">
+                                        <IconButton onClick={() => deleteNews(n)} size="small" color="error">
+                                          <DeleteIcon fontSize="inherit" />
+                                        </IconButton>
+                                      </Tooltip>
+                                    </>
+                                  )}
+                                </Box>
                               </TableCell>
                             </TableRow>
                           ))
@@ -2050,16 +2126,16 @@ export default function HospitalsManagement() {
                     sx={{ mb: 2 }}
                   />
 
-                  <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider" }}>
-                    <Table size="small">
+                  <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider", overflowX: "auto", maxWidth: "100%" }}>
+                    <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                       <TableHead>
                         <TableRow sx={{ bgcolor: "grey.100" }}>
-                          <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>Title</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>Hospital</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>Status</TableCell>
-                          <TableCell align="right" sx={{ fontWeight: 800 }}>
+                          <TableCell sx={{ fontWeight: 800, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                          <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Title</TableCell>
+                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 140 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Hospital</TableCell>
+                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 110 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Date</TableCell>
+                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Status</TableCell>
+                          <TableCell align="right" sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             Actions
                           </TableCell>
                         </TableRow>
@@ -2079,31 +2155,33 @@ export default function HospitalsManagement() {
                             <TableRow key={ev.id} hover>
                               <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{eventsPage * eventsRowsPerPage + idx + 1}</TableCell>
                               <TableCell sx={{ fontWeight: 800 }}>{ev.title}</TableCell>
-                              <TableCell>{hospitals.find((h) => h.id === ev.hospital_id)?.name || "—"}</TableCell>
-                              <TableCell>{ev.event_date || "—"}</TableCell>
-                              <TableCell>
+                              <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{hospitals.find((h) => h.id === ev.hospital_id)?.name || "—"}</TableCell>
+                              <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{ev.event_date || "—"}</TableCell>
+                              <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
                                 <Chip size="small" label={ev.status} sx={{ fontWeight: 800 }} />
                               </TableCell>
-                              <TableCell align="right">
-                                <Tooltip title="View">
-                                  <IconButton onClick={() => openViewEvent(ev)} size="small">
-                                    <VisibilityIcon fontSize="inherit" />
-                                  </IconButton>
-                                </Tooltip>
-                                {isAdmin && (
-                                  <>
-                                    <Tooltip title="Edit">
-                                      <IconButton onClick={() => openEditEvent(ev)} size="small">
-                                        <EditIcon fontSize="inherit" />
-                                      </IconButton>
-                                    </Tooltip>
-                                    <Tooltip title="Delete">
-                                      <IconButton onClick={() => deleteEvent(ev)} size="small" color="error">
-                                        <DeleteIcon fontSize="inherit" />
-                                      </IconButton>
-                                    </Tooltip>
-                                  </>
-                                )}
+                              <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                                <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
+                                  <Tooltip title="View">
+                                    <IconButton onClick={() => openViewEvent(ev)} size="small">
+                                      <VisibilityIcon fontSize="inherit" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  {isAdmin && (
+                                    <>
+                                      <Tooltip title="Edit">
+                                        <IconButton onClick={() => openEditEvent(ev)} size="small">
+                                          <EditIcon fontSize="inherit" />
+                                        </IconButton>
+                                      </Tooltip>
+                                      <Tooltip title="Delete">
+                                        <IconButton onClick={() => deleteEvent(ev)} size="small" color="error">
+                                          <DeleteIcon fontSize="inherit" />
+                                        </IconButton>
+                                      </Tooltip>
+                                    </>
+                                  )}
+                                </Box>
                               </TableCell>
                             </TableRow>
                           ))
@@ -2140,9 +2218,9 @@ export default function HospitalsManagement() {
       </Card>
 
       {/* Hospital view */}
-      <Dialog open={hospitalView.open} onClose={() => setHospitalView({ open: false, hospital: null })} fullWidth maxWidth="sm">
+      <Dialog open={hospitalView.open} onClose={() => setHospitalView({ open: false, hospital: null })} fullWidth maxWidth="sm" PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle sx={{ fontWeight: 900 }}>Hospital Details</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={1.25} sx={{ mt: 0.5 }}>
             <Stack direction="row" spacing={2} alignItems="center">
               <Avatar
@@ -2188,9 +2266,9 @@ export default function HospitalsManagement() {
       </Dialog>
 
       {/* Hospital create/edit */}
-      <Dialog open={hospitalDialog.open} onClose={() => setHospitalDialog({ open: false, mode: "create", id: null })} fullWidth maxWidth="sm">
+      <Dialog open={hospitalDialog.open} onClose={() => setHospitalDialog({ open: false, mode: "create", id: null })} fullWidth maxWidth="sm" PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle sx={{ fontWeight: 900 }}>{hospitalDialog.mode === "create" ? "Create Hospital" : "Edit Hospital"}</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Stack direction="row" spacing={2} alignItems="center">
               <Avatar
@@ -2242,9 +2320,9 @@ export default function HospitalsManagement() {
       </Dialog>
 
       {/* Staff view */}
-      <Dialog open={staffView.open} onClose={() => setStaffView({ open: false, staff: null })} fullWidth maxWidth="sm">
+      <Dialog open={staffView.open} onClose={() => setStaffView({ open: false, staff: null })} fullWidth maxWidth="sm" PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle sx={{ fontWeight: 900 }}>Staff Details</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={1.25} sx={{ mt: 0.5 }}>
             <Typography sx={{ fontWeight: 900, fontSize: 18 }}>{staffView.staff?.user?.full_name || "—"}</Typography>
             <Typography variant="body2" color="text.secondary">
@@ -2307,11 +2385,11 @@ export default function HospitalsManagement() {
       </Dialog>
 
       {/* Staff schedule */}
-      <Dialog open={scheduleDialog.open} onClose={() => setScheduleDialog({ open: false, staff: null })} fullWidth maxWidth="sm">
+      <Dialog open={scheduleDialog.open} onClose={() => setScheduleDialog({ open: false, staff: null })} fullWidth maxWidth="md" PaperProps={{ sx: { maxWidth: 675, maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle sx={{ fontWeight: 900 }}>
           Schedule — {scheduleDialog.staff?.user?.full_name || "Staff"}
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ mt: 0.5 }}>
             {staffSchedulesLoading ? (
               <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
@@ -2328,31 +2406,79 @@ export default function HospitalsManagement() {
                 ) : (
                   <Stack spacing={0.5}>
                     {staffSchedules.map((slot) => (
-                      <Stack
-                        key={slot.id}
-                        direction="row"
-                        alignItems="center"
-                        justifyContent="space-between"
-                        sx={{
-                          py: 1,
-                          px: 1.5,
-                          borderRadius: 1,
-                          bgcolor: "action.hover",
-                        }}
-                      >
-                        <Typography variant="body2" fontWeight={600}>
-                          {DAY_NAMES[slot.day_of_week]} — {String(slot.start_time).slice(0, 5)} – {String(slot.end_time).slice(0, 5)}
-                        </Typography>
-                        {isAdmin && (
-                          <IconButton onClick={() => removeSchedule(slot.id)} size="small" color="error" aria-label="Remove slot">
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        )}
-                      </Stack>
+                      editScheduleSlot?.id === slot.id ? (
+                        <Stack key={slot.id} spacing={1.5} sx={{ py: 1.5, px: 1.5, borderRadius: 1, bgcolor: "action.selected" }}>
+                          <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ sm: "flex-end" }} flexWrap="wrap">
+                            <FormControl size="small" sx={{ minWidth: 140 }}>
+                              <InputLabel>Day</InputLabel>
+                              <Select
+                                value={editScheduleForm.day_of_week}
+                                label="Day"
+                                onChange={(e) => setEditScheduleForm((p) => ({ ...p, day_of_week: Number(e.target.value) }))}
+                              >
+                                {DAY_NAMES.map((name, i) => (
+                                  <MenuItem key={i} value={i}>{name}</MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                            <TextField
+                              label="Start"
+                              type="time"
+                              size="small"
+                              value={editScheduleForm.start_time}
+                              onChange={(e) => setEditScheduleForm((p) => ({ ...p, start_time: e.target.value }))}
+                              InputLabelProps={{ shrink: true }}
+                              inputProps={{ step: 300 }}
+                              sx={{ width: 120 }}
+                            />
+                            <TextField
+                              label="End"
+                              type="time"
+                              size="small"
+                              value={editScheduleForm.end_time}
+                              onChange={(e) => setEditScheduleForm((p) => ({ ...p, end_time: e.target.value }))}
+                              InputLabelProps={{ shrink: true }}
+                              inputProps={{ step: 300 }}
+                              sx={{ width: 120 }}
+                            />
+                            <Stack direction="row" spacing={0.5}>
+                              <Button size="small" variant="contained" onClick={saveEditSchedule}>Save</Button>
+                              <Button size="small" onClick={() => setEditScheduleSlot(null)}>Cancel</Button>
+                            </Stack>
+                          </Stack>
+                        </Stack>
+                      ) : (
+                        <Stack
+                          key={slot.id}
+                          direction="row"
+                          alignItems="center"
+                          justifyContent="space-between"
+                          sx={{
+                            py: 1,
+                            px: 1.5,
+                            borderRadius: 1,
+                            bgcolor: "action.hover",
+                          }}
+                        >
+                          <Typography variant="body2" fontWeight={600}>
+                            {DAY_NAMES[slot.day_of_week]} — {String(slot.start_time).slice(0, 5)} – {String(slot.end_time).slice(0, 5)}
+                          </Typography>
+                          {canEditSchedules && (
+                            <Stack direction="row" spacing={0}>
+                              <IconButton onClick={() => startEditSchedule(slot)} size="small" color="primary" aria-label="Edit slot">
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton onClick={() => removeSchedule(slot.id)} size="small" color="error" aria-label="Remove slot">
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Stack>
+                          )}
+                        </Stack>
+                      )
                     ))}
                   </Stack>
                 )}
-                {isAdmin && (
+                {canEditSchedules && (
                   <>
                     <Divider />
                     <Typography variant="subtitle2" color="text.secondary">
@@ -2407,9 +2533,9 @@ export default function HospitalsManagement() {
       </Dialog>
 
       {/* Staff create/edit */}
-      <Dialog open={staffDialog.open} onClose={() => setStaffDialog({ open: false, mode: "create", id: null })} fullWidth maxWidth="sm">
+      <Dialog open={staffDialog.open} onClose={() => setStaffDialog({ open: false, mode: "create", id: null })} fullWidth maxWidth="sm" PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle sx={{ fontWeight: 900 }}>{staffDialog.mode === "create" ? "Create Staff" : "Edit Staff"}</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Alert severity="info">
               Staff profiles link an existing <b>User</b> to a <b>Hospital</b> (and optional Department). Create the user first in “Users & Roles”.
@@ -2470,9 +2596,9 @@ export default function HospitalsManagement() {
       </Dialog>
 
       {/* Department view */}
-      <Dialog open={deptView.open} onClose={() => setDeptView({ open: false, department: null })} fullWidth maxWidth="sm">
+      <Dialog open={deptView.open} onClose={() => setDeptView({ open: false, department: null })} fullWidth maxWidth="sm" PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle sx={{ fontWeight: 900 }}>Department Details</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={1.25} sx={{ mt: 0.5 }}>
             <Typography sx={{ fontWeight: 900, fontSize: 18 }}>{deptView.department?.name || "—"}</Typography>
             <Typography variant="body2" color="text.secondary">
@@ -2493,9 +2619,9 @@ export default function HospitalsManagement() {
       </Dialog>
 
       {/* Department create/edit */}
-      <Dialog open={deptDialog.open} onClose={() => setDeptDialog({ open: false, mode: "create", id: null })} fullWidth maxWidth="sm">
+      <Dialog open={deptDialog.open} onClose={() => setDeptDialog({ open: false, mode: "create", id: null })} fullWidth maxWidth="sm" PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle sx={{ fontWeight: 900 }}>{deptDialog.mode === "create" ? "Create Department" : "Edit Department"}</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Autocomplete
               options={hospitals}
@@ -2528,9 +2654,9 @@ export default function HospitalsManagement() {
       </Dialog>
 
       {/* Service view */}
-      <Dialog open={svcView.open} onClose={() => setSvcView({ open: false, service: null })} fullWidth maxWidth="sm">
+      <Dialog open={svcView.open} onClose={() => setSvcView({ open: false, service: null })} fullWidth maxWidth="sm" PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle sx={{ fontWeight: 900 }}>Service Details</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={1.25} sx={{ mt: 0.5 }}>
             <Stack direction="row" spacing={2} alignItems="center">
               <Avatar
@@ -2576,9 +2702,9 @@ export default function HospitalsManagement() {
       </Dialog>
 
       {/* Service create/edit */}
-      <Dialog open={svcDialog.open} onClose={() => setSvcDialog({ open: false, mode: "create", id: null })} fullWidth maxWidth="sm">
+      <Dialog open={svcDialog.open} onClose={() => setSvcDialog({ open: false, mode: "create", id: null })} fullWidth maxWidth="sm" PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle sx={{ fontWeight: 900 }}>{svcDialog.mode === "create" ? "Create Service" : "Edit Service"}</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Stack direction="row" spacing={2} alignItems="center">
               <Avatar
@@ -2671,9 +2797,9 @@ export default function HospitalsManagement() {
       </Dialog>
 
       {/* News view */}
-      <Dialog open={newsView.open} onClose={() => setNewsView({ open: false, news: null })} fullWidth maxWidth="md">
+      <Dialog open={newsView.open} onClose={() => setNewsView({ open: false, news: null })} fullWidth maxWidth="md" PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle sx={{ fontWeight: 900 }}>News Details</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={1.25} sx={{ mt: 0.5 }}>
             <Stack direction="row" spacing={2} alignItems="center">
               <Avatar
@@ -2721,9 +2847,9 @@ export default function HospitalsManagement() {
       </Dialog>
 
       {/* News create/edit */}
-      <Dialog open={newsDialog.open} onClose={() => setNewsDialog({ open: false, mode: "create", id: null })} fullWidth maxWidth="md">
+      <Dialog open={newsDialog.open} onClose={() => setNewsDialog({ open: false, mode: "create", id: null })} fullWidth maxWidth="md" PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle sx={{ fontWeight: 900 }}>{newsDialog.mode === "create" ? "Create News" : "Edit News"}</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Stack direction="row" spacing={2} alignItems="center">
               <Avatar
@@ -2816,9 +2942,9 @@ export default function HospitalsManagement() {
       </Dialog>
 
       {/* Event view */}
-      <Dialog open={eventView.open} onClose={() => setEventView({ open: false, event: null })} fullWidth maxWidth="md">
+      <Dialog open={eventView.open} onClose={() => setEventView({ open: false, event: null })} fullWidth maxWidth="md" PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle sx={{ fontWeight: 900 }}>Event Details</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={1.25} sx={{ mt: 0.5 }}>
             <Stack direction="row" spacing={2} alignItems="center">
               <Avatar
@@ -2880,9 +3006,9 @@ export default function HospitalsManagement() {
       </Dialog>
 
       {/* Event create/edit */}
-      <Dialog open={eventDialog.open} onClose={() => setEventDialog({ open: false, mode: "create", id: null })} fullWidth maxWidth="md">
+      <Dialog open={eventDialog.open} onClose={() => setEventDialog({ open: false, mode: "create", id: null })} fullWidth maxWidth="md" PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle sx={{ fontWeight: 900 }}>{eventDialog.mode === "create" ? "Create Event" : "Edit Event"}</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Stack direction="row" spacing={2} alignItems="center">
               <Avatar

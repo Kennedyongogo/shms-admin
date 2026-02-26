@@ -32,12 +32,13 @@ import {
   TextField,
   Tooltip,
   Typography,
+  useMediaQuery,
 } from "@mui/material";
 import {
   Add,
   Delete,
+  Edit,
   Payments as PaymentsIcon,
-  Refresh,
   Receipt as ReceiptIcon,
   Science,
   Search,
@@ -100,6 +101,7 @@ const fmt = (v) => (v == null || v === "" ? "—" : String(v));
 
 export default function LaboratoryManagement() {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const token = getToken();
   const navigate = useNavigate();
   const roleName = getRoleName();
@@ -890,23 +892,6 @@ export default function LaboratoryManagement() {
               </Typography>
             </Box>
             <Stack direction="row" spacing={1}>
-              <Tooltip title="Refresh">
-                <IconButton
-                  onClick={() => {
-                    if (tab === 0) loadTests();
-                    if (tab === 1) loadOrders();
-                    if (tab === 2) loadResults();
-                    if (tab === 3) loadLabBills();
-                    if (tab === 4) loadLabPayments();
-                  }}
-                  sx={{
-                    color: "white",
-                    border: "1px solid rgba(255,255,255,0.25)",
-                  }}
-                >
-                  <Refresh />
-                </IconButton>
-              </Tooltip>
               {isAdmin && tab === 0 && (
                 <Button
                   variant="contained"
@@ -928,22 +913,41 @@ export default function LaboratoryManagement() {
         </Box>
 
         <CardContent sx={{ p: 0 }}>
-          <Tabs
-            value={tab}
-            onChange={(_, v) => setTab(v)}
-            sx={{
-              px: 2,
-              "& .MuiTabs-indicator": {
-                backgroundColor: theme.palette.primary.main,
-              },
-            }}
-          >
-            <Tab label="Lab Tests" />
-            <Tab label="Lab Orders" />
-            <Tab label="Results" />
-            <Tab icon={<ReceiptIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Billing" />
-            <Tab icon={<PaymentsIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Payment" />
-          </Tabs>
+          {isMobile ? (
+            <FormControl fullWidth size="small" sx={{ px: 2, py: 1.5 }}>
+              <InputLabel id="lab-section-label">Section</InputLabel>
+              <Select
+                labelId="lab-section-label"
+                value={tab}
+                label="Section"
+                onChange={(e) => setTab(Number(e.target.value))}
+                sx={{ borderRadius: 1 }}
+              >
+                <MenuItem value={0}>Lab Tests</MenuItem>
+                <MenuItem value={1}>Lab Orders</MenuItem>
+                <MenuItem value={2}>Results</MenuItem>
+                <MenuItem value={3}>Billing</MenuItem>
+                <MenuItem value={4}>Payment</MenuItem>
+              </Select>
+            </FormControl>
+          ) : (
+            <Tabs
+              value={tab}
+              onChange={(_, v) => setTab(v)}
+              sx={{
+                px: 2,
+                "& .MuiTabs-indicator": {
+                  backgroundColor: theme.palette.primary.main,
+                },
+              }}
+            >
+              <Tab label="Lab Tests" />
+              <Tab label="Lab Orders" />
+              <Tab label="Results" />
+              <Tab icon={<ReceiptIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Billing" />
+              <Tab icon={<PaymentsIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Payment" />
+            </Tabs>
+          )}
           <Divider />
 
           {tab === 0 && (
@@ -985,18 +989,20 @@ export default function LaboratoryManagement() {
                   borderRadius: 2,
                   border: "1px solid",
                   borderColor: "divider",
+                  overflowX: "auto",
+                  maxWidth: "100%",
                 }}
               >
-                <Table size="small">
+                <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                   <TableHead>
                     <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>
+                      <TableCell sx={{ fontWeight: 800, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         No
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Name</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Code</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Price</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 800 }}>
+                      <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "28vw", sm: 160, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Name</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Code</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Price</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         Actions
                       </TableCell>
                     </TableRow>
@@ -1026,35 +1032,28 @@ export default function LaboratoryManagement() {
                           >
                             {testPage * testRowsPerPage + idx + 1}
                           </TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>
+                          <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "28vw", sm: 160, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {t.test_name}
                           </TableCell>
-                          <TableCell>{t.test_code}</TableCell>
-                          <TableCell>{fmt(t.price)}</TableCell>
-                          <TableCell
-                            align="right"
-                            sx={{ whiteSpace: "nowrap" }}
-                          >
-                            {isAdmin && (
-                              <>
-                                <Button
-                                  size="small"
-                                  variant="outlined"
-                                  onClick={() => openEditTest(t)}
-                                  sx={{ mr: 1 }}
-                                >
-                                  Edit
-                                </Button>
-                                <Button
-                                  size="small"
-                                  variant="outlined"
-                                  color="error"
-                                  onClick={() => deleteTest(t)}
-                                >
-                                  Delete
-                                </Button>
-                              </>
-                            )}
+                          <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{t.test_code}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{fmt(t.price)}</TableCell>
+                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
+                              {isAdmin && (
+                                <>
+                                  <Tooltip title="Edit">
+                                    <IconButton size="small" color="primary" onClick={() => openEditTest(t)} aria-label="Edit">
+                                      <Edit fontSize="inherit" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Delete">
+                                    <IconButton size="small" color="error" onClick={() => deleteTest(t)} aria-label="Delete">
+                                      <Delete fontSize="inherit" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </>
+                              )}
+                            </Box>
                           </TableCell>
                         </TableRow>
                       ))
@@ -1139,20 +1138,22 @@ export default function LaboratoryManagement() {
                   borderRadius: 2,
                   border: "1px solid",
                   borderColor: "divider",
+                  overflowX: "auto",
+                  maxWidth: "100%",
                 }}
               >
-                <Table size="small">
+                <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                   <TableHead>
                     <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>
+                      <TableCell sx={{ fontWeight: 800, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         No
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Created</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Patient</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Doctor</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Status</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Tests</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 800 }}>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Created</TableCell>
+                      <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Patient</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Doctor</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Status</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Tests</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         Actions
                       </TableCell>
                     </TableRow>
@@ -1182,31 +1183,31 @@ export default function LaboratoryManagement() {
                           >
                             {orderPage * orderRowsPerPage + idx + 1}
                           </TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>
+                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" } }}>
                             {formatDateTime(o.createdAt)}
                           </TableCell>
-                          <TableCell>
-                            {o.patient?.full_name ||
-                              o.patient?.user?.full_name ||
-                              "—"}
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                              sx={{ display: "block" }}
-                            >
-                              {o.patient?.phone ||
-                                o.patient?.email ||
-                                o.patient?.user?.phone ||
-                                o.patient?.user?.email ||
-                                ""}
-                            </Typography>
+                          <TableCell sx={{ maxWidth: { xs: "28vw", sm: 160, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
+                            <Box sx={{ minWidth: 0 }}>
+                              <Typography noWrap sx={{ fontWeight: 800 }}>
+                                {o.patient?.full_name ||
+                                  o.patient?.user?.full_name ||
+                                  "—"}
+                              </Typography>
+                              <Typography noWrap variant="caption" color="text.secondary">
+                                {o.patient?.phone ||
+                                  o.patient?.email ||
+                                  o.patient?.user?.phone ||
+                                  o.patient?.user?.email ||
+                                  ""}
+                              </Typography>
+                            </Box>
                           </TableCell>
-                          <TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
                             {o.doctor?.user?.full_name ||
                               o.doctor?.staff_type ||
                               "—"}
                           </TableCell>
-                          <TableCell>
+                          <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
                             <Chip
                               size="small"
                               label={o.status}
@@ -1222,7 +1223,7 @@ export default function LaboratoryManagement() {
                               }
                             />
                           </TableCell>
-                          <TableCell>{o.items?.length || 0}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{o.items?.length || 0}</TableCell>
                           <TableCell align="right">
                             <Tooltip title="View / Enter results">
                               <IconButton
@@ -1307,21 +1308,23 @@ export default function LaboratoryManagement() {
                   borderRadius: 2,
                   border: "1px solid",
                   borderColor: "divider",
+                  overflowX: "auto",
+                  maxWidth: "100%",
                 }}
               >
-                <Table size="small">
+                <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                   <TableHead>
                     <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>
+                      <TableCell sx={{ fontWeight: 800, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         No
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Patient</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Test</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Result</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Range</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Technician</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 800 }}>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Date</TableCell>
+                      <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Patient</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Test</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Result</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Range</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Technician</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         Actions
                       </TableCell>
                     </TableRow>
@@ -1351,7 +1354,7 @@ export default function LaboratoryManagement() {
                           >
                             {resultPage * resultRowsPerPage + idx + 1}
                           </TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>
+                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" } }}>
                             {formatDateTime(r.result_date || r.createdAt)}
                           </TableCell>
                           <TableCell>
@@ -1360,12 +1363,12 @@ export default function LaboratoryManagement() {
                                 ?.full_name ||
                               "—"}
                           </TableCell>
-                          <TableCell>
+                          <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
                             {r.labOrderItem?.labTest?.test_name || "—"}
                           </TableCell>
-                          <TableCell>{fmt(r.result_value)}</TableCell>
-                          <TableCell>{fmt(r.reference_range)}</TableCell>
-                          <TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{fmt(r.result_value)}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{fmt(r.reference_range)}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
                             {r.labTechnician?.user?.full_name || "—"}
                           </TableCell>
                           <TableCell align="right">
@@ -1423,19 +1426,21 @@ export default function LaboratoryManagement() {
                   borderRadius: 2,
                   border: "1px solid",
                   borderColor: "divider",
+                  overflowX: "auto",
+                  maxWidth: "100%",
                 }}
               >
-                <Table size="small">
+                <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                   <TableHead>
                     <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Patient</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Total</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Paid</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Balance</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Status</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Created</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 800 }}>Actions</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Patient</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 80 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Total</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 80 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Paid</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 80 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Balance</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Status</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Created</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1460,22 +1465,24 @@ export default function LaboratoryManagement() {
                             <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>
                               {labBillsPage * labBillsRowsPerPage + idx + 1}
                             </TableCell>
-                            <TableCell sx={{ fontWeight: 700 }}>{patientName}</TableCell>
-                            <TableCell>{total.toFixed(2)}</TableCell>
-                            <TableCell>{paidAmt.toFixed(2)}</TableCell>
-                            <TableCell>{balance.toFixed(2)}</TableCell>
-                            <TableCell>
+                            <TableCell sx={{ fontWeight: 700, maxWidth: { xs: "28vw", sm: 160, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{patientName}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{total.toFixed(2)}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{paidAmt.toFixed(2)}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{balance.toFixed(2)}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
                               <Chip
                                 size="small"
                                 label={status}
                                 color={status === "paid" ? "success" : status === "partial" ? "warning" : "default"}
                               />
                             </TableCell>
-                            <TableCell>{formatDateTime(b.createdAt)}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{formatDateTime(b.createdAt)}</TableCell>
                             <TableCell align="right">
-                              <Button size="small" variant="outlined" onClick={() => openLabBillView(b.id)}>
-                                View
-                              </Button>
+                              <Tooltip title="View">
+                                <IconButton size="small" color="primary" onClick={() => openLabBillView(b.id)} aria-label="View">
+                                  <Visibility fontSize="inherit" />
+                                </IconButton>
+                              </Tooltip>
                             </TableCell>
                           </TableRow>
                         );
@@ -1517,18 +1524,20 @@ export default function LaboratoryManagement() {
                   borderRadius: 2,
                   border: "1px solid",
                   borderColor: "divider",
+                  overflowX: "auto",
+                  maxWidth: "100%",
                 }}
               >
-                <Table size="small">
+                <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                   <TableHead>
                     <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Patient</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Amount</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Method</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Bill</TableCell>
-                      <TableCell sx={{ fontWeight: 800, width: 72 }} align="center">Action</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 110 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Date</TableCell>
+                      <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Patient</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Amount</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Method</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Bill</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: 72, maxWidth: { xs: "22vw", sm: 72 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} align="center">Action</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1549,11 +1558,11 @@ export default function LaboratoryManagement() {
                             <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>
                               {labPaymentsPage * labPaymentsRowsPerPage + idx + 1}
                             </TableCell>
-                            <TableCell>{formatDateTime(p.payment_date || p.createdAt)}</TableCell>
-                            <TableCell sx={{ fontWeight: 700 }}>{patientName}</TableCell>
-                            <TableCell>{Number(p.amount_paid ?? 0).toFixed(2)}</TableCell>
-                            <TableCell>{p.payment_method || "—"}</TableCell>
-                            <TableCell sx={{ fontSize: "0.85rem", color: "text.secondary" }}>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{formatDateTime(p.payment_date || p.createdAt)}</TableCell>
+                            <TableCell sx={{ fontWeight: 700, maxWidth: { xs: "28vw", sm: 160, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{patientName}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{Number(p.amount_paid ?? 0).toFixed(2)}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{p.payment_method || "—"}</TableCell>
+                            <TableCell sx={{ fontSize: "0.85rem", color: "text.secondary", display: { xs: "none", md: "table-cell" } }}>
                               {p.bill_id ? `#${String(p.bill_id).slice(0, 8)}` : "—"}
                             </TableCell>
                             <TableCell align="center">
@@ -1601,9 +1610,10 @@ export default function LaboratoryManagement() {
         onClose={() => setLabBillView({ open: false, bill: null, loading: false })}
         fullWidth
         maxWidth="sm"
+        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
       >
         <DialogTitle sx={{ fontWeight: 900 }}>Lab order bill</DialogTitle>
-        <DialogContent dividers>
+        <DialogContent dividers sx={{ overflowY: "auto" }}>
           {labBillView.loading ? (
             <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
               <CircularProgress size={18} />
@@ -1645,9 +1655,10 @@ export default function LaboratoryManagement() {
         onClose={() => setOrderView({ open: false, order: null })}
         fullWidth
         maxWidth="md"
+        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
       >
         <DialogTitle sx={{ fontWeight: 900 }}>Lab Order</DialogTitle>
-        <DialogContent dividers>
+        <DialogContent dividers sx={{ overflowY: "auto" }}>
           <Stack spacing={2}>
             <Typography sx={{ fontWeight: 900 }}>
               Patient:{" "}
@@ -1795,54 +1806,56 @@ export default function LaboratoryManagement() {
 
             <Divider />
             <Typography sx={{ fontWeight: 900 }}>Tests</Typography>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 800 }}>Test</TableCell>
-                  <TableCell sx={{ fontWeight: 800 }}>Code</TableCell>
-                  <TableCell sx={{ fontWeight: 800 }}>Result</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 800 }}>
-                    Action
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {(orderView.order?.items || []).map((it) => (
-                  <TableRow key={it.id} hover>
-                    <TableCell>{it.labTest?.test_name || "—"}</TableCell>
-                    <TableCell>{it.labTest?.test_code || "—"}</TableCell>
-                    <TableCell>
-                      {it.result?.result_value ? (
-                        it.result.result_value
-                      ) : (
-                        <Chip size="small" label="pending" variant="outlined" />
-                      )}
-                    </TableCell>
-                    <TableCell align="right">
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        disabled={!orderBilling?.paid}
-                        onClick={() =>
-                          openEnterResult(it.id, it.result, orderView.order)
-                        }
-                      >
-                        {it.result ? "Update result" : "Enter result"}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {!(orderView.order?.items || []).length && (
+            <TableContainer sx={{ overflowX: "auto", width: "100%" }}>
+              <Table size="small">
+                <TableHead>
                   <TableRow>
-                    <TableCell colSpan={4}>
-                      <Typography color="text.secondary">
-                        No tests on this order.
-                      </Typography>
+                    <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Test</TableCell>
+                    <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Code</TableCell>
+                    <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Result</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      Action
                     </TableCell>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHead>
+                <TableBody>
+                  {(orderView.order?.items || []).map((it) => (
+                    <TableRow key={it.id} hover>
+                      <TableCell>{it.labTest?.test_name || "—"}</TableCell>
+                      <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{it.labTest?.test_code || "—"}</TableCell>
+                      <TableCell>
+                        {it.result?.result_value ? (
+                          it.result.result_value
+                        ) : (
+                          <Chip size="small" label="pending" variant="outlined" />
+                        )}
+                      </TableCell>
+                      <TableCell align="right">
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          disabled={!orderBilling?.paid}
+                          onClick={() =>
+                            openEnterResult(it.id, it.result, orderView.order)
+                          }
+                        >
+                          {it.result ? "Update result" : "Enter result"}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {!(orderView.order?.items || []).length && (
+                    <TableRow>
+                      <TableCell colSpan={4}>
+                        <Typography color="text.secondary">
+                          No tests on this order.
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -1879,11 +1892,12 @@ export default function LaboratoryManagement() {
         onClose={() => setTestDialog({ open: false, mode: "create", id: null })}
         fullWidth
         maxWidth="sm"
+        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
       >
         <DialogTitle sx={{ fontWeight: 900 }}>
           {testDialog.mode === "create" ? "Create Lab Test" : "Edit Lab Test"}
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
               label="Test name"
@@ -1954,9 +1968,10 @@ export default function LaboratoryManagement() {
         }
         fullWidth
         maxWidth="sm"
+        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
       >
         <DialogTitle sx={{ fontWeight: 900 }}>Lab Result</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
               label="Result value"

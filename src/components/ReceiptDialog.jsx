@@ -96,12 +96,12 @@ export default function ReceiptDialog({ open, onClose, paymentId, getToken }) {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" PaperProps={{ sx: { borderRadius: 2 } }}>
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" PaperProps={{ sx: { borderRadius: 2, maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
       <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1, fontWeight: 800 }}>
         <ReceiptIcon color="primary" />
         Payment Receipt
       </DialogTitle>
-      <DialogContent dividers sx={{ p: 0 }}>
+      <DialogContent dividers sx={{ p: 0, overflowY: "auto" }}>
         <Box sx={{ borderBottom: 1, borderColor: "divider", p: 1.5, display: "flex", justifyContent: "flex-end", gap: 1 }}>
           <Button size="small" startIcon={<PrintIcon />} variant="outlined" onClick={handlePrint} disabled={!pdfUrl} sx={{ fontWeight: 700 }}>
             Print

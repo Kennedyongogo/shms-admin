@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   CardContent,
+  Checkbox,
   Chip,
   Dialog,
   DialogActions,
@@ -13,6 +14,8 @@ import {
   DialogTitle,
   Divider,
   FormControl,
+  FormControlLabel,
+  FormGroup,
   IconButton,
   InputAdornment,
   InputLabel,
@@ -33,15 +36,16 @@ import {
   Typography,
   CircularProgress,
   Tooltip,
+  useMediaQuery,
 } from "@mui/material";
 import {
   Add as AddIcon,
   CloudUpload as CloudUploadIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
+  List as ListIcon,
   Person as PersonIcon,
   Shield as ShieldIcon,
-  Refresh as RefreshIcon,
   Block as BlockIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
@@ -52,6 +56,23 @@ import Swal from "sweetalert2";
 const API = {
   roles: "/api/roles",
   users: "/api/users",
+};
+
+/** Display labels for navbar menu keys (must match backend ALL_MENU_KEYS). */
+const MENU_KEY_LABELS = {
+  dashboard: "Dashboard",
+  hospitals: "Hospital",
+  appointments: "Appointments",
+  patients: "Patients",
+  laboratory: "Laboratory",
+  pharmacy: "Pharmacy",
+  ward: "Ward & Admissions",
+  diet: "Diet & Meals",
+  inventory: "Inventory",
+  billing: "Billing & Payments",
+  users: "Users & Roles",
+  "audit-logs": "Audit log",
+  settings: "Settings",
 };
 
 const getToken = () => localStorage.getItem("token");
@@ -177,6 +198,7 @@ const normalizeKenyanPhone = (input) => {
 
 export default function AdminUsersManagement() {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const token = getToken();
   const roleName = getRoleName();
   const isAdmin = roleName === "admin";
@@ -235,6 +257,12 @@ export default function AdminUsersManagement() {
   });
   const [roleForm, setRoleForm] = useState({ name: "" });
   const [roleView, setRoleView] = useState({ open: false, role: null });
+  const [roleViewMenuKeys, setRoleViewMenuKeys] = useState([]);
+  const [roleViewMenuLoading, setRoleViewMenuLoading] = useState(false);
+  const [menuItemsDialog, setMenuItemsDialog] = useState({ open: false, role: null });
+  const [menuItemsForm, setMenuItemsForm] = useState({ allMenuKeys: [], selectedKeys: [] });
+  const [menuItemsLoading, setMenuItemsLoading] = useState(false);
+  const [menuItemsSaving, setMenuItemsSaving] = useState(false);
 
   const [userDialog, setUserDialog] = useState({
     open: false,
@@ -358,13 +386,17 @@ export default function AdminUsersManagement() {
   const rolesSearchDebounceSkipped = useRef(true);
 
   // Load only the active tab's data (same pattern as Billing) to avoid double blink on mount
+  // When on Users tab, also load roles so Role column can resolve role_id -> name
   useEffect(() => {
     if (tab === 1) loadRoles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, rolesPage, rolesRowsPerPage]);
 
   useEffect(() => {
-    if (tab === 0) loadUsers();
+    if (tab === 0) {
+      loadUsers();
+      loadRoles(); // roles needed for Role column in users table
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, usersPage, usersRowsPerPage]);
 
@@ -409,7 +441,67 @@ export default function AdminUsersManagement() {
     setRoleForm({ name: role.name || "" });
     setRoleDialog({ open: true, mode: "edit", id: role.id });
   };
-  const openViewRole = (role) => setRoleView({ open: true, role });
+  const openViewRole = async (role) => {
+    if (!role?.id) return;
+    setRoleView({ open: true, role });
+    setRoleViewMenuKeys([]);
+    setRoleViewMenuLoading(true);
+    try {
+      const data = await fetchJson(`${API.roles}/${role.id}/menu-items`, { token });
+      setRoleViewMenuKeys(Array.isArray(data.data?.menuKeys) ? data.data.menuKeys : []);
+    } catch {
+      setRoleViewMenuKeys([]);
+    } finally {
+      setRoleViewMenuLoading(false);
+    }
+  };
+
+  const openMenuItemsDialog = async (role) => {
+    if (!role?.id || !requireTokenGuard()) return;
+    setMenuItemsDialog({ open: true, role });
+    setMenuItemsForm({ allMenuKeys: [], selectedKeys: [] });
+    setMenuItemsLoading(true);
+    try {
+      const data = await fetchJson(`${API.roles}/${role.id}/menu-items`, { token });
+      setMenuItemsForm({
+        allMenuKeys: data.data?.allMenuKeys ?? [],
+        selectedKeys: Array.isArray(data.data?.menuKeys) ? [...data.data.menuKeys] : [],
+      });
+    } catch (e) {
+      showToast("error", e.message);
+      setMenuItemsDialog({ open: false, role: null });
+    } finally {
+      setMenuItemsLoading(false);
+    }
+  };
+
+  const toggleMenuKey = (key) => {
+    setMenuItemsForm((prev) => {
+      const set = new Set(prev.selectedKeys);
+      if (set.has(key)) set.delete(key);
+      else set.add(key);
+      return { ...prev, selectedKeys: prev.allMenuKeys.filter((k) => set.has(k)) };
+    });
+  };
+
+  const saveMenuItems = async () => {
+    const { role } = menuItemsDialog;
+    if (!role?.id || !requireTokenGuard()) return;
+    setMenuItemsSaving(true);
+    try {
+      await fetchJson(`${API.roles}/${role.id}/menu-items`, {
+        method: "PUT",
+        token,
+        body: { menuKeys: menuItemsForm.selectedKeys },
+      });
+      showToast("success", "Menu items updated.");
+      setMenuItemsDialog({ open: false, role: null });
+    } catch (e) {
+      showToast("error", e.message);
+    } finally {
+      setMenuItemsSaving(false);
+    }
+  };
 
   const saveRole = async () => {
     if (!requireTokenGuard()) return;
@@ -704,20 +796,6 @@ export default function AdminUsersManagement() {
               </Typography>
             </Box>
             <Stack direction="row" spacing={1}>
-              <Tooltip title="Refresh">
-                <IconButton
-                  onClick={() => {
-                    loadRoles();
-                    loadUsers();
-                  }}
-                  sx={{
-                    color: "white",
-                    border: "1px solid rgba(255,255,255,0.25)",
-                  }}
-                >
-                  <RefreshIcon />
-                </IconButton>
-              </Tooltip>
               {isAdmin && (
                 <Button
                   variant="contained"
@@ -738,19 +816,35 @@ export default function AdminUsersManagement() {
           </Stack>
         </Box>
         <CardContent sx={{ p: 0 }}>
-          <Tabs
-            value={tab}
-            onChange={(_, v) => setTab(v)}
-            sx={{
-              px: 2,
-              "& .MuiTabs-indicator": {
-                backgroundColor: theme.palette.primary.main,
-              },
-            }}
-          >
-            <Tab icon={<PersonIcon />} iconPosition="start" label="Users" />
-            <Tab icon={<ShieldIcon />} iconPosition="start" label="Roles" />
-          </Tabs>
+          {isMobile ? (
+            <FormControl fullWidth size="small" sx={{ px: 2, py: 1.5 }}>
+              <InputLabel id="users-section-label">Section</InputLabel>
+              <Select
+                labelId="users-section-label"
+                value={tab}
+                label="Section"
+                onChange={(e) => setTab(Number(e.target.value))}
+                sx={{ borderRadius: 1 }}
+              >
+                <MenuItem value={0}>Users</MenuItem>
+                <MenuItem value={1}>Roles</MenuItem>
+              </Select>
+            </FormControl>
+          ) : (
+            <Tabs
+              value={tab}
+              onChange={(_, v) => setTab(v)}
+              sx={{
+                px: 2,
+                "& .MuiTabs-indicator": {
+                  backgroundColor: theme.palette.primary.main,
+                },
+              }}
+            >
+              <Tab icon={<PersonIcon />} iconPosition="start" label="Users" />
+              <Tab icon={<ShieldIcon />} iconPosition="start" label="Roles" />
+            </Tabs>
+          )}
           <Divider />
 
           {/* USERS TAB */}
@@ -807,22 +901,24 @@ export default function AdminUsersManagement() {
                   borderRadius: 2,
                   border: "1px solid",
                   borderColor: "divider",
+                  overflowX: "auto",
+                  maxWidth: "100%",
                 }}
               >
-                <Table size="small">
+                <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                   <TableHead>
                     <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>
+                      <TableCell sx={{ fontWeight: 800, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         No
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 800, width: 72 }}>
+                      <TableCell sx={{ fontWeight: 800, width: 72, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 72 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         Photo
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Name</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Email</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Role</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Status</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 800 }}>
+                      <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "28vw", sm: 160, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Name</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 180 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Email</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Role</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Status</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         Actions
                       </TableCell>
                     </TableRow>
@@ -852,7 +948,7 @@ export default function AdminUsersManagement() {
                           >
                             {usersPage * usersRowsPerPage + idx + 1}
                           </TableCell>
-                          <TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
                             <Avatar
                               src={buildImageUrl(u.profile_image_path)}
                               alt={u.full_name}
@@ -870,11 +966,11 @@ export default function AdminUsersManagement() {
                                 .toUpperCase()}
                             </Avatar>
                           </TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>
+                          <TableCell sx={{ fontWeight: 700, maxWidth: { xs: "28vw", sm: 160, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {u.full_name}
                           </TableCell>
-                          <TableCell>{u.email}</TableCell>
-                          <TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" }, maxWidth: { md: 180 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
                             <Chip
                               size="small"
                               label={displayRoleName(
@@ -887,7 +983,7 @@ export default function AdminUsersManagement() {
                               }}
                             />
                           </TableCell>
-                          <TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
                             <Chip
                               size="small"
                               label={u.status}
@@ -899,45 +995,47 @@ export default function AdminUsersManagement() {
                               }
                             />
                           </TableCell>
-                          <TableCell align="right">
-                            <Tooltip title="View">
-                              <IconButton
-                                onClick={() => openViewUser(u)}
-                                size="small"
-                              >
-                                <VisibilityIcon fontSize="inherit" />
-                              </IconButton>
-                            </Tooltip>
-                            {isAdmin && (
-                              <>
-                                <Tooltip title="Edit">
-                                  <IconButton
-                                    onClick={() => openEditUser(u)}
-                                    size="small"
-                                  >
-                                    <EditIcon fontSize="inherit" />
-                                  </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Deactivate">
-                                  <IconButton
-                                    onClick={() => deactivateUser(u)}
-                                    size="small"
-                                    disabled={u.status !== "active"}
-                                  >
-                                    <BlockIcon fontSize="inherit" />
-                                  </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Delete">
-                                  <IconButton
-                                    onClick={() => deleteUser(u)}
-                                    size="small"
-                                    color="error"
-                                  >
-                                    <DeleteIcon fontSize="inherit" />
-                                  </IconButton>
-                                </Tooltip>
-                              </>
-                            )}
+                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
+                              <Tooltip title="View">
+                                <IconButton
+                                  onClick={() => openViewUser(u)}
+                                  size="small"
+                                >
+                                  <VisibilityIcon fontSize="inherit" />
+                                </IconButton>
+                              </Tooltip>
+                              {isAdmin && (
+                                <>
+                                  <Tooltip title="Edit">
+                                    <IconButton
+                                      onClick={() => openEditUser(u)}
+                                      size="small"
+                                    >
+                                      <EditIcon fontSize="inherit" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Deactivate">
+                                    <IconButton
+                                      onClick={() => deactivateUser(u)}
+                                      size="small"
+                                      disabled={u.status !== "active"}
+                                    >
+                                      <BlockIcon fontSize="inherit" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Delete">
+                                    <IconButton
+                                      onClick={() => deleteUser(u)}
+                                      size="small"
+                                      color="error"
+                                    >
+                                      <DeleteIcon fontSize="inherit" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </>
+                              )}
+                            </Box>
                           </TableCell>
                         </TableRow>
                       ))
@@ -1023,17 +1121,19 @@ export default function AdminUsersManagement() {
                   borderRadius: 2,
                   border: "1px solid",
                   borderColor: "divider",
+                  overflowX: "auto",
+                  maxWidth: "100%",
                 }}
               >
-                <Table size="small">
+                <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                   <TableHead>
                     <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>
+                      <TableCell sx={{ fontWeight: 800, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         No
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Role</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Created</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 800 }}>
+                      <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "28vw", sm: 200, md: 280 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Role</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 140 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Created</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         Actions
                       </TableCell>
                     </TableRow>
@@ -1063,40 +1163,51 @@ export default function AdminUsersManagement() {
                           >
                             {rolesPage * rolesRowsPerPage + idx + 1}
                           </TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>
+                          <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "28vw", sm: 200, md: 280 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {r.name}
                           </TableCell>
-                          <TableCell>{formatDateTime(r.createdAt)}</TableCell>
-                          <TableCell align="right">
-                            <Tooltip title="View">
-                              <IconButton
-                                onClick={() => openViewRole(r)}
-                                size="small"
-                              >
-                                <VisibilityIcon fontSize="inherit" />
-                              </IconButton>
-                            </Tooltip>
-                            {isAdmin && (
-                              <>
-                                <Tooltip title="Edit">
-                                  <IconButton
-                                    onClick={() => openEditRole(r)}
-                                    size="small"
-                                  >
-                                    <EditIcon fontSize="inherit" />
-                                  </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Delete">
-                                  <IconButton
-                                    onClick={() => deleteRole(r)}
-                                    size="small"
-                                    color="error"
-                                  >
-                                    <DeleteIcon fontSize="inherit" />
-                                  </IconButton>
-                                </Tooltip>
-                              </>
-                            )}
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{formatDateTime(r.createdAt)}</TableCell>
+                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
+                              <Tooltip title="View">
+                                <IconButton
+                                  onClick={() => openViewRole(r)}
+                                  size="small"
+                                >
+                                  <VisibilityIcon fontSize="inherit" />
+                                </IconButton>
+                              </Tooltip>
+                              {isAdmin && (
+                                <>
+                                  <Tooltip title="Navbar menu items">
+                                    <IconButton
+                                      onClick={() => openMenuItemsDialog(r)}
+                                      size="small"
+                                      aria-label="Menu items"
+                                    >
+                                      <ListIcon fontSize="inherit" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Edit">
+                                    <IconButton
+                                      onClick={() => openEditRole(r)}
+                                      size="small"
+                                    >
+                                      <EditIcon fontSize="inherit" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Delete">
+                                    <IconButton
+                                      onClick={() => deleteRole(r)}
+                                      size="small"
+                                      color="error"
+                                    >
+                                      <DeleteIcon fontSize="inherit" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </>
+                              )}
+                            </Box>
                           </TableCell>
                         </TableRow>
                       ))
@@ -1181,41 +1292,171 @@ export default function AdminUsersManagement() {
         open={roleView.open}
         onClose={() => setRoleView({ open: false, role: null })}
         fullWidth
-        maxWidth="xs"
+        maxWidth="sm"
+        PaperProps={{
+          sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0,0,0,0.12)" },
+        }}
       >
-        <DialogTitle sx={{ fontWeight: 900 }}>Role Details</DialogTitle>
-        <DialogContent>
-          <Stack spacing={1} sx={{ mt: 0.5 }}>
-            <Typography variant="overline" color="text.secondary">
-              Name
+        <DialogTitle
+          sx={{
+            fontWeight: 900,
+            fontSize: "1.25rem",
+            pb: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+          }}
+        >
+          <ShieldIcon color="primary" sx={{ fontSize: 28 }} />
+          Role details
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Stack spacing={2.5}>
+            <Box>
+              <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1, fontWeight: 600 }}>
+                Role name
+              </Typography>
+              <Typography sx={{ fontWeight: 800, fontSize: "1.1rem", mt: 0.25 }}>
+                {roleView.role?.name || "—"}
+              </Typography>
+            </Box>
+            <Divider sx={{ borderColor: "divider" }} />
+            <Box>
+              <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1, fontWeight: 600 }}>
+                Navbar menu items
+              </Typography>
+              {roleViewMenuLoading ? (
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
+                  <CircularProgress size={18} />
+                  <Typography variant="body2" color="text.secondary">
+                    Loading…
+                  </Typography>
+                </Stack>
+              ) : normalizeRoleName(roleView.role?.name) === "admin" ? (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  Admin sees all sidebar items.
+                </Typography>
+              ) : roleViewMenuKeys.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  No menu items assigned. Users with this role will not see any sidebar links.
+                </Typography>
+              ) : (
+                <Stack
+                  direction="row"
+                  flexWrap="wrap"
+                  useFlexGap
+                  gap={0.75}
+                  sx={{ mt: 1 }}
+                >
+                  {roleViewMenuKeys.map((key) => (
+                    <Chip
+                      key={key}
+                      label={MENU_KEY_LABELS[key] || key}
+                      size="small"
+                      sx={{
+                        fontWeight: 600,
+                        bgcolor: "rgba(0, 137, 123, 0.08)",
+                        color: "primary.dark",
+                        border: "1px solid",
+                        borderColor: "primary.light",
+                      }}
+                    />
+                  ))}
+                </Stack>
+              )}
+            </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+              Created {formatDateTime(roleView.role?.createdAt)}
             </Typography>
-            <Typography sx={{ fontWeight: 900, fontSize: 18 }}>
-              {roleView.role?.name || "—"}
-            </Typography>
-            <Divider sx={{ my: 1 }} />
-            <Stack direction="row" spacing={2}>
-              <Box>
-                <Typography variant="overline" color="text.secondary">
-                  ID
-                </Typography>
-                <Typography sx={{ fontFamily: "monospace" }}>
-                  {roleView.role?.id || "—"}
-                </Typography>
-              </Box>
-              <Box>
-                <Typography variant="overline" color="text.secondary">
-                  Created
-                </Typography>
-                <Typography>
-                  {formatDateTime(roleView.role?.createdAt)}
-                </Typography>
-              </Box>
-            </Stack>
           </Stack>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setRoleView({ open: false, role: null })}>
+        <DialogActions sx={{ px: 3, pb: 2, pt: 0 }}>
+          {isAdmin && roleView.role && normalizeRoleName(roleView.role.name) !== "admin" && (
+            <Button
+              startIcon={<ListIcon />}
+              onClick={() => {
+                setRoleView({ open: false, role: null });
+                openMenuItemsDialog(roleView.role);
+              }}
+              sx={{ mr: "auto" }}
+            >
+              Edit menu items
+            </Button>
+          )}
+          <Button
+            variant="contained"
+            onClick={() => setRoleView({ open: false, role: null })}
+            sx={{
+              bgcolor: theme.palette.primary.main,
+              "&:hover": { bgcolor: theme.palette.primary.dark },
+            }}
+          >
             Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ROLE MENU ITEMS DIALOG */}
+      <Dialog
+        open={menuItemsDialog.open}
+        onClose={() => setMenuItemsDialog({ open: false, role: null })}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle sx={{ fontWeight: 900 }}>
+          Navbar menu items — {menuItemsDialog.role?.name || "Role"}
+        </DialogTitle>
+        <DialogContent>
+          {menuItemsLoading ? (
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 3 }}>
+              <CircularProgress size={20} />
+              <Typography color="text.secondary">Loading…</Typography>
+            </Stack>
+          ) : normalizeRoleName(menuItemsDialog.role?.name) === "admin" ? (
+            <Alert severity="info" sx={{ mt: 1 }}>
+              Admin always sees all navbar items. No need to configure.
+            </Alert>
+          ) : (
+            <>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                Select which sidebar menu items users with this role can see.
+              </Typography>
+              <FormGroup sx={{ mt: 0.5 }}>
+                {menuItemsForm.allMenuKeys.map((key) => (
+                  <FormControlLabel
+                    key={key}
+                    control={
+                      <Checkbox
+                        checked={menuItemsForm.selectedKeys.includes(key)}
+                        onChange={() => toggleMenuKey(key)}
+                        size="small"
+                      />
+                    }
+                    label={MENU_KEY_LABELS[key] || key}
+                  />
+                ))}
+              </FormGroup>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setMenuItemsDialog({ open: false, role: null })}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={saveMenuItems}
+            disabled={
+              menuItemsSaving ||
+              menuItemsLoading ||
+              normalizeRoleName(menuItemsDialog.role?.name) === "admin"
+            }
+            sx={{
+              bgcolor: theme.palette.primary.main,
+              "&:hover": { bgcolor: theme.palette.primary.dark },
+            }}
+          >
+            {menuItemsSaving ? "Saving…" : "Save"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1483,9 +1724,10 @@ export default function AdminUsersManagement() {
         onClose={() => setUserView({ open: false, user: null })}
         fullWidth
         maxWidth="sm"
+        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
       >
         <DialogTitle sx={{ fontWeight: 900 }}>User Details</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={1.25} sx={{ mt: 0.5 }}>
             <Stack direction="row" spacing={2} alignItems="center">
               <Avatar

@@ -13,14 +13,14 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
   TablePagination,
   TableRow,
-  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
-import { History as HistoryIcon, Refresh as RefreshIcon } from "@mui/icons-material";
+import { History as HistoryIcon } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
 import Swal from "sweetalert2";
 
@@ -135,15 +135,6 @@ export default function AuditLogsPage() {
                 All system activity: who did what and when.
               </Typography>
             </Box>
-            <Tooltip title="Refresh">
-              <IconButton
-                onClick={() => loadLogs()}
-                sx={{ color: "white", border: "1px solid rgba(255,255,255,0.25)" }}
-                disabled={loading}
-              >
-                <RefreshIcon />
-              </IconButton>
-            </Tooltip>
           </Stack>
         </Box>
 
@@ -198,47 +189,98 @@ export default function AuditLogsPage() {
             </FormControl>
           </Stack>
 
-          <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-            <Table size="small">
+          <TableContainer
+            sx={{
+              borderRadius: 2,
+              border: "1px solid",
+              borderColor: "divider",
+              overflow: "hidden",
+              overflowX: "auto",
+              maxWidth: "100%",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+            }}
+          >
+            <Table size="medium" stickyHeader sx={{ tableLayout: "fixed", width: "100%" }}>
               <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 900, width: 155 }}>Date & time</TableCell>
-                  <TableCell sx={{ fontWeight: 900, minWidth: 140 }}>User</TableCell>
-                  <TableCell sx={{ fontWeight: 900, minWidth: 180 }}>Action</TableCell>
-                  <TableCell sx={{ fontWeight: 900, width: 120 }}>Resource</TableCell>
-                  <TableCell sx={{ fontWeight: 900, width: 120 }}>Record ID</TableCell>
+                <TableRow
+                  sx={{
+                    bgcolor: theme.palette.mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0, 137, 123, 0.06)",
+                    "& th": {
+                      fontWeight: 800,
+                      fontSize: "0.8125rem",
+                      letterSpacing: "0.02em",
+                      color: "text.primary",
+                      borderBottom: "2px solid",
+                      borderColor: "divider",
+                      py: 1.5,
+                      px: 2,
+                    },
+                  }}
+                >
+                  <TableCell align="center" sx={{ width: 64, minWidth: 0, maxWidth: { xs: "16vw", sm: 64 }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    No
+                  </TableCell>
+                  <TableCell sx={{ width: 165, minWidth: 0, maxWidth: { md: 165 }, display: { xs: "none", md: "table-cell" }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Date & time</TableCell>
+                  <TableCell sx={{ minWidth: 0, maxWidth: { sm: 150, md: 180 }, display: { xs: "none", sm: "table-cell" }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>User</TableCell>
+                  <TableCell sx={{ minWidth: 0, maxWidth: { xs: "28vw", sm: 160 }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Action</TableCell>
+                  <TableCell sx={{ width: 120, minWidth: 0, maxWidth: { md: 120 }, display: { xs: "none", md: "table-cell" }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Resource</TableCell>
+                  <TableCell sx={{ width: 130, minWidth: 0, maxWidth: { md: 130 }, display: { xs: "none", md: "table-cell" }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Record ID</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={5}>
-                      <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 3 }}>
-                        <CircularProgress size={22} />
+                    <TableCell colSpan={6}>
+                      <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" sx={{ py: 4 }}>
+                        <CircularProgress size={24} />
                         <Typography color="text.secondary">Loading audit logs…</Typography>
                       </Stack>
                     </TableCell>
                   </TableRow>
                 ) : rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5}>
-                      <Typography color="text.secondary" sx={{ py: 3 }}>
+                    <TableCell colSpan={6}>
+                      <Typography color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
                         No audit entries found.
                       </Typography>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  rows.map((log) => (
-                    <TableRow key={log.id} hover>
-                      <TableCell sx={{ fontVariantNumeric: "tabular-nums" }}>
+                  rows.map((log, idx) => (
+                    <TableRow
+                      key={log.id}
+                      hover
+                      sx={{
+                        "&:nth-of-type(even)": {
+                          bgcolor: theme.palette.mode === "dark" ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.02)",
+                        },
+                        "&:hover": {
+                          bgcolor: theme.palette.mode === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0, 137, 123, 0.04)",
+                        },
+                        "& td": {
+                          py: 1.25,
+                          px: 2,
+                          borderColor: "divider",
+                          fontSize: "0.875rem",
+                        },
+                      }}
+                    >
+                      <TableCell align="center" sx={{ fontWeight: 700, color: "text.secondary", fontVariantNumeric: "tabular-nums" }}>
+                        {page * limit + idx + 1}
+                      </TableCell>
+                      <TableCell sx={{ fontVariantNumeric: "tabular-nums", display: { xs: "none", md: "table-cell" } }}>
                         {formatDateTime(log.createdAt ?? log.timestamp)}
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ fontWeight: 500, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 140, md: 180 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {log.user ? (log.user.full_name || log.user.email || log.user_id) : fmt(log.user_id)}
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>{fmt(log.action)}</TableCell>
-                      <TableCell>{fmt(log.table_name)}</TableCell>
-                      <TableCell sx={{ fontFamily: "monospace", fontSize: "0.75rem" }} title={log.record_id}>
+                      <TableCell sx={{ maxWidth: { xs: "28vw", sm: 160 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <Typography component="span" noWrap sx={{ fontWeight: 600, color: "primary.dark" }}>
+                          {fmt(log.action)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={{ color: "text.secondary", display: { xs: "none", md: "table-cell" }, maxWidth: { md: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fmt(log.table_name)}</TableCell>
+                      <TableCell sx={{ fontFamily: "monospace", fontSize: "0.8rem", color: "text.secondary", display: { xs: "none", md: "table-cell" } }} title={log.record_id}>
                         {log.record_id ? (log.record_id.length > 12 ? `${log.record_id.slice(0, 8)}…` : log.record_id) : "—"}
                       </TableCell>
                     </TableRow>
@@ -246,7 +288,7 @@ export default function AuditLogsPage() {
                 )}
               </TableBody>
             </Table>
-          </Box>
+          </TableContainer>
 
           <TablePagination
             component="div"
@@ -259,6 +301,13 @@ export default function AuditLogsPage() {
               setPage(0);
             }}
             rowsPerPageOptions={[10, 25, 50, 100]}
+            sx={{
+              borderTop: "1px solid",
+              borderColor: "divider",
+              mt: 0,
+              ".MuiTablePagination-toolbar": { minHeight: 52 },
+              ".MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows": { fontSize: "0.875rem" },
+            }}
           />
         </CardContent>
       </Card>

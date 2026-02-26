@@ -31,11 +31,11 @@ import {
   Typography,
   CircularProgress,
   Tooltip,
+  useMediaQuery,
 } from "@mui/material";
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
-  Refresh as RefreshIcon,
   Visibility as VisibilityIcon,
   LocalPharmacy as LocalPharmacyIcon,
   ReceiptLong as ReceiptLongIcon,
@@ -100,6 +100,7 @@ const formatDateTime = (value) => {
 
 export default function PharmacyManagement() {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const token = getToken();
   const navigate = useNavigate();
   const isAdmin = getRoleName() === "admin";
@@ -872,65 +873,65 @@ export default function PharmacyManagement() {
                 Medication catalogue, prescriptions, and dispense records.
               </Typography>
             </Box>
-            <Stack direction="row" spacing={1}>
-              <Tooltip title="Refresh">
-                <IconButton
-                  onClick={() => {
-                    loadMedications();
-                    loadPrescriptions();
-                    loadDispenses();
-                    if (tab === 3) loadPharmBills();
-                    if (tab === 4) loadPharmPayments();
-                  }}
-                  sx={{
-                    color: "white",
-                    border: "1px solid rgba(255,255,255,0.25)",
-                  }}
-                >
-                  <RefreshIcon />
-                </IconButton>
-              </Tooltip>
-            </Stack>
           </Stack>
         </Box>
 
         <CardContent sx={{ p: 0 }}>
-          <Tabs
-            value={tab}
-            onChange={(_, v) => setTab(v)}
-            sx={{
-              px: 2,
-              "& .MuiTabs-indicator": {
-                backgroundColor: theme.palette.primary.main,
-              },
-            }}
-          >
-            <Tab
-              icon={<InventoryIcon />}
-              iconPosition="start"
-              label="Medicine Catalogue"
-            />
-            <Tab
-              icon={<ReceiptLongIcon />}
-              iconPosition="start"
-              label="Prescriptions"
-            />
-            <Tab
-              icon={<LocalPharmacyIcon />}
-              iconPosition="start"
-              label="Dispense Records"
-            />
-            <Tab
-              icon={<ReceiptIcon />}
-              iconPosition="start"
-              label="Billing"
-            />
-            <Tab
-              icon={<PaymentIcon />}
-              iconPosition="start"
-              label="Payment"
-            />
-          </Tabs>
+          {isMobile ? (
+            <FormControl fullWidth size="small" sx={{ px: 2, py: 1.5 }}>
+              <InputLabel id="pharmacy-section-label">Section</InputLabel>
+              <Select
+                labelId="pharmacy-section-label"
+                value={tab}
+                label="Section"
+                onChange={(e) => setTab(Number(e.target.value))}
+                sx={{ borderRadius: 1 }}
+              >
+                <MenuItem value={0}>Medicine Catalogue</MenuItem>
+                <MenuItem value={1}>Prescriptions</MenuItem>
+                <MenuItem value={2}>Dispense Records</MenuItem>
+                <MenuItem value={3}>Billing</MenuItem>
+                <MenuItem value={4}>Payment</MenuItem>
+              </Select>
+            </FormControl>
+          ) : (
+            <Tabs
+              value={tab}
+              onChange={(_, v) => setTab(v)}
+              sx={{
+                px: 2,
+                "& .MuiTabs-indicator": {
+                  backgroundColor: theme.palette.primary.main,
+                },
+              }}
+            >
+              <Tab
+                icon={<InventoryIcon />}
+                iconPosition="start"
+                label="Medicine Catalogue"
+              />
+              <Tab
+                icon={<ReceiptLongIcon />}
+                iconPosition="start"
+                label="Prescriptions"
+              />
+              <Tab
+                icon={<LocalPharmacyIcon />}
+                iconPosition="start"
+                label="Dispense Records"
+              />
+              <Tab
+                icon={<ReceiptIcon />}
+                iconPosition="start"
+                label="Billing"
+              />
+              <Tab
+                icon={<PaymentIcon />}
+                iconPosition="start"
+                label="Payment"
+              />
+            </Tabs>
+          )}
           <Divider />
 
           {/* MEDS */}
@@ -956,30 +957,24 @@ export default function PharmacyManagement() {
                 sx={{ mb: 2 }}
               />
 
-              <TableContainer
-                sx={{
-                  borderRadius: 2,
-                  border: "1px solid",
-                  borderColor: "divider",
-                }}
-              >
-                <Table size="small">
+              <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider", overflowX: "auto", maxWidth: "100%" }}>
+                <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                   <TableHead>
-                    <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>
+                    <TableRow sx={{ bgcolor: "grey.100" }}>
+                      <TableCell sx={{ fontWeight: 800, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         No
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Name</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>
+                      <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Name</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 110 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         Dosage form
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 140 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         Manufacturer
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Unit price</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Stock link</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>In pharmacy</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 800 }}>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Unit price</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Stock link</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>In pharmacy</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         Actions
                       </TableCell>
                     </TableRow>
@@ -1009,54 +1004,56 @@ export default function PharmacyManagement() {
                           >
                             {medsPage * medsRowsPerPage + idx + 1}
                           </TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>
+                          <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {m.name}
                           </TableCell>
-                          <TableCell>{m.dosage_form || "—"}</TableCell>
-                          <TableCell>{m.manufacturer || "—"}</TableCell>
-                          <TableCell>{m.unit_price ?? "—"}</TableCell>
-                          <TableCell>
+                          <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{m.dosage_form || "—"}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{m.manufacturer || "—"}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{m.unit_price ?? "—"}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
                             {m.inventory_item_id ? (
                               <Chip size="small" label="Linked" color="success" variant="outlined" />
                             ) : (
                               "—"
                             )}
                           </TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>
+                          <TableCell sx={{ fontWeight: 700, display: { xs: "none", sm: "table-cell" } }}>
                             {m.inventory_item_id && m.inventoryItem != null
                               ? (m.inventoryItem.quantity_in_pharmacy ?? 0)
                               : "—"}
                           </TableCell>
-                          <TableCell align="right">
-                            <Tooltip title="View">
-                              <IconButton
-                                onClick={() => openViewMed(m)}
-                                size="small"
-                              >
-                                <VisibilityIcon fontSize="inherit" />
-                              </IconButton>
-                            </Tooltip>
-                            {isAdmin && (
-                              <>
-                                <Tooltip title="Edit">
-                                  <IconButton
-                                    onClick={() => openEditMed(m)}
-                                    size="small"
-                                  >
-                                    <EditIcon fontSize="inherit" />
-                                  </IconButton>
-                                </Tooltip>
-                                <Tooltip title="Delete">
-                                  <IconButton
-                                    onClick={() => deleteMed(m)}
-                                    size="small"
-                                    color="error"
-                                  >
-                                    <DeleteIcon fontSize="inherit" />
-                                  </IconButton>
-                                </Tooltip>
-                              </>
-                            )}
+                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
+                              <Tooltip title="View">
+                                <IconButton
+                                  onClick={() => openViewMed(m)}
+                                  size="small"
+                                >
+                                  <VisibilityIcon fontSize="inherit" />
+                                </IconButton>
+                              </Tooltip>
+                              {isAdmin && (
+                                <>
+                                  <Tooltip title="Edit">
+                                    <IconButton
+                                      onClick={() => openEditMed(m)}
+                                      size="small"
+                                    >
+                                      <EditIcon fontSize="inherit" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Delete">
+                                    <IconButton
+                                      onClick={() => deleteMed(m)}
+                                      size="small"
+                                      color="error"
+                                    >
+                                      <DeleteIcon fontSize="inherit" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </>
+                              )}
+                            </Box>
                           </TableCell>
                         </TableRow>
                       ))
@@ -1111,26 +1108,20 @@ export default function PharmacyManagement() {
                 sx={{ mb: 2 }}
               />
 
-              <TableContainer
-                sx={{
-                  borderRadius: 2,
-                  border: "1px solid",
-                  borderColor: "divider",
-                }}
-              >
-                <Table size="small">
+              <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider", overflowX: "auto", maxWidth: "100%" }}>
+                <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                   <TableHead>
-                    <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>
+                    <TableRow sx={{ bgcolor: "grey.100" }}>
+                      <TableCell sx={{ fontWeight: 800, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         No
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Patient</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Doctor</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Date</TableCell>
+                      <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Patient</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 140 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Doctor</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 110 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         Consultation
                       </TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 800 }}>
+                      <TableCell align="right" sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         Actions
                       </TableCell>
                     </TableRow>
@@ -1165,28 +1156,24 @@ export default function PharmacyManagement() {
                           >
                             {presPage * presRowsPerPage + idx + 1}
                           </TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>
+                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" } }}>
                             {formatDateTime(p.prescription_date)}
                           </TableCell>
-                          <TableCell>
+                          <TableCell sx={{ maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {p.patient?.full_name || p.patient?.user?.full_name || p.patient_id || "—"}
                           </TableCell>
-                          <TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
                             {p.doctor?.user?.full_name || p.doctor?.staff_type || p.consultation?.appointment?.doctor?.user?.full_name || p.consultation?.appointment?.doctor?.staff_type || p.doctor_id || "—"}
                           </TableCell>
-                          <TableCell sx={{ fontFamily: "monospace", fontSize: "0.85rem" }}>
+                          <TableCell sx={{ fontFamily: "monospace", fontSize: "0.85rem", display: { xs: "none", md: "table-cell" } }}>
                             {p.consultation_id ? String(p.consultation_id).slice(0, 8) + "…" : "—"}
                           </TableCell>
-                          <TableCell align="right">
-                            <Chip
-                              size="small"
-                              label="View items"
-                              sx={{
-                                fontWeight: 800,
-                                bgcolor: "rgba(0, 137, 123, 0.10)",
-                                color: theme.palette.primary.dark,
-                              }}
-                            />
+                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} onClick={(e) => e.stopPropagation()}>
+                            <Tooltip title="View items">
+                              <IconButton size="small" color="primary" onClick={() => openPrescription(p)} aria-label="View items">
+                                <VisibilityIcon fontSize="inherit" />
+                              </IconButton>
+                            </Tooltip>
                           </TableCell>
                         </TableRow>
                       ))
@@ -1246,22 +1233,25 @@ export default function PharmacyManagement() {
                   borderRadius: 2,
                   border: "1px solid",
                   borderColor: "divider",
+                  overflow: "hidden",
+                  overflowX: "auto",
+                  maxWidth: "100%",
                 }}
               >
-                <Table size="small">
+                <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                   <TableHead>
-                    <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>
+                    <TableRow sx={{ bgcolor: "grey.100" }}>
+                      <TableCell sx={{ fontWeight: 800, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         No
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 120, md: 140 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         Dispense date
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>
+                      <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 120, md: 160 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         Prescription
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Pharmacist</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 800 }}>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 180 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Pharmacist</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         Actions
                       </TableCell>
                     </TableRow>
@@ -1291,13 +1281,13 @@ export default function PharmacyManagement() {
                           >
                             {dispPage * dispRowsPerPage + idx + 1}
                           </TableCell>
-                          <TableCell sx={{ fontWeight: 800 }}>
+                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 120, md: 140 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {formatDateTime(r.dispense_date)}
                           </TableCell>
-                          <TableCell sx={{ fontFamily: "monospace" }}>
+                          <TableCell sx={{ fontFamily: "monospace", maxWidth: { xs: "22vw", sm: 120, md: 160 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {r.prescription_id}
                           </TableCell>
-                          <TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" }, maxWidth: { md: 180 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                             {r.pharmacist?.user?.full_name || r.pharmacist?.staff_type || "—"}
                           </TableCell>
                           <TableCell align="right">
@@ -1347,18 +1337,18 @@ export default function PharmacyManagement() {
               <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
                 Bills for prescriptions (pharmacy) only.
               </Typography>
-              <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-                <Table size="small">
+<TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                   <TableHead>
-                    <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Patient</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Total</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Paid</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Balance</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Status</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Created</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 800 }}>Actions</TableCell>
+                    <TableRow sx={{ bgcolor: "grey.100" }}>
+                      <TableCell sx={{ fontWeight: 800, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Patient</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Total</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Paid</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Balance</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Status</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Created</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1383,16 +1373,20 @@ export default function PharmacyManagement() {
                             <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>
                               {pharmBillsPage * pharmBillsRowsPerPage + idx + 1}
                             </TableCell>
-                            <TableCell sx={{ fontWeight: 700 }}>{patientName}</TableCell>
-                            <TableCell>{total.toFixed(2)}</TableCell>
-                            <TableCell>{paidAmt.toFixed(2)}</TableCell>
-                            <TableCell>{balance.toFixed(2)}</TableCell>
-                            <TableCell>
+                            <TableCell sx={{ fontWeight: 700, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{patientName}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{total.toFixed(2)}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{paidAmt.toFixed(2)}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{balance.toFixed(2)}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
                               <Chip size="small" label={status} color={status === "paid" ? "success" : status === "partial" ? "warning" : "default"} />
                             </TableCell>
-                            <TableCell>{formatDateTime(b.createdAt)}</TableCell>
-                            <TableCell align="right">
-                              <Button size="small" variant="outlined" onClick={() => openPharmBillView(b.id)}>View</Button>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" }, maxWidth: { md: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{formatDateTime(b.createdAt)}</TableCell>
+                            <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                              <Tooltip title="View">
+                                <IconButton size="small" color="primary" onClick={() => openPharmBillView(b.id)} aria-label="View">
+                                  <VisibilityIcon fontSize="inherit" />
+                                </IconButton>
+                              </Tooltip>
                             </TableCell>
                           </TableRow>
                         );
@@ -1424,17 +1418,17 @@ export default function PharmacyManagement() {
               <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
                 Payments recorded for prescription (pharmacy) bills.
               </Typography>
-              <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-                <Table size="small">
+<TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                   <TableHead>
-                    <TableRow sx={{ bgcolor: "rgba(0, 137, 123, 0.06)" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Date</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Patient</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Amount</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Method</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>Bill</TableCell>
-                      <TableCell sx={{ fontWeight: 800, width: 72 }} align="center">Action</TableCell>
+                    <TableRow sx={{ bgcolor: "grey.100" }}>
+                      <TableCell sx={{ fontWeight: 800, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 110 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Date</TableCell>
+                      <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Patient</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Amount</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Method</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Bill</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: 72, maxWidth: { xs: "22vw", sm: 72 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} align="center">Action</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1455,14 +1449,14 @@ export default function PharmacyManagement() {
                             <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>
                               {pharmPaymentsPage * pharmPaymentsRowsPerPage + idx + 1}
                             </TableCell>
-                            <TableCell>{formatDateTime(p.payment_date || p.createdAt)}</TableCell>
-                            <TableCell sx={{ fontWeight: 700 }}>{patientName}</TableCell>
-                            <TableCell>{Number(p.amount_paid ?? 0).toFixed(2)}</TableCell>
-                            <TableCell>{p.payment_method || "—"}</TableCell>
-                            <TableCell sx={{ fontSize: "0.85rem", color: "text.secondary" }}>
+                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 110 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{formatDateTime(p.payment_date || p.createdAt)}</TableCell>
+                            <TableCell sx={{ fontWeight: 700, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{patientName}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{Number(p.amount_paid ?? 0).toFixed(2)}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.payment_method || "—"}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" }, fontSize: "0.85rem", color: "text.secondary", maxWidth: { md: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                               {p.bill_id ? `#${String(p.bill_id).slice(0, 8)}` : "—"}
                             </TableCell>
-                            <TableCell align="center">
+                            <TableCell align="center" sx={{ overflow: "hidden", minWidth: 96 }}>
                               <Tooltip title="View receipt">
                                 <IconButton size="small" color="primary" onClick={() => setReceiptDialogPaymentId(p.id)} aria-label="View receipt">
                                   <ReceiptIcon />
@@ -1502,9 +1496,10 @@ export default function PharmacyManagement() {
         onClose={() => setPharmBillView({ open: false, bill: null, loading: false })}
         fullWidth
         maxWidth="sm"
+        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
       >
         <DialogTitle sx={{ fontWeight: 900 }}>Prescription bill</DialogTitle>
-        <DialogContent dividers>
+        <DialogContent dividers sx={{ overflowY: "auto" }}>
           {pharmBillView.loading ? (
             <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
               <CircularProgress size={18} />
@@ -1573,9 +1568,10 @@ export default function PharmacyManagement() {
         onClose={() => setMedView({ open: false, med: null })}
         fullWidth
         maxWidth="xs"
+        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
       >
         <DialogTitle sx={{ fontWeight: 900 }}>Medication Details</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={1} sx={{ mt: 0.5 }}>
             <Typography variant="overline" color="text.secondary">
               Name
@@ -1638,9 +1634,10 @@ export default function PharmacyManagement() {
         onClose={() => setMedDialog({ open: false, mode: "edit", id: null })}
         fullWidth
         maxWidth="sm"
+        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
       >
         <DialogTitle sx={{ fontWeight: 900 }}>Edit Medication</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
               label="Name"
@@ -1733,9 +1730,10 @@ export default function PharmacyManagement() {
         }
         fullWidth
         maxWidth="md"
+        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
       >
         <DialogTitle sx={{ fontWeight: 900 }}>Prescription</DialogTitle>
-        <DialogContent dividers>
+        <DialogContent dividers sx={{ overflowY: "auto" }}>
           {presView.loading ? (
             <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
               <CircularProgress size={18} />
@@ -1895,39 +1893,41 @@ export default function PharmacyManagement() {
 
               <Divider />
               <Typography sx={{ fontWeight: 900 }}>Medications</Typography>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 800, width: 64 }}>No</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Medication</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Qty</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Dosage</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Frequency</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>Duration</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {(presView.prescription?.items || []).map((it, idx) => (
-                    <TableRow key={it.id} hover>
-                      <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{idx + 1}</TableCell>
-                      <TableCell>{it.medication?.name || it.medication_id || "—"}</TableCell>
-                      <TableCell>{it.quantity ?? 1}</TableCell>
-                      <TableCell>{it.dosage || "—"}</TableCell>
-                      <TableCell>{it.frequency || "—"}</TableCell>
-                      <TableCell>{it.duration || "—"}</TableCell>
-                    </TableRow>
-                  ))}
-                  {!(presView.prescription?.items || []).length && (
+<TableContainer sx={{ overflowX: "auto", width: "100%", maxWidth: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
+                  <TableHead>
                     <TableRow>
-                      <TableCell colSpan={6}>
-                        <Typography color="text.secondary">
-                          No medications on this prescription.
-                        </Typography>
-                      </TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Medication</TableCell>
+                      <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "14vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Qty</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Dosage</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Frequency</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Duration</TableCell>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                  </TableHead>
+                  <TableBody>
+                    {(presView.prescription?.items || []).map((it, idx) => (
+                      <TableRow key={it.id} hover>
+                        <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{idx + 1}</TableCell>
+                        <TableCell>{it.medication?.name || it.medication_id || "—"}</TableCell>
+                        <TableCell>{it.quantity ?? 1}</TableCell>
+                        <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{it.dosage || "—"}</TableCell>
+                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{it.frequency || "—"}</TableCell>
+                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{it.duration || "—"}</TableCell>
+                      </TableRow>
+                    ))}
+                    {!(presView.prescription?.items || []).length && (
+                      <TableRow>
+                        <TableCell colSpan={6}>
+                          <Typography color="text.secondary">
+                            No medications on this prescription.
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             </Stack>
           )}
         </DialogContent>
@@ -1970,9 +1970,10 @@ export default function PharmacyManagement() {
         onClose={() => setDispView({ open: false, record: null })}
         fullWidth
         maxWidth="sm"
+        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
       >
         <DialogTitle sx={{ fontWeight: 900 }}>Dispense Record</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={1} sx={{ mt: 0.5 }}>
             <Typography variant="overline" color="text.secondary">
               Dispense date

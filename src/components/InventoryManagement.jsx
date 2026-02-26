@@ -29,6 +29,7 @@ import {
   TextField,
   Typography,
   Tooltip,
+  useMediaQuery,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -38,7 +39,6 @@ import {
   ShoppingCart as PurchaseOrderIcon,
   Category as ItemsIcon,
   SwapHoriz as StockIcon,
-  Refresh as RefreshIcon,
   Visibility as VisibilityIcon,
 } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
@@ -96,6 +96,7 @@ const PO_STATUS_OPTIONS = ["draft", "ordered", "received", "cancelled"];
 
 export default function InventoryManagement() {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const token = getToken();
 
   const [tab, setTab] = useState(0);
@@ -785,29 +786,34 @@ export default function InventoryManagement() {
           <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: 0.2 }}>
             Inventory
           </Typography>
-          <Button
-            variant="outlined"
-            startIcon={<RefreshIcon />}
-            onClick={() => {
-              if (tab === 0) loadSuppliers();
-              if (tab === 1) loadInventoryItems();
-              if (tab === 2) loadPurchaseOrders();
-              if (tab === 3) loadTransactions();
-            }}
-            sx={{ borderColor: "rgba(255,255,255,0.55)", color: "white", fontWeight: 800, "&:hover": { borderColor: "rgba(255,255,255,0.85)", bgcolor: "rgba(255,255,255,0.08)" } }}
-          >
-            Refresh
-          </Button>
         </Stack>
       </Box>
 
       <CardContent sx={{ p: 0 }}>
-        <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ px: 2, "& .MuiTabs-indicator": { backgroundColor: theme.palette.primary.main } }}>
-          <Tab icon={<SupplierIcon />} iconPosition="start" label="Suppliers" />
-          <Tab icon={<ItemsIcon />} iconPosition="start" label="Inventory items" />
-          <Tab icon={<PurchaseOrderIcon />} iconPosition="start" label="Purchase orders" />
-          <Tab icon={<StockIcon />} iconPosition="start" label="Stock in / out" />
-        </Tabs>
+        {isMobile ? (
+          <FormControl fullWidth size="small" sx={{ px: 2, py: 1.5 }}>
+            <InputLabel id="inventory-section-label">Section</InputLabel>
+            <Select
+              labelId="inventory-section-label"
+              value={tab}
+              label="Section"
+              onChange={(e) => setTab(Number(e.target.value))}
+              sx={{ borderRadius: 1 }}
+            >
+              <MenuItem value={0}>Suppliers</MenuItem>
+              <MenuItem value={1}>Inventory items</MenuItem>
+              <MenuItem value={2}>Purchase orders</MenuItem>
+              <MenuItem value={3}>Stock in / out</MenuItem>
+            </Select>
+          </FormControl>
+        ) : (
+          <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ px: 2, "& .MuiTabs-indicator": { backgroundColor: theme.palette.primary.main } }}>
+            <Tab icon={<SupplierIcon />} iconPosition="start" label="Suppliers" />
+            <Tab icon={<ItemsIcon />} iconPosition="start" label="Inventory items" />
+            <Tab icon={<PurchaseOrderIcon />} iconPosition="start" label="Purchase orders" />
+            <Tab icon={<StockIcon />} iconPosition="start" label="Stock in / out" />
+          </Tabs>
+        )}
         <Divider />
 
         {/* Tab 0: Suppliers */}
@@ -828,15 +834,15 @@ export default function InventoryManagement() {
                 Add supplier
               </Button>
             </Stack>
-            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-              <Table size="small">
+            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: "rgba(0,0,0,0.02)" }}>
-                    <TableCell sx={{ fontWeight: 900, width: 64 }}>No</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Name</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Phone</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Email</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 900 }}>Actions</TableCell>
+                    <TableCell sx={{ fontWeight: 900, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Name</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Phone</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 160 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Email</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -853,17 +859,21 @@ export default function InventoryManagement() {
                     suppliers.map((s, idx) => (
                       <TableRow key={s.id} hover>
                         <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{suppliersPage * suppliersRowsPerPage + idx + 1}</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }}>{s.name}</TableCell>
-                        <TableCell>{s.phone || "—"}</TableCell>
-                        <TableCell>{s.email || "—"}</TableCell>
-                        <TableCell align="right">
-                          <Stack direction="row" spacing={1} justifyContent="flex-end">
+                        <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "28vw", sm: 160, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</TableCell>
+                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{s.phone || "—"}</TableCell>
+                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{s.email || "—"}</TableCell>
+                        <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                          <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
                             <Tooltip title="View">
-                              <Button size="small" variant="outlined" startIcon={<VisibilityIcon />} onClick={() => openSupplierView(s.id)} sx={{ fontWeight: 800 }}>View</Button>
+                              <IconButton size="small" color="primary" onClick={() => openSupplierView(s.id)} aria-label="View"><VisibilityIcon fontSize="inherit" /></IconButton>
                             </Tooltip>
-                            <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => openSupplierEdit(s)} sx={{ fontWeight: 800 }}>Edit</Button>
-                            <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => deleteSupplier(s.id)} sx={{ fontWeight: 800 }}>Delete</Button>
-                          </Stack>
+                            <Tooltip title="Edit">
+                              <IconButton size="small" color="primary" onClick={() => openSupplierEdit(s)} aria-label="Edit"><EditIcon fontSize="inherit" /></IconButton>
+                            </Tooltip>
+                            <Tooltip title="Delete">
+                              <IconButton size="small" color="error" onClick={() => deleteSupplier(s.id)} aria-label="Delete"><DeleteIcon fontSize="inherit" /></IconButton>
+                            </Tooltip>
+                          </Box>
                         </TableCell>
                       </TableRow>
                     ))
@@ -910,18 +920,18 @@ export default function InventoryManagement() {
                 Add item
               </Button>
             </Stack>
-            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-              <Table size="small">
+            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: "rgba(0,0,0,0.02)" }}>
-                    <TableCell sx={{ fontWeight: 900, width: 64 }}>No</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Name</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Category</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Main store</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>In pharmacy</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Reorder level</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Unit</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 900 }}>Actions</TableCell>
+                    <TableCell sx={{ fontWeight: 900, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Name</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Category</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Main store</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>In pharmacy</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 110 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Reorder level</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 80 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Unit</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -938,14 +948,14 @@ export default function InventoryManagement() {
                     inventoryItems.map((item, idx) => (
                       <TableRow key={item.id} hover>
                         <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{inventoryItemsPage * inventoryItemsRowsPerPage + idx + 1}</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }}>{item.name}</TableCell>
-                        <TableCell>{item.category || "—"}</TableCell>
-                        <TableCell>{item.quantity_available ?? 0}</TableCell>
-                        <TableCell>{item.quantity_in_pharmacy ?? 0}</TableCell>
-                        <TableCell>{item.reorder_level ?? 0}</TableCell>
-                        <TableCell>{item.unit || "—"}</TableCell>
-                        <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
-                          <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="flex-end" flexWrap="nowrap">
+                        <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "28vw", sm: 160, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</TableCell>
+                        <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{item.category || "—"}</TableCell>
+                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{item.quantity_available ?? 0}</TableCell>
+                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{item.quantity_in_pharmacy ?? 0}</TableCell>
+                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{item.reorder_level ?? 0}</TableCell>
+                        <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{item.unit || "—"}</TableCell>
+                        <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                          <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
                             <Tooltip title="View">
                               <IconButton size="small" onClick={() => openItemView(item.id)} color="inherit"><VisibilityIcon fontSize="small" /></IconButton>
                             </Tooltip>
@@ -955,8 +965,13 @@ export default function InventoryManagement() {
                             <Tooltip title="Delete">
                               <IconButton size="small" onClick={() => deleteItem(item.id)} color="error"><DeleteIcon fontSize="small" /></IconButton>
                             </Tooltip>
-                            <Button size="small" variant="outlined" startIcon={<StockIcon />} onClick={() => openTransferToPharmacy(item)} sx={{ fontWeight: 800, ml: 0.5, flexShrink: 0 }}>Move stock to pharmacy</Button>
-                          </Stack>
+                            <Tooltip title="Move stock to pharmacy">
+                              <IconButton size="small" color="primary" onClick={() => openTransferToPharmacy(item)} sx={{ display: { xs: "inline-flex", md: "none" } }} aria-label="Move stock to pharmacy">
+                                <StockIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Button size="small" variant="outlined" startIcon={<StockIcon />} onClick={() => openTransferToPharmacy(item)} sx={{ fontWeight: 800, gridColumn: "1 / -1", justifySelf: "end", display: { xs: "none", md: "inline-flex" } }}>Move stock to pharmacy</Button>
+                          </Box>
                         </TableCell>
                       </TableRow>
                     ))
@@ -1003,15 +1018,15 @@ export default function InventoryManagement() {
                 Add purchase order
               </Button>
             </Stack>
-            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-              <Table size="small">
+            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: "rgba(0,0,0,0.02)" }}>
-                    <TableCell sx={{ fontWeight: 900, width: 64 }}>No</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Supplier</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Order date</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Status</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 900 }}>Actions</TableCell>
+                    <TableCell sx={{ fontWeight: 900, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Supplier</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Order date</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Status</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -1029,16 +1044,22 @@ export default function InventoryManagement() {
                       <TableRow key={po.id} hover>
                         <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{purchaseOrdersPage * purchaseOrdersRowsPerPage + idx + 1}</TableCell>
                         <TableCell sx={{ fontWeight: 800 }}>{po.supplier?.name ?? "—"}</TableCell>
-                        <TableCell>{formatDate(po.order_date)}</TableCell>
-                        <TableCell>
+                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{formatDate(po.order_date)}</TableCell>
+                        <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
                           <Chip size="small" label={po.status} color={po.status === "received" ? "success" : po.status === "cancelled" ? "default" : "primary"} variant="outlined" />
                         </TableCell>
-                        <TableCell align="right">
-                          <Stack direction="row" spacing={1} justifyContent="flex-end">
-                            <Button size="small" variant="outlined" startIcon={<VisibilityIcon />} onClick={() => openPOView(po.id)} sx={{ fontWeight: 800 }}>View</Button>
-                            <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => openPOEdit(po)} sx={{ fontWeight: 800 }}>Edit</Button>
-                            <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => deletePO(po.id)} sx={{ fontWeight: 800 }}>Delete</Button>
-                          </Stack>
+                        <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                          <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
+                            <Tooltip title="View">
+                              <IconButton size="small" color="primary" onClick={() => openPOView(po.id)} aria-label="View"><VisibilityIcon fontSize="inherit" /></IconButton>
+                            </Tooltip>
+                            <Tooltip title="Edit">
+                              <IconButton size="small" color="primary" onClick={() => openPOEdit(po)} aria-label="Edit"><EditIcon fontSize="inherit" /></IconButton>
+                            </Tooltip>
+                            <Tooltip title="Delete">
+                              <IconButton size="small" color="error" onClick={() => deletePO(po.id)} aria-label="Delete"><DeleteIcon fontSize="inherit" /></IconButton>
+                            </Tooltip>
+                          </Box>
                         </TableCell>
                       </TableRow>
                     ))
@@ -1085,16 +1106,16 @@ export default function InventoryManagement() {
                 Record stock in/out
               </Button>
             </Stack>
-            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-              <Table size="small">
+            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: "rgba(0,0,0,0.02)" }}>
-                    <TableCell sx={{ fontWeight: 900, width: 64 }}>No</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Item</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Type</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Quantity</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Unit type</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Date</TableCell>
+                    <TableCell sx={{ fontWeight: 900, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Item</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Type</TableCell>
+                    <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "18vw", sm: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Quantity</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Unit type</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 110 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Date</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -1112,12 +1133,12 @@ export default function InventoryManagement() {
                       <TableRow key={tx.id} hover>
                         <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{transactionsPage * transactionsRowsPerPage + idx + 1}</TableCell>
                         <TableCell sx={{ fontWeight: 800 }}>{tx.item?.name ?? "—"}</TableCell>
-                        <TableCell>
+                        <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
                           <Chip size="small" label={tx.transaction_type} color={tx.transaction_type === "in" ? "success" : tx.transaction_type === "out" ? "warning" : "default"} variant="outlined" />
                         </TableCell>
                         <TableCell>{tx.quantity ?? 0}</TableCell>
-                        <TableCell>{tx.unit_type || "unit"}</TableCell>
-                        <TableCell>{formatDateTime(tx.transaction_date)}</TableCell>
+                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{tx.unit_type || "unit"}</TableCell>
+                        <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{formatDateTime(tx.transaction_date)}</TableCell>
                       </TableRow>
                     ))
                   ) : (
@@ -1147,9 +1168,9 @@ export default function InventoryManagement() {
       </CardContent>
 
       {/* Supplier create/edit dialog */}
-      <Dialog open={supplierDialog.open} onClose={() => setSupplierDialog((p) => ({ ...p, open: false }))} maxWidth="sm" fullWidth>
+      <Dialog open={supplierDialog.open} onClose={() => setSupplierDialog((p) => ({ ...p, open: false }))} maxWidth="sm" fullWidth PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle>{supplierDialog.mode === "create" ? "Add supplier" : "Edit supplier"}</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <TextField fullWidth size="small" label="Name" value={supplierForm.name} onChange={(e) => setSupplierForm((p) => ({ ...p, name: e.target.value }))} required />
             <TextField fullWidth size="small" label="Phone" value={supplierForm.phone} onChange={(e) => setSupplierForm((p) => ({ ...p, phone: e.target.value }))} />
@@ -1164,9 +1185,9 @@ export default function InventoryManagement() {
       </Dialog>
 
       {/* Supplier view dialog */}
-      <Dialog open={supplierView.open} onClose={() => setSupplierView({ open: false, data: null })} maxWidth="sm" fullWidth>
+      <Dialog open={supplierView.open} onClose={() => setSupplierView({ open: false, data: null })} maxWidth="sm" fullWidth PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle>Supplier details</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           {supplierView.data && (
             <Stack spacing={2} sx={{ pt: 1 }}>
               <Typography><strong>Name:</strong> {supplierView.data.name}</Typography>
@@ -1182,9 +1203,9 @@ export default function InventoryManagement() {
       </Dialog>
 
       {/* Purchase order create/edit dialog */}
-      <Dialog open={poDialog.open} onClose={() => setPoDialog((p) => ({ ...p, open: false }))} maxWidth="md" fullWidth>
+      <Dialog open={poDialog.open} onClose={() => setPoDialog((p) => ({ ...p, open: false }))} maxWidth="md" fullWidth PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle>{poDialog.mode === "create" ? "Add purchase order" : "Edit purchase order"}</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <FormControl fullWidth size="small" required>
               <InputLabel>Supplier</InputLabel>
@@ -1216,14 +1237,14 @@ export default function InventoryManagement() {
             {poDialog.mode === "create" && (
               <>
                 <Typography variant="subtitle2" fontWeight={700}>Line items (optional)</Typography>
-                <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1 }}>
-                  <Table size="small">
+                <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, overflowX: "auto", maxWidth: "100%" }}>
+                  <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                     <TableHead>
                       <TableRow sx={{ bgcolor: "rgba(0,0,0,0.04)" }}>
-                        <TableCell sx={{ fontWeight: 800 }}>Item</TableCell>
-                        <TableCell sx={{ fontWeight: 800, width: 100 }}>Qty</TableCell>
-                        <TableCell sx={{ fontWeight: 800, width: 120 }}>Unit price</TableCell>
-                        <TableCell sx={{ width: 56 }} />
+                        <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 180 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Item</TableCell>
+                        <TableCell sx={{ fontWeight: 800, width: 100, maxWidth: { xs: "16vw", sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Qty</TableCell>
+                        <TableCell sx={{ fontWeight: 800, width: 120, maxWidth: { xs: "20vw", sm: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Unit price</TableCell>
+                        <TableCell sx={{ width: 56, maxWidth: 56, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} />
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -1270,9 +1291,9 @@ export default function InventoryManagement() {
       </Dialog>
 
       {/* Purchase order view dialog */}
-      <Dialog open={poView.open} onClose={() => setPoView({ open: false, data: null })} maxWidth="md" fullWidth>
+      <Dialog open={poView.open} onClose={() => setPoView({ open: false, data: null })} maxWidth="md" fullWidth PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle>Purchase order details</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           {poView.data && (
             <Stack spacing={2} sx={{ pt: 1 }}>
               <Typography><strong>Supplier:</strong> {poView.data.supplier?.name ?? "—"}</Typography>
@@ -1281,27 +1302,31 @@ export default function InventoryManagement() {
               <Divider />
               <Typography variant="subtitle2" fontWeight={700}>Line items (what was ordered)</Typography>
               {poView.data.items?.length ? (
-                <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1 }}>
-                  <Table size="small">
+                <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, overflowX: "auto", maxWidth: "100%" }}>
+                  <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                     <TableHead>
                       <TableRow sx={{ bgcolor: "rgba(0,0,0,0.04)" }}>
-                        <TableCell sx={{ fontWeight: 800 }}>Item</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }}>Quantity ordered</TableCell>
-                        <TableCell sx={{ fontWeight: 800 }}>Unit price</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 800 }}>Actions</TableCell>
+                        <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Item</TableCell>
+                        <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Quantity ordered</TableCell>
+                        <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Unit price</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Actions</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {poView.data.items.map((line) => (
                         <TableRow key={line.id}>
                           <TableCell>{line.inventoryItem?.name ?? "—"}</TableCell>
-                          <TableCell>{line.quantity_ordered ?? 0}</TableCell>
-                          <TableCell>{line.unit_price != null ? Number(line.unit_price).toLocaleString() : "—"}</TableCell>
-                          <TableCell align="right">
-                            <Stack direction="row" spacing={1} justifyContent="flex-end">
-                              <Button size="small" variant="outlined" startIcon={<EditIcon />} onClick={() => openEditPOLine(line)} sx={{ fontWeight: 800 }}>Edit</Button>
-                              <Button size="small" variant="outlined" color="error" startIcon={<DeleteIcon />} onClick={() => deletePOLine(line)} sx={{ fontWeight: 800 }}>Delete</Button>
-                            </Stack>
+                          <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{line.quantity_ordered ?? 0}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{line.unit_price != null ? Number(line.unit_price).toLocaleString() : "—"}</TableCell>
+                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
+                              <Tooltip title="Edit">
+                                <IconButton size="small" color="primary" onClick={() => openEditPOLine(line)} aria-label="Edit"><EditIcon fontSize="inherit" /></IconButton>
+                              </Tooltip>
+                              <Tooltip title="Delete">
+                                <IconButton size="small" color="error" onClick={() => deletePOLine(line)} aria-label="Delete"><DeleteIcon fontSize="inherit" /></IconButton>
+                              </Tooltip>
+                            </Box>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1321,9 +1346,9 @@ export default function InventoryManagement() {
       </Dialog>
 
       {/* Add line item to PO dialog */}
-      <Dialog open={poAddLineOpen} onClose={() => setPoAddLineOpen(false)} maxWidth="xs" fullWidth>
+      <Dialog open={poAddLineOpen} onClose={() => setPoAddLineOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle>Add line item</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <FormControl fullWidth size="small" required>
               <InputLabel>Inventory item</InputLabel>
@@ -1345,9 +1370,9 @@ export default function InventoryManagement() {
       </Dialog>
 
       {/* Edit line item dialog */}
-      <Dialog open={poEditLineOpen} onClose={() => setPoEditLineOpen(false)} maxWidth="xs" fullWidth>
+      <Dialog open={poEditLineOpen} onClose={() => setPoEditLineOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle>Edit line item</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <FormControl fullWidth size="small" required>
               <InputLabel>Inventory item</InputLabel>
@@ -1369,9 +1394,9 @@ export default function InventoryManagement() {
       </Dialog>
 
       {/* Record stock in/out dialog */}
-      <Dialog open={stockTxOpen} onClose={() => setStockTxOpen(false)} maxWidth="xs" fullWidth>
+      <Dialog open={stockTxOpen} onClose={() => setStockTxOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle>Record stock in/out</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <FormControl fullWidth size="small" required>
               <InputLabel>Inventory item</InputLabel>
@@ -1407,9 +1432,9 @@ export default function InventoryManagement() {
       </Dialog>
 
       {/* Inventory item create/edit dialog */}
-      <Dialog open={itemDialog.open} onClose={() => setItemDialog((p) => ({ ...p, open: false }))} maxWidth="sm" fullWidth>
+      <Dialog open={itemDialog.open} onClose={() => setItemDialog((p) => ({ ...p, open: false }))} maxWidth="sm" fullWidth PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle>{itemDialog.mode === "create" ? "Add inventory item" : "Edit inventory item"}</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <TextField fullWidth size="small" label="Name" value={itemForm.name} onChange={(e) => setItemForm((p) => ({ ...p, name: e.target.value }))} required />
             <TextField fullWidth size="small" label="Category" value={itemForm.category} onChange={(e) => setItemForm((p) => ({ ...p, category: e.target.value }))} placeholder="e.g. Medication, Consumables" />
@@ -1426,9 +1451,9 @@ export default function InventoryManagement() {
       </Dialog>
 
       {/* Inventory item view dialog */}
-      <Dialog open={itemView.open} onClose={() => setItemView({ open: false, data: null })} maxWidth="sm" fullWidth>
+      <Dialog open={itemView.open} onClose={() => setItemView({ open: false, data: null })} maxWidth="sm" fullWidth PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle>Inventory item details</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           {itemView.data && (
             <Stack spacing={2} sx={{ pt: 1 }}>
               <Typography><strong>Name:</strong> {itemView.data.name}</Typography>
@@ -1452,9 +1477,9 @@ export default function InventoryManagement() {
       </Dialog>
 
       {/* Move stock to pharmacy dialog */}
-      <Dialog open={transferToPharmacyOpen} onClose={() => setTransferToPharmacyOpen(false)} maxWidth="xs" fullWidth>
+      <Dialog open={transferToPharmacyOpen} onClose={() => setTransferToPharmacyOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle>Move stock to pharmacy</DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflowY: "auto" }}>
           {transferToPharmacyItem && (
             <Stack spacing={2} sx={{ pt: 1 }}>
               <Typography variant="body2" color="text.secondary">{transferToPharmacyItem.name}</Typography>

@@ -114,6 +114,7 @@ export default function LoginPage() {
         localStorage.setItem("token", data.data.token);
         localStorage.setItem("user", JSON.stringify(data.data.user));
         localStorage.setItem("role", JSON.stringify(data.data.role ?? null));
+        localStorage.setItem("menuItems", JSON.stringify(data.data.menuItems ?? []));
         navigate("/dashboard");
         Swal.fire({
           icon: "success",
@@ -358,7 +359,7 @@ export default function LoginPage() {
         </Box>
       )}
 
-      {/* Right: Login form - fits viewport, footer always visible, no page scrollbar */}
+      {/* Right: Login form - attractive landing-style panel */}
       <Box
         sx={{
           width: isDesktop ? "50%" : "100%",
@@ -368,9 +369,22 @@ export default function LoginPage() {
           minWidth: 0,
           display: "flex",
           flexDirection: "column",
-          bgcolor: "white",
+          background: isDesktop
+            ? `linear-gradient(165deg, ${backgroundLight} 0%, #ffffff 35%, #f0f7f6 100%)`
+            : "linear-gradient(180deg, #fafcfb 0%, #ffffff 30%, #f6faf9 100%)",
           overflow: "hidden",
           boxSizing: "border-box",
+          position: "relative",
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            top: 0,
+            right: 0,
+            width: "60%",
+            height: "50%",
+            background: `radial-gradient(ellipse at 100% 0%, rgba(0, 137, 123, 0.06) 0%, transparent 70%)`,
+            pointerEvents: "none",
+          },
         }}
       >
         <Box
@@ -379,65 +393,70 @@ export default function LoginPage() {
             minHeight: 0,
             display: "flex",
             flexDirection: "column",
-            padding: "clamp(12px, 3vh, 32px) clamp(16px, 5vw, 48px)",
+            padding: "clamp(20px, 4vh, 40px) clamp(20px, 6vw, 56px)",
             overflow: "hidden",
+            position: "relative",
+            zIndex: 1,
           }}
         >
-          {/* Brand header - always visible at top */}
+          {/* Brand header */}
           <Box
             sx={{
               flexShrink: 0,
               textAlign: "center",
-              marginBottom: "clamp(8px, 2vh, 24px)",
+              marginBottom: "clamp(16px, 3vh, 32px)",
             }}
           >
             <Box
               sx={{
-                width: "clamp(40px, 10vw, 64px)",
-                height: "clamp(40px, 10vw, 64px)",
-                minWidth: 40,
-                minHeight: 40,
-                bgcolor: primaryTeal,
-                borderRadius: 2,
+                width: "clamp(48px, 12vw, 72px)",
+                height: "clamp(48px, 12vw, 72px)",
+                minWidth: 48,
+                minHeight: 48,
+                background: `linear-gradient(135deg, ${primaryTeal} 0%, ${primaryTealDark} 100%)`,
+                borderRadius: "16px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 mx: "auto",
-                mb: "clamp(8px, 2vh, 16px)",
+                mb: "clamp(12px, 2.5vh, 20px)",
+                boxShadow: "0 8px 24px rgba(0, 137, 123, 0.25)",
               }}
             >
               <LocalHospital
                 sx={{
                   color: "white",
-                  fontSize: "clamp(24, 6vw, 40)",
+                  fontSize: "clamp(28, 7vw, 44)",
                 }}
               />
             </Box>
             <Typography
               variant="h1"
               sx={{
-                fontSize: "clamp(1.15rem, 2.5vw + 0.5rem, 1.875rem)",
+                fontSize: "clamp(1.2rem, 2.8vw + 0.5rem, 1.95rem)",
                 fontWeight: 900,
                 color: textPrimary,
                 lineHeight: 1.2,
+                letterSpacing: "-0.02em",
               }}
             >
               Smart Hospital Management System
             </Typography>
             <Typography
               sx={{
-                fontFamily: "'Playfair Display', serif",
+                fontFamily: "'Playfair Display', Georgia, serif",
                 fontStyle: "italic",
                 color: earthBrown,
-                fontSize: "clamp(0.8rem, 1.5vw + 0.5rem, 1.125rem)",
-                mt: 0.5,
+                fontSize: "clamp(0.85rem, 1.6vw + 0.5rem, 1.1rem)",
+                mt: 0.75,
+                opacity: 0.9,
               }}
             >
               Admin Portal
             </Typography>
           </Box>
 
-          {/* Scrollable middle - only this area scrolls if content is tall */}
+          {/* Scrollable form area */}
           <Box
             sx={{
               flex: 1,
@@ -447,175 +466,196 @@ export default function LoginPage() {
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
+              justifyContent: "flex-start",
             }}
           >
-            <Box
-              sx={{
-                width: "100%",
-                maxWidth: "min(480px, 90vw)",
-                flexShrink: 0,
-              }}
-            >
-          {/* Login card - padding scales with viewport */}
-          <Card
-            elevation={0}
-            sx={{
-              boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)",
-              borderRadius: 2,
-              p: "clamp(16px, 3vh, 24px)",
-              border: "1px solid",
-              borderColor: "grey.100",
-              bgcolor: "white",
-            }}
-          >
-            <Box sx={{ mb: "clamp(12px, 2.5vh, 24px)" }}>
-              <Typography
-                variant="h6"
+            <Box sx={{ width: "100%", maxWidth: "min(420px, 92vw)", flexShrink: 0 }}>
+              <Card
+                elevation={0}
                 sx={{
-                  fontWeight: 700,
-                  color: textPrimary,
-                  fontSize: "clamp(1rem, 1.5vw + 0.5rem, 1.25rem)",
+                  borderRadius: "20px",
+                  overflow: "hidden",
+                  border: "1px solid",
+                  borderColor: "rgba(0, 137, 123, 0.12)",
+                  bgcolor: "rgba(255,255,255,0.85)",
+                  backdropFilter: "blur(12px)",
+                  boxShadow: "0 4px 24px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,137,123,0.04)",
+                  p: "clamp(24px, 4vh, 36px)",
                 }}
               >
-                Admin Login
-              </Typography>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ fontSize: "clamp(0.75rem, 1vw + 0.4rem, 0.875rem)" }}
-              >
-                Please enter your credentials to continue
-              </Typography>
-            </Box>
-
-            <form onSubmit={login}>
-              <TextField
-                inputRef={rfEmail}
-                type="email"
-                label="Email Address"
-                placeholder="admin@mkconsultants.com"
-                fullWidth
-                required
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <EmailIcon sx={{ color: "grey.500", fontSize: 22 }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ ...inputSx, mb: "clamp(8px, 2vh, 16px)" }}
-              />
-
-              <TextField
-                inputRef={rfPassword}
-                type={showPassword ? "text" : "password"}
-                label="Password"
-                placeholder="••••••••"
-                fullWidth
-                required
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Lock sx={{ color: "grey.500", fontSize: 22 }} />
-                    </InputAdornment>
-                  ),
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setShowPassword(!showPassword)}
-                        edge="end"
-                        size="small"
-                        aria-label={showPassword ? "Hide password" : "Show password"}
-                      >
-                        {showPassword ? (
-                          <VisibilityOff fontSize="small" />
-                        ) : (
-                          <Visibility fontSize="small" />
-                        )}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ ...inputSx, mb: "clamp(4px, 1vh, 8px)" }}
-              />
-
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      sx={{
-                        color: "#dbe6dd",
-                        "&.Mui-checked": { color: primaryTeal },
-                      }}
-                    />
-                  }
-                  label={
-                    <Typography variant="body2" color="text.secondary">
-                      Remember this device
-                    </Typography>
-                  }
-                />
-                <Typography
-                  component="button"
-                  type="button"
-                  variant="body2"
-                  onClick={() => setOpenResetDialog(true)}
+                <Box
                   sx={{
-                    border: "none",
-                    background: "none",
-                    cursor: "pointer",
-                    color: earthBrown,
-                    fontWeight: 700,
-                    "&:hover": { textDecoration: "underline" },
+                    borderLeft: "4px solid",
+                    borderColor: primaryTeal,
+                    pl: 2,
+                    mb: "clamp(16px, 3vh, 28px)",
                   }}
                 >
-                  Forgot password?
-                </Typography>
-              </Box>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight: 800,
+                      color: textPrimary,
+                      fontSize: "clamp(1.05rem, 1.8vw + 0.5rem, 1.35rem)",
+                      letterSpacing: "-0.01em",
+                    }}
+                  >
+                    Welcome back
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      fontSize: "clamp(0.8rem, 1.2vw + 0.4rem, 0.9rem)",
+                      mt: 0.25,
+                    }}
+                  >
+                    Sign in with your admin account to continue
+                  </Typography>
+                </Box>
 
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                disabled={loading}
-                startIcon={
-                  loading ? (
-                    <CircularProgress size={22} color="inherit" />
-                  ) : (
-                    <LoginIcon sx={{ fontSize: 22 }} />
-                  )
-                }
-                sx={{
-                  mt: "clamp(16px, 3vh, 24px)",
-                  py: "clamp(12px, 2.5vh, 14px)",
-                  bgcolor: primaryTeal,
-                  color: "white",
-                  fontWeight: 900,
-                  fontSize: "clamp(0.75rem, 1.5vw + 0.4rem, 0.875rem)",
-                  letterSpacing: "0.05em",
-                  borderRadius: "8px",
-                  boxShadow: "0 0 20px rgba(0, 137, 123, 0.22)",
-                  "&:hover": {
-                    bgcolor: primaryTealDark,
-                    boxShadow: "0 0 24px rgba(0, 137, 123, 0.3)",
-                  },
-                  "&:active": { transform: "scale(0.98)" },
-                }}
-              >
-                {loading ? "Signing in..." : "SIGN IN TO PORTAL"}
-              </Button>
-            </form>
-          </Card>
+                <form onSubmit={login}>
+                  <TextField
+                    inputRef={rfEmail}
+                    type="email"
+                    label="Email address"
+                    placeholder="you@hospital.com"
+                    fullWidth
+                    required
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <EmailIcon sx={{ color: primaryTeal, fontSize: 22, opacity: 0.9 }} />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{
+                      ...inputSx,
+                      mb: "clamp(14px, 2.5vh, 20px)",
+                      "& .MuiOutlinedInput-root": { ...inputSx["& .MuiOutlinedInput-root"], borderRadius: "12px" },
+                    }}
+                  />
+
+                  <TextField
+                    inputRef={rfPassword}
+                    type={showPassword ? "text" : "password"}
+                    label="Password"
+                    placeholder="Enter your password"
+                    fullWidth
+                    required
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Lock sx={{ color: primaryTeal, fontSize: 22, opacity: 0.9 }} />
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={() => setShowPassword(!showPassword)}
+                            edge="end"
+                            size="small"
+                            aria-label={showPassword ? "Hide password" : "Show password"}
+                            sx={{ color: "grey.600" }}
+                          >
+                            {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{
+                      ...inputSx,
+                      mb: "clamp(6px, 1.5vh, 12px)",
+                      "& .MuiOutlinedInput-root": { ...inputSx["& .MuiOutlinedInput-root"], borderRadius: "12px" },
+                    }}
+                  />
+
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: 1,
+                      mb: "clamp(4px, 1vh, 8px)",
+                    }}
+                  >
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={rememberMe}
+                          onChange={(e) => setRememberMe(e.target.checked)}
+                          sx={{
+                            color: "#b0c4be",
+                            "&.Mui-checked": { color: primaryTeal },
+                          }}
+                        />
+                      }
+                      label={
+                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                          Remember this device
+                        </Typography>
+                      }
+                    />
+                    <Typography
+                      component="button"
+                      type="button"
+                      variant="body2"
+                      onClick={() => setOpenResetDialog(true)}
+                      sx={{
+                        border: "none",
+                        background: "none",
+                        cursor: "pointer",
+                        color: primaryTeal,
+                        fontWeight: 700,
+                        "&:hover": { textDecoration: "underline", color: primaryTealDark },
+                      }}
+                    >
+                      Forgot password?
+                    </Typography>
+                  </Box>
+
+                  <Button
+                    type="submit"
+                    fullWidth
+                    variant="contained"
+                    disabled={loading}
+                    startIcon={
+                      loading ? (
+                        <CircularProgress size={22} color="inherit" />
+                      ) : (
+                        <LoginIcon sx={{ fontSize: 22 }} />
+                      )
+                    }
+                    sx={{
+                      mt: "clamp(20px, 3.5vh, 28px)",
+                      py: "clamp(14px, 2.8vh, 16px)",
+                      background: `linear-gradient(135deg, ${primaryTeal} 0%, ${primaryTealDark} 100%)`,
+                      color: "white",
+                      fontWeight: 800,
+                      fontSize: "clamp(0.8rem, 1.6vw + 0.4rem, 0.9rem)",
+                      letterSpacing: "0.06em",
+                      borderRadius: "12px",
+                      boxShadow: "0 4px 14px rgba(0, 137, 123, 0.35)",
+                      "&:hover": {
+                        background: `linear-gradient(135deg, ${primaryTealDark} 0%, #004d40 100%)`,
+                        boxShadow: "0 6px 20px rgba(0, 137, 123, 0.4)",
+                      },
+                      "&:active": { transform: "scale(0.99)" },
+                    }}
+                  >
+                    {loading ? "Signing in…" : "Sign in to portal"}
+                  </Button>
+                </form>
+              </Card>
             </Box>
           </Box>
 
-          {/* Footer - always visible at bottom, never cut off */}
+          {/* Footer */}
           <Box
             sx={{
               flexShrink: 0,
-              paddingTop: "clamp(12px, 2vh, 20px)",
+              paddingTop: "clamp(16px, 2.5vh, 24px)",
               textAlign: "center",
             }}
           >
@@ -623,12 +663,11 @@ export default function LoginPage() {
               variant="caption"
               sx={{
                 color: "grey.500",
-                textTransform: "uppercase",
-                letterSpacing: "0.1em",
-                fontSize: "clamp(0.65rem, 1.2vw + 0.3rem, 0.75rem)",
+                letterSpacing: "0.08em",
+                fontSize: "clamp(0.7rem, 1.2vw + 0.3rem, 0.8rem)",
               }}
             >
-              © {new Date().getFullYear()} Smart Hospital Management System. All rights reserved.
+              © {new Date().getFullYear()} Smart Hospital Management System
             </Typography>
           </Box>
         </Box>

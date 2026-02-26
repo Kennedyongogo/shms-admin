@@ -7,11 +7,13 @@ import {
   Button,
   Card,
   CardContent,
+  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   FormControl,
   IconButton,
   InputAdornment,
@@ -29,7 +31,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { Add, Delete, Edit, Person, Refresh, Search, Visibility, Description as ReportIcon } from "@mui/icons-material";
+import { Add, Delete, Edit, Person, Search, Visibility, Description as ReportIcon } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
 import Swal from "sweetalert2";
 
@@ -70,6 +72,17 @@ async function fetchJson(url, { method = "GET", body, token } = {}) {
 }
 
 const fmt = (v) => (v == null || v === "" ? "—" : String(v));
+
+const DetailRow = ({ label, value }) => (
+  <Stack direction="row" spacing={2} alignItems="baseline" sx={{ gap: 2 }}>
+    <Typography variant="body2" color="text.secondary" sx={{ minWidth: 140, fontWeight: 600 }}>
+      {label}
+    </Typography>
+    <Typography variant="body2" sx={{ wordBreak: "break-word" }}>
+      {value}
+    </Typography>
+  </Stack>
+);
 
 const normalizeKenyanPhone = (input) => {
   if (input == null) return { value: null, error: null };
@@ -398,16 +411,7 @@ export default function PatientsManagement() {
                   Add walk-in patient
                 </Button>
               )}
-              <Tooltip title="Refresh">
-                <IconButton
-                  onClick={() => loadPatients()}
-                  sx={{ color: "white", border: "1px solid rgba(255,255,255,0.25)" }}
-                  disabled={loading}
-                >
-                  <Refresh />
-                </IconButton>
-              </Tooltip>
-            </Stack>
+              </Stack>
           </Stack>
         </Box>
 
@@ -434,17 +438,17 @@ export default function PatientsManagement() {
             />
           </Stack>
 
-          <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-            <Table size="small">
+          <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
+            <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 900, width: 70 }}>No.</TableCell>
-                  <TableCell sx={{ fontWeight: 900 }}>Patient</TableCell>
-                  <TableCell sx={{ fontWeight: 900 }}>Phone</TableCell>
-                  <TableCell sx={{ fontWeight: 900 }}>Email</TableCell>
-                  <TableCell sx={{ fontWeight: 900, width: 120 }}>Source</TableCell>
-                  <TableCell sx={{ fontWeight: 900 }}>Status</TableCell>
-                  <TableCell sx={{ fontWeight: 900, width: 140, textAlign: "right" }}>Actions</TableCell>
+                  <TableCell sx={{ fontWeight: 900, width: 70, maxWidth: { xs: "18vw", sm: 70 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No.</TableCell>
+                  <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "28vw", sm: 180, md: 260 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Patient</TableCell>
+                  <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 140 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Phone</TableCell>
+                  <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 180 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Email</TableCell>
+                  <TableCell sx={{ fontWeight: 900, width: 120, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Source</TableCell>
+                  <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Status</TableCell>
+                  <TableCell sx={{ fontWeight: 900, width: 140, textAlign: "right", maxWidth: { xs: "22vw", sm: 140 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -469,25 +473,25 @@ export default function PatientsManagement() {
                   rows.map((p, idx) => (
                     <TableRow key={p.id} hover>
                       <TableCell sx={{ fontWeight: 800 }}>{page * limit + idx + 1}</TableCell>
-                      <TableCell>
-                        <Stack direction="row" spacing={1.2} alignItems="center">
-                          <Avatar sx={{ bgcolor: theme.palette.primary.main, width: 32, height: 32 }}>
+                      <TableCell sx={{ maxWidth: { xs: "28vw", sm: 180, md: 260 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
+                        <Stack direction="row" spacing={1.2} alignItems="center" sx={{ minWidth: 0 }}>
+                          <Avatar sx={{ bgcolor: theme.palette.primary.main, width: 32, height: 32, flexShrink: 0 }}>
                             {(p.full_name || "?").slice(0, 1).toUpperCase()}
                           </Avatar>
-                          <Box>
-                            <Typography sx={{ fontWeight: 800, lineHeight: 1.2 }}>{fmt(p.full_name)}</Typography>
-                            <Typography variant="caption" color="text.secondary">
+                          <Box sx={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
+                            <Typography noWrap sx={{ fontWeight: 800, lineHeight: 1.2 }}>{fmt(p.full_name)}</Typography>
+                            <Typography noWrap variant="caption" color="text.secondary">
                               {p.hospital?.name ? `Hospital: ${p.hospital.name}` : "Hospital: —"}
                             </Typography>
                           </Box>
                         </Stack>
                       </TableCell>
-                      <TableCell>{fmt(p.phone)}</TableCell>
-                      <TableCell>{fmt(p.email)}</TableCell>
-                      <TableCell>{fmt(p.patient_source)}</TableCell>
-                      <TableCell>{fmt(p.status)}</TableCell>
-                      <TableCell align="right">
-                        <Stack direction="row" spacing={0.5} justifyContent="flex-end" alignItems="center">
+                      <TableCell sx={{ display: { xs: "none", md: "table-cell" }, maxWidth: { md: 140 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fmt(p.phone)}</TableCell>
+                      <TableCell sx={{ display: { xs: "none", md: "table-cell" }, maxWidth: { md: 180 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fmt(p.email)}</TableCell>
+                      <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{fmt(p.patient_source)}</TableCell>
+                      <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{fmt(p.status)}</TableCell>
+                      <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
                           <Tooltip title="Medical reports">
                             <IconButton size="small" onClick={() => navigate(`/patients/${p.id}/reports`)}>
                               <ReportIcon fontSize="inherit" />
@@ -512,7 +516,7 @@ export default function PatientsManagement() {
                               </IconButton>
                             </span>
                           </Tooltip>
-                        </Stack>
+                        </Box>
                       </TableCell>
                     </TableRow>
                   ))
@@ -536,98 +540,124 @@ export default function PatientsManagement() {
         </CardContent>
       </Card>
 
-      <Dialog open={viewOpen} onClose={() => setViewOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ fontWeight: 900 }}>Patient Details</DialogTitle>
-        <DialogContent dividers>
+      <Dialog
+        open={viewOpen}
+        onClose={() => setViewOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0,0,0,0.12)" },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            fontWeight: 900,
+            fontSize: "1.25rem",
+            pb: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+          }}
+        >
+          <Person color="primary" sx={{ fontSize: 28 }} />
+          Patient details
+        </DialogTitle>
+        <DialogContent dividers sx={{ pt: 2 }}>
           {viewLoading ? (
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
-              <CircularProgress size={18} />
+            <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" sx={{ py: 4 }}>
+              <CircularProgress size={24} />
               <Typography color="text.secondary">Loading…</Typography>
             </Stack>
           ) : !viewPatient ? (
-            <Typography color="text.secondary">No data.</Typography>
+            <Typography color="text.secondary" sx={{ py: 3, textAlign: "center" }}>
+              No data.
+            </Typography>
           ) : (
-            <Stack spacing={2}>
-              <Stack direction="row" spacing={1.2} alignItems="center">
-                <Avatar sx={{ bgcolor: theme.palette.primary.main }}>
+            <Stack spacing={2.5}>
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Avatar
+                  sx={{
+                    width: 56,
+                    height: 56,
+                    bgcolor: theme.palette.primary.main,
+                    fontSize: "1.5rem",
+                    fontWeight: 800,
+                  }}
+                >
                   {(viewPatient.full_name || "?").slice(0, 1).toUpperCase()}
                 </Avatar>
-                <Box>
-                  <Typography sx={{ fontWeight: 900 }}>{fmt(viewPatient.full_name)}</Typography>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography sx={{ fontWeight: 800, fontSize: "1.15rem" }}>
+                    {fmt(viewPatient.full_name)}
+                  </Typography>
+                  <Chip
+                    size="small"
+                    label={fmt(viewPatient.status)}
+                    color={viewPatient.status === "active" ? "success" : viewPatient.status === "suspended" ? "error" : "default"}
+                    sx={{ mt: 0.5, fontWeight: 600 }}
+                  />
                 </Box>
               </Stack>
 
-              <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-                <Table size="small">
-                  <TableBody>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 900, width: 220 }}>Hospital</TableCell>
-                      <TableCell>{fmt(viewPatient.hospital?.name)}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 900 }}>Phone</TableCell>
-                      <TableCell>{fmt(viewPatient.phone)}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 900 }}>Email</TableCell>
-                      <TableCell>{fmt(viewPatient.email)}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 900 }}>Source</TableCell>
-                      <TableCell>{fmt(viewPatient.patient_source)}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 900 }}>Temperature (°C)</TableCell>
-                      <TableCell>{fmt(viewPatient.temperature_c)}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 900 }}>Weight (kg)</TableCell>
-                      <TableCell>{fmt(viewPatient.weight_kg)}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 900 }}>Date of birth</TableCell>
-                      <TableCell>{fmt(viewPatient.date_of_birth)}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 900 }}>Gender</TableCell>
-                      <TableCell>{fmt(viewPatient.gender)}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 900 }}>Blood group</TableCell>
-                      <TableCell>{fmt(viewPatient.blood_group)}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 900 }}>Insurance provider</TableCell>
-                      <TableCell>{fmt(viewPatient.insurance_provider)}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 900 }}>Emergency contact</TableCell>
-                      <TableCell>{fmt(viewPatient.emergency_contact)}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 900 }}>Status</TableCell>
-                      <TableCell>{fmt(viewPatient.status)}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 900 }}>User link</TableCell>
-                      <TableCell>{viewPatient.user ? `${fmt(viewPatient.user.full_name)} (${fmt(viewPatient.user.email)})` : "—"}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 900 }}>Created</TableCell>
-                      <TableCell>{fmt(viewPatient.createdAt)}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 900 }}>Updated</TableCell>
-                      <TableCell>{fmt(viewPatient.updatedAt)}</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
+              <Divider sx={{ borderColor: "divider" }} />
+
+              <Box>
+                <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1, fontWeight: 600 }}>
+                  Contact & location
+                </Typography>
+                <Stack spacing={0.75} sx={{ mt: 1 }}>
+                  <DetailRow label="Hospital" value={fmt(viewPatient.hospital?.name)} />
+                  <DetailRow label="Phone" value={fmt(viewPatient.phone)} />
+                  <DetailRow label="Email" value={fmt(viewPatient.email)} />
+                  <DetailRow label="Source" value={fmt(viewPatient.patient_source)} />
+                  <DetailRow label="Emergency contact" value={fmt(viewPatient.emergency_contact)} />
+                </Stack>
+              </Box>
+
+              <Divider sx={{ borderColor: "divider" }} />
+
+              <Box>
+                <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1, fontWeight: 600 }}>
+                  Medical
+                </Typography>
+                <Stack spacing={0.75} sx={{ mt: 1 }}>
+                  <DetailRow label="Date of birth" value={fmt(viewPatient.date_of_birth)} />
+                  <DetailRow label="Gender" value={fmt(viewPatient.gender)} />
+                  <DetailRow label="Blood group" value={fmt(viewPatient.blood_group)} />
+                  <DetailRow label="Temperature (°C)" value={fmt(viewPatient.temperature_c)} />
+                  <DetailRow label="Weight (kg)" value={fmt(viewPatient.weight_kg)} />
+                  <DetailRow label="Insurance provider" value={fmt(viewPatient.insurance_provider)} />
+                </Stack>
+              </Box>
+
+              <Divider sx={{ borderColor: "divider" }} />
+
+              <Box>
+                <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1, fontWeight: 600 }}>
+                  Account
+                </Typography>
+                <Stack spacing={0.75} sx={{ mt: 1 }}>
+                  <DetailRow
+                    label="User link"
+                    value={viewPatient.user ? `${fmt(viewPatient.user.full_name)} (${fmt(viewPatient.user.email)})` : "—"}
+                  />
+                  <DetailRow label="Created" value={fmt(viewPatient.createdAt)} />
+                  <DetailRow label="Updated" value={fmt(viewPatient.updatedAt)} />
+                </Stack>
               </Box>
             </Stack>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button variant="contained" onClick={() => setViewOpen(false)} sx={{ fontWeight: 900 }}>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button
+            variant="contained"
+            onClick={() => setViewOpen(false)}
+            sx={{
+              fontWeight: 700,
+              bgcolor: theme.palette.primary.main,
+              "&:hover": { bgcolor: theme.palette.primary.dark },
+            }}
+          >
             Close
           </Button>
         </DialogActions>

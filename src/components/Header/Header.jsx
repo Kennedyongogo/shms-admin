@@ -99,30 +99,20 @@ export default function Header(props) {
       }
 
       try {
-        const userId = JSON.parse(savedUser)?.id;
-        if (!userId) {
-          setLoading(false);
-          return;
-        }
+        const meRes = await fetchJson("/api/auth/me");
+        const freshUser = meRes?.data?.user || null;
+        const role = meRes?.data?.role || null;
+        const menuItems = meRes?.data?.menuItems;
 
-        const uRes = await fetchJson(`/api/users/${userId}`);
-        const freshUser = uRes?.data || null;
         if (freshUser) {
           setCurrentUser(freshUser);
           props.setUser(freshUser);
           localStorage.setItem("user", JSON.stringify(freshUser));
         }
-
-        const roleId = freshUser?.role_id;
-        if (roleId) {
-          const rRes = await fetchJson(`/api/roles/${roleId}`);
-          const role = rRes?.data || null;
-          const roleName = role?.name || "";
-          setCurrentRoleName(roleName);
-          localStorage.setItem("role", JSON.stringify(role ? { id: role.id, name: role.name } : null));
-        } else {
-          setCurrentRoleName("");
-          localStorage.setItem("role", JSON.stringify(null));
+        setCurrentRoleName(role?.name || "");
+        localStorage.setItem("role", JSON.stringify(role ? { id: role.id, name: role.name } : null));
+        if (Array.isArray(menuItems)) {
+          localStorage.setItem("menuItems", JSON.stringify(menuItems));
         }
       } catch (e) {
         // If token expired/invalid, force login
@@ -134,6 +124,27 @@ export default function Header(props) {
 
     bootstrap();
   }, []);
+
+  // When Settings (or elsewhere) updates profile, refresh header user
+  useEffect(() => {
+    const onUserUpdated = async () => {
+      try {
+        const meRes = await fetchJson("/api/auth/me");
+        const freshUser = meRes?.data?.user || null;
+        const role = meRes?.data?.role || null;
+        const menuItems = meRes?.data?.menuItems;
+        if (freshUser) {
+          setCurrentUser(freshUser);
+          props.setUser(freshUser);
+          localStorage.setItem("user", JSON.stringify(freshUser));
+        }
+        if (role) setCurrentRoleName(role.name || "");
+        if (Array.isArray(menuItems)) localStorage.setItem("menuItems", JSON.stringify(menuItems));
+      } catch (_) {}
+    };
+    window.addEventListener("user-updated", onUserUpdated);
+    return () => window.removeEventListener("user-updated", onUserUpdated);
+  }, [props]);
 
   const logout = () => {
     localStorage.clear();

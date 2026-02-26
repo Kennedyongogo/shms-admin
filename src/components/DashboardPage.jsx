@@ -12,6 +12,7 @@ import {
   Tabs,
   Typography,
   useTheme,
+  useMediaQuery,
 } from "@mui/material";
 import {
   PieChart,
@@ -47,6 +48,8 @@ import {
 const API_STATISTICS = "/api/statistics";
 const API_APPOINTMENTS_CHART = "/api/statistics/appointments/chart";
 const API_REVENUE_CHART = "/api/statistics/revenue/chart";
+const API_PHARMACY_CHART = "/api/statistics/pharmacy/chart";
+const API_ADMISSIONS_CHART = "/api/statistics/admissions/chart";
 
 async function fetchJson(url, { token } = {}) {
   const headers = { "Content-Type": "application/json" };
@@ -59,6 +62,52 @@ async function fetchJson(url, { token } = {}) {
 
 const PIE_COLORS = ["#00897b", "#26a69a", "#4db6ac", "#80cbc4", "#b2dfdb", "#e0f2f1"];
 const BAR_COLORS = ["#00897b", "#26a69a", "#4db6ac"];
+
+// Distinct colors per patient status (active, inactive, suspended) so legend and pie show different colours; zero-value labels are hidden to avoid overlap
+const PATIENT_STATUS_COLORS = {
+  active: "#2e7d32",
+  inactive: "#757575",
+  suspended: "#c62828",
+};
+
+// Distinct colors per appointment status (pending, confirmed, completed, cancelled)
+const APPOINTMENT_STATUS_COLORS = {
+  pending: "#ed6c02",
+  confirmed: "#0288d1",
+  completed: "#2e7d32",
+  cancelled: "#c62828",
+};
+
+// Lab order statuses (pending, in_progress, completed, cancelled)
+const LAB_ORDER_STATUS_COLORS = {
+  pending: "#ed6c02",
+  in_progress: "#0288d1",
+  completed: "#2e7d32",
+  cancelled: "#c62828",
+};
+
+// Bill statuses (unpaid, partial, paid, cancelled)
+const BILL_STATUS_COLORS = {
+  unpaid: "#c62828",
+  partial: "#ed6c02",
+  paid: "#2e7d32",
+  cancelled: "#757575",
+};
+
+// Bed statuses (available, occupied, maintenance)
+const BED_STATUS_COLORS = {
+  available: "#2e7d32",
+  occupied: "#0288d1",
+  maintenance: "#ed6c02",
+};
+
+// Purchase order statuses (draft, ordered, received, cancelled)
+const PURCHASE_ORDER_STATUS_COLORS = {
+  draft: "#757575",
+  ordered: "#0288d1",
+  received: "#2e7d32",
+  cancelled: "#c62828",
+};
 
 function objToPieData(obj) {
   if (!obj || typeof obj !== "object") return [];
@@ -128,17 +177,28 @@ function StatCard({ title, value, icon: Icon, subtitle, compact }) {
   );
 }
 
-function PieChartCard({ title, data, emptyMessage }) {
+function PieChartCard({ title, data, emptyMessage, colorMap, hideZeroValueLabels }) {
   const chartData = Array.isArray(data) ? data : objToPieData(data);
   const hasData = chartData.length > 0 && chartData.some((d) => d.value > 0);
+  const getFill = (name, i) => (colorMap && colorMap[name]) || PIE_COLORS[i % PIE_COLORS.length];
+  const renderLabel = hideZeroValueLabels
+    ? ({ name, value }) => (value > 0 ? `${name}: ${value}` : null)
+    : ({ name, value }) => `${name}: ${value}`;
+  // Explicit legend payload so all statuses appear (Recharts only shows legend for rendered segments; zero-value slices are omitted otherwise)
+  const legendPayload = chartData.map((entry, i) => ({
+    value: `${entry.name} (${entry.value})`,
+    id: entry.name,
+    type: "circle",
+    color: getFill(entry.name, i),
+  }));
   return (
-    <Card variant="outlined" sx={{ height: "100%", borderRadius: 2 }}>
+    <Card variant="outlined" sx={{ height: "100%", minHeight: 320, borderRadius: 2 }}>
       <CardContent>
         <Typography variant="subtitle2" color="text.secondary" gutterBottom>
           {title}
         </Typography>
         {hasData ? (
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
                 data={chartData}
@@ -146,15 +206,16 @@ function PieChartCard({ title, data, emptyMessage }) {
                 nameKey="name"
                 cx="50%"
                 cy="50%"
-                outerRadius={80}
-                label={({ name, value }) => `${name}: ${value}`}
+                outerRadius={100}
+                label={renderLabel}
+                labelLine={false}
               >
-                {chartData.map((_, i) => (
-                  <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                {chartData.map((entry, i) => (
+                  <Cell key={entry.name} fill={getFill(entry.name, i)} />
                 ))}
               </Pie>
               <Tooltip formatter={(v) => [v, ""]} />
-              <Legend />
+              <Legend payload={legendPayload} />
             </PieChart>
           </ResponsiveContainer>
         ) : (
@@ -215,6 +276,7 @@ const MONTHS = [
 ];
 
 export default function DashboardPage() {
+  const theme = useTheme();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -227,6 +289,14 @@ export default function DashboardPage() {
   const [revenueChartMonth, setRevenueChartMonth] = useState("");
   const [revenueChartData, setRevenueChartData] = useState([]);
   const [revenueChartLoading, setRevenueChartLoading] = useState(false);
+  const [pharmacyChartData, setPharmacyChartData] = useState([]);
+  const [pharmacyChartColumns, setPharmacyChartColumns] = useState([]);
+  const [pharmacyChartColumnKey, setPharmacyChartColumnKey] = useState("quantity_available");
+  const [pharmacyChartLoading, setPharmacyChartLoading] = useState(false);
+  const [admissionsChartYear, setAdmissionsChartYear] = useState(currentYear);
+  const [admissionsChartMonth, setAdmissionsChartMonth] = useState("");
+  const [admissionsChartData, setAdmissionsChartData] = useState([]);
+  const [admissionsChartLoading, setAdmissionsChartLoading] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -276,18 +346,77 @@ export default function DashboardPage() {
       .finally(() => setRevenueChartLoading(false));
   }, [tab, revenueChartYear, revenueChartMonth]);
 
-  // Always show page shell (title + tabs) so navigation doesn't cause full-page spinner → content blink
+  useEffect(() => {
+    if (tab !== 3) return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    setPharmacyChartLoading(true);
+    fetchJson(API_PHARMACY_CHART, { token })
+      .then((res) => {
+        if (res.success && res.data) {
+          setPharmacyChartData(res.data.bars || []);
+          setPharmacyChartColumns(res.data.columns || []);
+          if (res.data.columns?.length && !res.data.columns.some((c) => c.key === pharmacyChartColumnKey)) {
+            setPharmacyChartColumnKey(res.data.columns[0].key);
+          }
+        } else {
+          setPharmacyChartData([]);
+          setPharmacyChartColumns([]);
+        }
+      })
+      .catch(() => {
+        setPharmacyChartData([]);
+        setPharmacyChartColumns([]);
+      })
+      .finally(() => setPharmacyChartLoading(false));
+  }, [tab]);
+
+  useEffect(() => {
+    if (tab !== 5) return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    setAdmissionsChartLoading(true);
+    const params = new URLSearchParams({ year: admissionsChartYear });
+    if (admissionsChartMonth !== "") params.set("month", admissionsChartMonth);
+    fetchJson(`${API_ADMISSIONS_CHART}?${params}`, { token })
+      .then((res) => {
+        if (res.success && res.data?.bars) setAdmissionsChartData(res.data.bars);
+        else setAdmissionsChartData([]);
+      })
+      .catch(() => setAdmissionsChartData([]))
+      .finally(() => setAdmissionsChartLoading(false));
+  }, [tab, admissionsChartYear, admissionsChartMonth]);
+
+  // On small screens (e.g. phone): use a dropdown so all 7 sections are easy to pick without horizontal scroll or cramped tabs
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const d = stats;
   return (
     <Box sx={{ width: "100%" }}>
       <Typography variant="h5" fontWeight="bold" gutterBottom>
         Hospital Statistics
       </Typography>
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
-        {TAB_CONFIG.map((t, i) => (
-          <Tab key={t.id} label={t.label} id={`stats-tab-${i}`} aria-controls={`stats-tabpanel-${i}`} />
-        ))}
-      </Tabs>
+      {isMobile ? (
+        <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+          <InputLabel id="dashboard-section-label">Section</InputLabel>
+          <Select
+            labelId="dashboard-section-label"
+            value={tab}
+            label="Section"
+            onChange={(e) => setTab(Number(e.target.value))}
+            sx={{ borderRadius: 1 }}
+          >
+            {TAB_CONFIG.map((t, i) => (
+              <MenuItem key={t.id} value={i}>{t.label}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      ) : (
+        <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+          {TAB_CONFIG.map((t, i) => (
+            <Tab key={t.id} label={t.label} id={`stats-tab-${i}`} aria-controls={`stats-tabpanel-${i}`} />
+          ))}
+        </Tabs>
+      )}
 
       {loading ? (
         <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "50vh", width: "100%" }}>
@@ -344,7 +473,12 @@ export default function DashboardPage() {
             <StatCard title="Active Patients" value={d.patients?.active} icon={People} />
           </Box>
           <Box sx={{ width: "100%", mb: 2 }}>
-            <PieChartCard title="Patients by Status" data={d.patients?.byStatus} />
+            <PieChartCard
+              title="Patients by Status"
+              data={d.patients?.byStatus}
+              colorMap={PATIENT_STATUS_COLORS}
+              hideZeroValueLabels
+            />
           </Box>
           <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" gutterBottom sx={{ mt: 2 }}>
             Medical Reports
@@ -399,7 +533,12 @@ export default function DashboardPage() {
             <StatCard title="This Month" value={d.appointments?.thisMonth} />
           </Box>
           <Box sx={{ width: "100%", mb: 2 }}>
-            <PieChartCard title="Appointments by Status" data={d.appointments?.byStatus} />
+            <PieChartCard
+              title="Appointments by Status"
+              data={d.appointments?.byStatus}
+              colorMap={APPOINTMENT_STATUS_COLORS}
+              hideZeroValueLabels
+            />
           </Box>
           <Box sx={{ width: "100%", mb: 2 }}>
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "center", mb: 2 }}>
@@ -480,7 +619,12 @@ export default function DashboardPage() {
             <StatCard title="Lab Tests" value={d.laboratory?.totalTests} />
           </Box>
           <Box sx={{ width: "100%" }}>
-            <PieChartCard title="Lab Orders by Status" data={d.laboratory?.byStatus} />
+            <PieChartCard
+              title="Lab Orders by Status"
+              data={d.laboratory?.byStatus}
+              colorMap={LAB_ORDER_STATUS_COLORS}
+              hideZeroValueLabels
+            />
           </Box>
         </Box>
       )}
@@ -496,6 +640,7 @@ export default function DashboardPage() {
               display: "grid",
               gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
               gap: 2,
+              mb: 2,
               "& > *": { minWidth: 0 },
               "@media (max-width: 600px)": { gridTemplateColumns: "1fr" },
             }}
@@ -504,6 +649,36 @@ export default function DashboardPage() {
             <StatCard title="Dispensed" value={d.pharmacy?.totalDispensed} />
             <StatCard title="Medications" value={d.pharmacy?.totalMedications} />
           </Box>
+          <Typography variant="subtitle2" fontWeight="600" color="text.secondary" gutterBottom>
+            Medications by quantity
+          </Typography>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "center", mb: 2 }}>
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <InputLabel id="pharmacy-column-label">Show column</InputLabel>
+              <Select
+                labelId="pharmacy-column-label"
+                value={pharmacyChartColumnKey}
+                label="Show column"
+                onChange={(e) => setPharmacyChartColumnKey(e.target.value)}
+              >
+                {pharmacyChartColumns.map((col) => (
+                  <MenuItem key={col.key} value={col.key}>{col.label}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+          {pharmacyChartLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 220 }}>
+              <CircularProgress size={32} />
+            </Box>
+          ) : (
+            <BarChartCard
+              title={pharmacyChartColumns.find((c) => c.key === pharmacyChartColumnKey)?.label || "Quantity"}
+              data={pharmacyChartData}
+              dataKey={pharmacyChartColumnKey}
+              formatValue={(v) => (typeof v === "number" ? v.toLocaleString() : v)}
+            />
+          )}
         </Box>
       )}
 
@@ -528,7 +703,12 @@ export default function DashboardPage() {
             <StatCard title="Revenue This Month" value={d.billing?.revenueThisMonth} />
           </Box>
           <Box sx={{ width: "100%", mb: 2 }}>
-            <PieChartCard title="Bills by Status" data={d.billing?.byStatus} />
+            <PieChartCard
+              title="Bills by Status"
+              data={d.billing?.byStatus}
+              colorMap={BILL_STATUS_COLORS}
+              hideZeroValueLabels
+            />
           </Box>
           <Box sx={{ width: "100%", mb: 2 }}>
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "center", mb: 2 }}>
@@ -595,7 +775,12 @@ export default function DashboardPage() {
             <StatCard title="Beds" value={d.wardsAndBeds?.totalBeds} icon={Bed} />
           </Box>
           <Box sx={{ width: "100%", mb: 2 }}>
-            <PieChartCard title="Beds by Status" data={d.wardsAndBeds?.bedsByStatus} />
+            <PieChartCard
+              title="Beds by Status"
+              data={d.wardsAndBeds?.bedsByStatus}
+              colorMap={BED_STATUS_COLORS}
+              hideZeroValueLabels
+            />
           </Box>
           <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" gutterBottom sx={{ mt: 2 }}>
             Admissions
@@ -614,9 +799,50 @@ export default function DashboardPage() {
             <StatCard title="Currently Admitted" value={d.admissions?.currentlyAdmitted} />
             <StatCard title="Discharged This Month" value={d.admissions?.dischargedThisMonth} />
           </Box>
-          <Box sx={{ width: "100%" }}>
+          <Box sx={{ width: "100%", mb: 2 }}>
             <PieChartCard title="Admissions by Status" data={d.admissions?.byStatus} />
           </Box>
+          <Typography variant="subtitle2" fontWeight="600" color="text.secondary" gutterBottom>
+            Admissions by date
+          </Typography>
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "center", mb: 2 }}>
+            <FormControl size="small" sx={{ minWidth: 100 }}>
+              <InputLabel id="admissions-year-label">Year</InputLabel>
+              <Select
+                labelId="admissions-year-label"
+                value={admissionsChartYear}
+                label="Year"
+                onChange={(e) => setAdmissionsChartYear(Number(e.target.value))}
+              >
+                {YEARS.map((y) => (
+                  <MenuItem key={y} value={y}>{y}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <InputLabel id="admissions-month-label">Month</InputLabel>
+              <Select
+                labelId="admissions-month-label"
+                value={admissionsChartMonth}
+                label="Month"
+                onChange={(e) => setAdmissionsChartMonth(e.target.value === "" ? "" : Number(e.target.value))}
+              >
+                {MONTHS.map((m) => (
+                  <MenuItem key={m.value === "" ? "all" : m.value} value={m.value}>{m.label}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+          {admissionsChartLoading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 220 }}>
+              <CircularProgress size={32} />
+            </Box>
+          ) : (
+            <BarChartCard
+              title={admissionsChartMonth ? `Admissions by day (${admissionsChartYear}, ${MONTHS.find((m) => m.value === admissionsChartMonth)?.label ?? admissionsChartMonth})` : `Admissions by month (${admissionsChartYear})`}
+              data={admissionsChartData}
+            />
+          )}
         </Box>
       )}
 
@@ -643,7 +869,12 @@ export default function DashboardPage() {
             <StatCard title="Purchase Orders" value={d.inventory?.totalPurchaseOrders} />
           </Box>
           <Box sx={{ width: "100%" }}>
-            <PieChartCard title="Purchase Orders by Status" data={d.inventory?.purchaseOrdersByStatus} />
+            <PieChartCard
+              title="Purchase Orders by Status"
+              data={d.inventory?.purchaseOrdersByStatus}
+              colorMap={PURCHASE_ORDER_STATUS_COLORS}
+              hideZeroValueLabels
+            />
           </Box>
         </Box>
       )}

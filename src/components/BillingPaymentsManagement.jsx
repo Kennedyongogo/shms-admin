@@ -33,13 +33,13 @@ import {
   TextField,
   Typography,
   Tooltip,
+  useMediaQuery,
 } from "@mui/material";
 import {
   Add as AddIcon,
   Payments as PaymentsIcon,
   Receipt as ReceiptIcon,
   ReceiptLong as ReceiptLongIcon,
-  Refresh as RefreshIcon,
   Visibility as VisibilityIcon,
 } from "@mui/icons-material";
 import ReceiptDialog from "./ReceiptDialog";
@@ -107,6 +107,7 @@ function isUuidLike(value) {
 export default function BillingPaymentsManagement({ embedded = false, singleTab = null }) {
   // singleTab: 0 = billing only, 1 = payments only, null = show both (inner tabs)
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const token = getToken();
   const location = useLocation();
   const navigate = useNavigate();
@@ -432,14 +433,30 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
     <>
       {singleTab == null && (
         <>
-          <Tabs
-            value={tab}
-            onChange={(_, v) => setTab(v)}
-            sx={{ px: 2, "& .MuiTabs-indicator": { backgroundColor: theme.palette.primary.main } }}
-          >
-            <Tab icon={<ReceiptLongIcon />} iconPosition="start" label="Billing" />
-            <Tab icon={<PaymentsIcon />} iconPosition="start" label="Payments" />
-          </Tabs>
+          {isMobile ? (
+            <FormControl fullWidth size="small" sx={{ px: 2, py: 1.5 }}>
+              <InputLabel id="billing-section-label">Section</InputLabel>
+              <Select
+                labelId="billing-section-label"
+                value={tab}
+                label="Section"
+                onChange={(e) => setTab(Number(e.target.value))}
+                sx={{ borderRadius: 1 }}
+              >
+                <MenuItem value={0}>Billing</MenuItem>
+                <MenuItem value={1}>Payments</MenuItem>
+              </Select>
+            </FormControl>
+          ) : (
+            <Tabs
+              value={tab}
+              onChange={(_, v) => setTab(v)}
+              sx={{ px: 2, "& .MuiTabs-indicator": { backgroundColor: theme.palette.primary.main } }}
+            >
+              <Tab icon={<ReceiptLongIcon />} iconPosition="start" label="Billing" />
+              <Tab icon={<PaymentsIcon />} iconPosition="start" label="Payments" />
+            </Tabs>
+          )}
           <Divider />
         </>
       )}
@@ -477,18 +494,18 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
               </FormControl>
             </Stack>
 
-            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-              <Table size="small">
+            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: "rgba(0,0,0,0.02)" }}>
-                    <TableCell sx={{ fontWeight: 900, width: 64 }}>No</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Patient</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Total</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Paid</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Balance</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Created</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }} align="right">
+                    <TableCell sx={{ fontWeight: 900, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Patient</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Total</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Paid</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Balance</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Created</TableCell>
+                    <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} align="right">
                       Actions
                     </TableCell>
                   </TableRow>
@@ -512,16 +529,16 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
                           <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>
                             {billsPage * billsRowsPerPage + idx + 1}
                           </TableCell>
-                          <TableCell>
-                            <Typography sx={{ fontWeight: 800 }}>{patientName}</Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                          <TableCell sx={{ maxWidth: { xs: "28vw", sm: 160, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
+                            <Typography noWrap sx={{ fontWeight: 800 }}>{patientName}</Typography>
+                            <Typography noWrap variant="caption" color="text.secondary">
                               {b?.patient?.phone || b?.patient?.email || b?.patient?.user?.phone || b?.patient?.user?.email || ""}
                             </Typography>
                           </TableCell>
-                          <TableCell>{money(b.total_amount)}</TableCell>
-                          <TableCell>{money(b.paid_amount)}</TableCell>
-                          <TableCell>{money(b.balance)}</TableCell>
-                          <TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{money(b.total_amount)}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{money(b.paid_amount)}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{money(b.balance)}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
                             <Chip
                               size="small"
                               label={status}
@@ -529,15 +546,15 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
                               variant={status === "paid" ? "filled" : "outlined"}
                             />
                           </TableCell>
-                          <TableCell>{formatDateTime(b.createdAt)}</TableCell>
-                          <TableCell align="right">
-                            <Stack direction="row" spacing={1} justifyContent="flex-end">
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{formatDateTime(b.createdAt)}</TableCell>
+                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
                               <Tooltip title="View bill">
-                                <Button size="small" variant="outlined" onClick={() => openBillById(b.id)} startIcon={<VisibilityIcon />} sx={{ fontWeight: 800 }}>
-                                  View
-                                </Button>
+                                <IconButton size="small" color="primary" onClick={() => openBillById(b.id)} aria-label="View bill">
+                                  <VisibilityIcon fontSize="inherit" />
+                                </IconButton>
                               </Tooltip>
-                            </Stack>
+                            </Box>
                           </TableCell>
                         </TableRow>
                       );
@@ -599,27 +616,18 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
                   <MenuItem value="mpesa">M-Pesa</MenuItem>
                 </Select>
               </FormControl>
-              <Button
-                variant="outlined"
-                startIcon={<RefreshIcon />}
-                onClick={loadPayments}
-                disabled={paymentsLoading}
-                sx={{ fontWeight: 800, minWidth: { xs: "100%", md: 140 } }}
-              >
-                Refresh
-              </Button>
             </Stack>
 
-            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
-              <Table size="small">
+            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: "rgba(0,0,0,0.02)" }}>
-                    <TableCell sx={{ fontWeight: 900, width: 64 }}>No</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Date</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Patient</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Amount</TableCell>
-                    <TableCell sx={{ fontWeight: 900 }}>Method</TableCell>
-                    <TableCell sx={{ fontWeight: 900, width: 72 }} align="center">Action</TableCell>
+                    <TableCell sx={{ fontWeight: 900, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Date</TableCell>
+                    <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Patient</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Amount</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Method</TableCell>
+                    <TableCell sx={{ fontWeight: 900, width: 72, maxWidth: { xs: "22vw", sm: 72 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} align="center">Action</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -641,15 +649,15 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
                           <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>
                             {paymentsPage * paymentsRowsPerPage + idx + 1}
                           </TableCell>
-                          <TableCell>{formatDateTime(p.payment_date)}</TableCell>
-                          <TableCell>
-                            <Typography sx={{ fontWeight: 800 }}>{patientName}</Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{formatDateTime(p.payment_date)}</TableCell>
+                          <TableCell sx={{ maxWidth: { xs: "28vw", sm: 160, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
+                            <Typography noWrap sx={{ fontWeight: 800 }}>{patientName}</Typography>
+                            <Typography noWrap variant="caption" color="text.secondary">
                               {bill?.patient?.phone || bill?.patient?.email || bill?.patient?.user?.phone || bill?.patient?.user?.email || ""}
                             </Typography>
                           </TableCell>
-                          <TableCell>{money(p.amount_paid)}</TableCell>
-                          <TableCell>{p.payment_method}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{money(p.amount_paid)}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{p.payment_method}</TableCell>
                           <TableCell align="center">
                             <Tooltip title="View receipt">
                               <IconButton size="small" color="primary" onClick={() => setReceiptDialogPaymentId(p.id)} aria-label="View receipt">
@@ -691,9 +699,9 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
   const billViewDialog = (
       <>
       {/* Bill view (payments are initiated here) */}
-      <Dialog open={billView.open} onClose={() => setBillView({ open: false, loading: false, bill: null })} fullWidth maxWidth="md">
+      <Dialog open={billView.open} onClose={() => setBillView({ open: false, loading: false, bill: null })} fullWidth maxWidth="md" PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle sx={{ fontWeight: 900 }}>Bill</DialogTitle>
-        <DialogContent dividers>
+        <DialogContent dividers sx={{ overflowY: "auto" }}>
           {billView.loading ? (
             <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
               <CircularProgress size={18} />
@@ -745,10 +753,10 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ fontWeight: 900, width: 64 }}>No</TableCell>
-                      <TableCell sx={{ fontWeight: 900 }}>Type</TableCell>
-                      <TableCell sx={{ fontWeight: 900 }}>Reference</TableCell>
-                      <TableCell sx={{ fontWeight: 900 }}>Amount</TableCell>
+                      <TableCell sx={{ fontWeight: 900, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "18vw", sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Type</TableCell>
+                      <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Reference</TableCell>
+                      <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "18vw", sm: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Amount</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -791,9 +799,9 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
                                 <Table size="small">
                                   <TableHead>
                                     <TableRow>
-                                      <TableCell sx={{ fontWeight: 800 }}>Test</TableCell>
-                                      <TableCell sx={{ fontWeight: 800 }}>Code</TableCell>
-                                      <TableCell sx={{ fontWeight: 800 }}>Price</TableCell>
+                                      <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 140 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Test</TableCell>
+                                      <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "16vw", sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Code</TableCell>
+                                      <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "18vw", sm: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Price</TableCell>
                                     </TableRow>
                                   </TableHead>
                                   <TableBody>
@@ -837,24 +845,25 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
 
               <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
                 <Typography sx={{ fontWeight: 900, mb: 1 }}>Payments</Typography>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 900, width: 64 }}>No</TableCell>
-                      <TableCell sx={{ fontWeight: 900 }}>Date</TableCell>
-                      <TableCell sx={{ fontWeight: 900 }}>Amount</TableCell>
-                      <TableCell sx={{ fontWeight: 900 }}>Method</TableCell>
-                      <TableCell sx={{ fontWeight: 900, width: 72 }} align="center">Action</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {(billView.bill.payments || []).length ? (
-                      (billView.bill.payments || []).map((p, idx) => (
-                        <TableRow key={p.id} hover>
-                          <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{idx + 1}</TableCell>
-                          <TableCell>{formatDateTime(p.payment_date)}</TableCell>
-                          <TableCell>{money(p.amount_paid)}</TableCell>
-                          <TableCell>{p.payment_method}</TableCell>
+                <TableContainer sx={{ overflowX: "auto", maxWidth: "100%" }}>
+                  <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 900, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
+                        <TableCell sx={{ fontWeight: 900, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Date</TableCell>
+                        <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "18vw", sm: 90 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Amount</TableCell>
+                        <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Method</TableCell>
+                        <TableCell sx={{ fontWeight: 900, width: 72, maxWidth: { xs: "22vw", sm: 72 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} align="center">Action</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {(billView.bill.payments || []).length ? (
+                        (billView.bill.payments || []).map((p, idx) => (
+                          <TableRow key={p.id} hover>
+                            <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{idx + 1}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{formatDateTime(p.payment_date)}</TableCell>
+                            <TableCell>{money(p.amount_paid)}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{p.payment_method}</TableCell>
                           <TableCell align="center">
                             <Tooltip title="View receipt">
                               <IconButton size="small" color="primary" onClick={() => setReceiptDialogPaymentId(p.id)} aria-label="View receipt">
@@ -863,16 +872,17 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
                             </Tooltip>
                           </TableCell>
                         </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={5}>
-                          <Typography color="text.secondary">No payments yet.</Typography>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={5}>
+                            <Typography color="text.secondary">No payments yet.</Typography>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               </Box>
             </Stack>
           )}
@@ -904,7 +914,6 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
           <Stack spacing={0.5}>
             <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: 0.2 }}>Billing & Payments</Typography>
           </Stack>
-          <Button variant="outlined" startIcon={<RefreshIcon />} onClick={() => { if (tab === 0) loadBills(); if (tab === 1) loadPayments(); }} sx={{ borderColor: "rgba(255,255,255,0.55)", color: "white", fontWeight: 800, "&:hover": { borderColor: "rgba(255,255,255,0.85)", bgcolor: "rgba(255,255,255,0.08)" } }}>Refresh</Button>
         </Stack>
       </Box>
       <CardContent sx={{ p: 0 }}>{tabsAndContent}</CardContent>
