@@ -1456,12 +1456,12 @@ export default function VisitsManagement() {
                 <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                   <TableHead>
                     <TableRow sx={{ bgcolor: "grey.100" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 48, minWidth: 48, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "18%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Date</TableCell>
-                      <TableCell sx={{ fontWeight: 800, width: "30%", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Patient</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "18%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Doctor</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "14%", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Status</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 800, width: 96, minWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Actions</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: 48, minWidth: 48, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "18%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Date</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: "30%", minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Patient</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "18%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Doctor</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "14%", minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Status</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800, width: 96, minWidth: 96, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1492,7 +1492,7 @@ export default function VisitsManagement() {
                           <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" } }}>
                             {formatDateTime(a.appointment_date)}
                           </TableCell>
-                          <TableCell sx={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <TableCell sx={{ minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
                             <Typography noWrap sx={{ fontWeight: 800 }}>
                               {a.patient?.full_name ||
                                 a.patient?.user?.full_name ||
@@ -1506,7 +1506,7 @@ export default function VisitsManagement() {
                                 ""}
                             </Typography>
                           </TableCell>
-                          <TableCell sx={{ display: { xs: "none", md: "table-cell" }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
                             {a.doctor?.user?.full_name ||
                               a.doctor?.staff_type ||
                               "—"}
@@ -1528,7 +1528,7 @@ export default function VisitsManagement() {
                             />
                           </TableCell>
                           <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
-                            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
+                            <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
                               <Tooltip title="View">
                                 <IconButton
                                   onClick={() => openViewAppointment(a)}
@@ -1626,12 +1626,12 @@ export default function VisitsManagement() {
                 <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                   <TableHead>
                     <TableRow sx={{ bgcolor: "grey.100" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 48, minWidth: 48, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "16%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Created</TableCell>
-                      <TableCell sx={{ fontWeight: 800, width: "30%", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Patient</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "18%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Doctor</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "22%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Diagnosis</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 800, width: 96, minWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Actions</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: 48, minWidth: 48, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "16%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Created</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: "30%", minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Patient</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "18%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Doctor</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "22%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Diagnosis</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800, width: 96, minWidth: 96, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1659,24 +1659,24 @@ export default function VisitsManagement() {
                           >
                             {consPage * consRowsPerPage + idx + 1}
                           </TableCell>
-                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
                             {formatDateTime(c.createdAt)}
                           </TableCell>
-                          <TableCell sx={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <TableCell sx={{ minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
                             {c.appointment?.patient?.full_name ||
                               c.appointment?.patient?.user?.full_name ||
                               "—"}
                           </TableCell>
-                          <TableCell sx={{ display: { xs: "none", md: "table-cell" }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
                             {c.appointment?.doctor?.user?.full_name || "—"}
                           </TableCell>
-                          <TableCell sx={{ display: { xs: "none", md: "table-cell" }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
                             {c.diagnosis
                               ? String(c.diagnosis).slice(0, 32)
                               : "—"}
                           </TableCell>
                           <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
-                            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
+                            <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
                               <Tooltip title="View">
                                 <IconButton
                                   onClick={() => navigate("/appointments/consultation/" + c.id)}
@@ -1726,14 +1726,14 @@ export default function VisitsManagement() {
               <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                   <TableHead>
                     <TableRow sx={{ bgcolor: "grey.100" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 48, minWidth: 48, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
-                      <TableCell sx={{ fontWeight: 800, width: "28%", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Patient</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Total</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Paid</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Balance</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "14%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Status</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "14%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Created</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 800, width: 96, minWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Actions</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: 48, minWidth: 48, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: "28%", minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Patient</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Total</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Paid</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Balance</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "14%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Status</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "14%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Created</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800, width: 96, minWidth: 96, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1758,16 +1758,16 @@ export default function VisitsManagement() {
                             <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>
                               {mainBillsPage * mainBillsRowsPerPage + idx + 1}
                             </TableCell>
-                            <TableCell sx={{ fontWeight: 700, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{patientName}</TableCell>
+                            <TableCell sx={{ fontWeight: 700, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{patientName}</TableCell>
                             <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{total.toFixed(2)}</TableCell>
                             <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{paidAmt.toFixed(2)}</TableCell>
                             <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{balance.toFixed(2)}</TableCell>
                             <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
                               <Chip size="small" label={status} color={status === "paid" ? "success" : status === "partial" ? "warning" : "default"} />
                             </TableCell>
-                            <TableCell sx={{ display: { xs: "none", md: "table-cell" }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{formatDateTime(b.createdAt)}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{formatDateTime(b.createdAt)}</TableCell>
                             <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
-                              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "flex-end", justifyItems: "end", maxWidth: "100%" }}>
+                              <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
                                 <Tooltip title="View">
                                   <IconButton size="small" color="primary" onClick={() => openMainBillView(b.id)} aria-label="View">
                                     <VisibilityIcon fontSize="inherit" />
@@ -1809,13 +1809,13 @@ export default function VisitsManagement() {
               <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                   <TableHead>
                     <TableRow sx={{ bgcolor: "grey.100" }}>
-                      <TableCell sx={{ fontWeight: 800, width: 48, minWidth: 48, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>No</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "16%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Date</TableCell>
-                      <TableCell sx={{ fontWeight: 800, width: "28%", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Patient</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Amount</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "14%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Method</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Bill</TableCell>
-                      <TableCell sx={{ fontWeight: 800, width: 96, minWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} align="center">Action</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: 48, minWidth: 48, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "16%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Date</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: "28%", minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Patient</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Amount</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "14%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Method</TableCell>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Bill</TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: 96, minWidth: 96, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }} align="center">Action</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -1836,15 +1836,15 @@ export default function VisitsManagement() {
                             <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>
                               {mainPaymentsPage * mainPaymentsRowsPerPage + idx + 1}
                             </TableCell>
-                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{formatDateTime(p.payment_date || p.createdAt)}</TableCell>
-                            <TableCell sx={{ fontWeight: 700, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{patientName}</TableCell>
+                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{formatDateTime(p.payment_date || p.createdAt)}</TableCell>
+                            <TableCell sx={{ fontWeight: 700, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{patientName}</TableCell>
                             <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{Number(p.amount_paid ?? 0).toFixed(2)}</TableCell>
                             <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{p.payment_method || "—"}</TableCell>
-                            <TableCell sx={{ display: { xs: "none", md: "table-cell" }, fontSize: "0.85rem", color: "text.secondary", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" }, fontSize: "0.85rem", color: "text.secondary", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
                               {p.bill_id ? `#${String(p.bill_id).slice(0, 8)}` : "—"}
                             </TableCell>
                             <TableCell align="center" sx={{ overflow: "hidden", minWidth: 96 }}>
-                              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 0.5, justifyContent: "center", justifyItems: "center", maxWidth: "100%" }}>
+                              <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "center", justifyItems: { xs: "center" }, maxWidth: "100%" }}>
                                 <Tooltip title="View receipt">
                                   <IconButton size="small" color="primary" onClick={() => setReceiptDialogPaymentId(p.id)} aria-label="View receipt">
                                     <ReceiptIcon />
@@ -1917,8 +1917,8 @@ export default function VisitsManagement() {
                   <Table size="small">
                     <TableHead>
                       <TableRow sx={{ bgcolor: "rgba(0,0,0,0.03)" }}>
-                        <TableCell sx={{ fontWeight: 700, maxWidth: { xs: "50vw", sm: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Description</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 700, maxWidth: { xs: "22vw", sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Amount</TableCell>
+                        <TableCell sx={{ fontWeight: 700, maxWidth: { xs: "50vw", sm: 220 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Description</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700, maxWidth: { xs: "22vw", sm: 100 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Amount</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -2235,8 +2235,8 @@ export default function VisitsManagement() {
                           <Table size="small">
                             <TableHead>
                               <TableRow sx={{ bgcolor: "rgba(0,0,0,0.03)" }}>
-                                <TableCell sx={{ fontWeight: 700, maxWidth: { xs: "50vw", sm: 220 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Description</TableCell>
-                                <TableCell align="right" sx={{ fontWeight: 700, maxWidth: { xs: "22vw", sm: 100 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Amount</TableCell>
+                                <TableCell sx={{ fontWeight: 700, maxWidth: { xs: "50vw", sm: 220 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Description</TableCell>
+                                <TableCell align="right" sx={{ fontWeight: 700, maxWidth: { xs: "22vw", sm: 100 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Amount</TableCell>
                               </TableRow>
                             </TableHead>
                             <TableBody>

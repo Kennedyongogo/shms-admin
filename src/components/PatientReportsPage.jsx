@@ -199,11 +199,11 @@ export default function PatientReportsPage() {
               <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 900, width: 50, maxWidth: { xs: "14vw", sm: 50 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>#</TableCell>
-                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Date</TableCell>
-                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 140 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Doctor</TableCell>
-                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 280 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Report preview</TableCell>
-                    <TableCell sx={{ fontWeight: 900, width: 140, maxWidth: { xs: "22vw", sm: 140 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "right" }}>Actions</TableCell>
+                    <TableCell sx={{ fontWeight: 900, width: 50, maxWidth: { xs: "14vw", sm: 50 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>#</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 120 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Date</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 140 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Doctor</TableCell>
+                    <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 280 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Report preview</TableCell>
+                    <TableCell sx={{ fontWeight: 900, width: 140, maxWidth: { xs: "22vw", sm: 140 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" }, textAlign: "right" }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -212,7 +212,7 @@ export default function PatientReportsPage() {
                       <TableCell sx={{ fontWeight: 700 }}>{idx + 1}</TableCell>
                       <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{formatDateTime(r.created_at || r.createdAt)}</TableCell>
                       <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{r.doctor?.user?.full_name || r.doctor?.staff_type || "—"}</TableCell>
-                      <TableCell sx={{ maxWidth: 280, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: { xs: "none", md: "table-cell" } }} title={r.report_text}>
+                      <TableCell sx={{ maxWidth: 280, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" }, display: { xs: "none", md: "table-cell" } }} title={r.report_text}>
                         <Typography variant="body2" noWrap>
                           {truncate(r.report_text, 60)}
                         </Typography>

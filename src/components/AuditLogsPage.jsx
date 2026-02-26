@@ -217,14 +217,14 @@ export default function AuditLogsPage() {
                     },
                   }}
                 >
-                  <TableCell align="center" sx={{ width: 64, minWidth: 0, maxWidth: { xs: "16vw", sm: 64 }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <TableCell align="center" sx={{ width: 64, minWidth: 0, maxWidth: { xs: "16vw", sm: 64 }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
                     No
                   </TableCell>
-                  <TableCell sx={{ width: 165, minWidth: 0, maxWidth: { md: 165 }, display: { xs: "none", md: "table-cell" }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Date & time</TableCell>
-                  <TableCell sx={{ minWidth: 0, maxWidth: { sm: 150, md: 180 }, display: { xs: "none", sm: "table-cell" }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>User</TableCell>
-                  <TableCell sx={{ minWidth: 0, maxWidth: { xs: "28vw", sm: 160 }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Action</TableCell>
-                  <TableCell sx={{ width: 120, minWidth: 0, maxWidth: { md: 120 }, display: { xs: "none", md: "table-cell" }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Resource</TableCell>
-                  <TableCell sx={{ width: 130, minWidth: 0, maxWidth: { md: 130 }, display: { xs: "none", md: "table-cell" }, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Record ID</TableCell>
+                  <TableCell sx={{ width: 165, minWidth: 0, maxWidth: { md: 165 }, display: { xs: "none", md: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Date & time</TableCell>
+                  <TableCell sx={{ minWidth: 0, maxWidth: { sm: 150, md: 180 }, display: { xs: "none", sm: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>User</TableCell>
+                  <TableCell sx={{ minWidth: 0, maxWidth: { xs: "28vw", sm: 160 }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Action</TableCell>
+                  <TableCell sx={{ width: 120, minWidth: 0, maxWidth: { md: 120 }, display: { xs: "none", md: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Resource</TableCell>
+                  <TableCell sx={{ width: 130, minWidth: 0, maxWidth: { md: 130 }, display: { xs: "none", md: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Record ID</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -271,15 +271,15 @@ export default function AuditLogsPage() {
                       <TableCell sx={{ fontVariantNumeric: "tabular-nums", display: { xs: "none", md: "table-cell" } }}>
                         {formatDateTime(log.createdAt ?? log.timestamp)}
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 500, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 140, md: 180 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <TableCell sx={{ fontWeight: 500, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 140, md: 180 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
                         {log.user ? (log.user.full_name || log.user.email || log.user_id) : fmt(log.user_id)}
                       </TableCell>
-                      <TableCell sx={{ maxWidth: { xs: "28vw", sm: 160 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <TableCell sx={{ maxWidth: { xs: "28vw", sm: 160 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
                         <Typography component="span" noWrap sx={{ fontWeight: 600, color: "primary.dark" }}>
                           {fmt(log.action)}
                         </Typography>
                       </TableCell>
-                      <TableCell sx={{ color: "text.secondary", display: { xs: "none", md: "table-cell" }, maxWidth: { md: 120 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fmt(log.table_name)}</TableCell>
+                      <TableCell sx={{ color: "text.secondary", display: { xs: "none", md: "table-cell" }, maxWidth: { md: 120 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{fmt(log.table_name)}</TableCell>
                       <TableCell sx={{ fontFamily: "monospace", fontSize: "0.8rem", color: "text.secondary", display: { xs: "none", md: "table-cell" } }} title={log.record_id}>
                         {log.record_id ? (log.record_id.length > 12 ? `${log.record_id.slice(0, 8)}…` : log.record_id) : "—"}
                       </TableCell>
