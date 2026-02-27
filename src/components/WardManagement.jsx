@@ -462,6 +462,15 @@ export default function WardManagement() {
     setBedDialog({ open: true, mode: "create", id: null });
   };
 
+  const openBedView = (bed) => {
+    setBedForm({
+      ward_id: bed.ward_id || "",
+      bed_number: bed.bed_number || "",
+      status: bed.status || "available",
+    });
+    setBedDialog({ open: true, mode: "view", id: bed.id });
+  };
+
   const openBedEdit = (bed) => {
     setBedForm({
       ward_id: bed.ward_id || "",
@@ -758,14 +767,22 @@ export default function WardManagement() {
                     </TableRow>
                   ) : wards.length ? (
                     wards.map((w, idx) => (
-                      <TableRow key={w.id} hover>
+                      <TableRow
+                        key={w.id}
+                        hover
+                        onClick={(e) => {
+                          if (e.target.closest("[data-actions-cell]")) return;
+                          openWardEdit(w);
+                        }}
+                        sx={{ cursor: { xs: "pointer", sm: "default" } }}
+                      >
                         <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{wardsPage * wardsRowsPerPage + idx + 1}</TableCell>
                         <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "28vw", sm: 160, md: 220 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{w.name}</TableCell>
                         <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{w.type || "—"}</TableCell>
                         <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{departmentOptions.find((d) => d.id === w.department_id)?.name ?? w.department?.name ?? "—"}</TableCell>
                         <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{w.daily_rate != null ? Number(w.daily_rate).toLocaleString() : "—"}</TableCell>
                         {isAdmin && (
-                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} data-actions-cell onClick={(e) => e.stopPropagation()}>
                             <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
                               <Tooltip title="Edit">
                                 <IconButton size="small" color="primary" onClick={() => openWardEdit(w)} aria-label="Edit"><EditIcon fontSize="inherit" /></IconButton>
@@ -829,7 +846,15 @@ export default function WardManagement() {
                     </TableRow>
                   ) : beds.length ? (
                     beds.map((b, idx) => (
-                      <TableRow key={b.id} hover>
+                      <TableRow
+                        key={b.id}
+                        hover
+                        onClick={(e) => {
+                          if (e.target.closest("[data-actions-cell]")) return;
+                          openBedView(b);
+                        }}
+                        sx={{ cursor: { xs: "pointer", sm: "default" } }}
+                      >
                         <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{bedsPage * bedsRowsPerPage + idx + 1}</TableCell>
                         <TableCell sx={{ fontWeight: 800 }}>{b.bed_number}</TableCell>
                         <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{wardOptions.find((w) => w.id === b.ward_id)?.name ?? b.ward?.name ?? "—"}</TableCell>
@@ -837,7 +862,7 @@ export default function WardManagement() {
                           <Chip size="small" label={b.status} color={b.status === "available" ? "success" : b.status === "maintenance" ? "warning" : "default"} variant="outlined" />
                         </TableCell>
                         {isAdmin && (
-                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} data-actions-cell onClick={(e) => e.stopPropagation()}>
                             <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
                               <Tooltip title="Edit">
                                 <IconButton size="small" color="primary" onClick={() => openBedEdit(b)} aria-label="Edit"><EditIcon fontSize="inherit" /></IconButton>
@@ -910,7 +935,15 @@ export default function WardManagement() {
                     </TableRow>
                   ) : admissions.length ? (
                     admissions.map((a, idx) => (
-                      <TableRow key={a.id} hover>
+                      <TableRow
+                        key={a.id}
+                        hover
+                        onClick={(e) => {
+                          if (e.target.closest("[data-actions-cell]")) return;
+                          openAdmissionView(a.id);
+                        }}
+                        sx={{ cursor: { xs: "pointer", sm: "default" } }}
+                      >
                         <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{admissionsPage * admissionsRowsPerPage + idx + 1}</TableCell>
                         <TableCell sx={{ fontWeight: 800 }}>{patientLabel(a.patient)}</TableCell>
                         <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{a.bed?.bed_number ?? "—"}</TableCell>
@@ -920,7 +953,7 @@ export default function WardManagement() {
                         <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
                           <Chip size="small" label={a.status} color={a.status === "admitted" ? "primary" : "default"} variant="outlined" />
                         </TableCell>
-                        <TableCell align="right">
+                        <TableCell align="right" data-actions-cell onClick={(e) => e.stopPropagation()}>
                           <Tooltip title="View admission, generate billing, add notes, and discharge">
                             <IconButton size="small" color="primary" onClick={() => openAdmissionView(a.id)} aria-label="View">
                               <VisibilityIcon fontSize="inherit" />
@@ -981,7 +1014,15 @@ export default function WardManagement() {
                       const balance = Math.max(0, total - paidAmt);
                       const status = b?.paid ? "paid" : (b?.status || "unpaid");
                       return (
-                        <TableRow key={b.id} hover>
+                        <TableRow
+                          key={b.id}
+                          hover
+                          onClick={(e) => {
+                            if (e.target.closest("[data-actions-cell]")) return;
+                            openAdmissionBillView(b.id);
+                          }}
+                          sx={{ cursor: { xs: "pointer", sm: "default" } }}
+                        >
                           <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{admissionBillsPage * admissionBillsRowsPerPage + idx + 1}</TableCell>
                           <TableCell sx={{ fontWeight: 700, maxWidth: { xs: "28vw", sm: 160, md: 220 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{patientName}</TableCell>
                           <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{total.toFixed(2)}</TableCell>
@@ -991,7 +1032,7 @@ export default function WardManagement() {
                             <Chip size="small" label={status} color={status === "paid" ? "success" : status === "partial" ? "warning" : "default"} />
                           </TableCell>
                           <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{formatDateTime(b.createdAt)}</TableCell>
-                          <TableCell align="right">
+                          <TableCell align="right" data-actions-cell onClick={(e) => e.stopPropagation()}>
                             <Tooltip title="View">
                               <IconButton size="small" color="primary" onClick={() => openAdmissionBillView(b.id)} aria-label="View">
                                 <VisibilityIcon fontSize="inherit" />
@@ -1048,14 +1089,22 @@ export default function WardManagement() {
                     admissionPayments.map((p, idx) => {
                       const patientName = p?.bill?.patient?.full_name || p?.bill?.patient?.user?.full_name || "—";
                       return (
-                        <TableRow key={p.id} hover>
+                        <TableRow
+                          key={p.id}
+                          hover
+                          onClick={(e) => {
+                            if (e.target.closest("[data-actions-cell]")) return;
+                            setReceiptDialogPaymentId(p.id);
+                          }}
+                          sx={{ cursor: { xs: "pointer", sm: "default" } }}
+                        >
                           <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{admissionPaymentsPage * admissionPaymentsRowsPerPage + idx + 1}</TableCell>
                           <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{formatDateTime(p.payment_date || p.createdAt)}</TableCell>
                           <TableCell sx={{ fontWeight: 700, maxWidth: { xs: "28vw", sm: 160, md: 220 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{patientName}</TableCell>
                           <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{Number(p.amount_paid ?? 0).toFixed(2)}</TableCell>
                           <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{p.payment_method || "—"}</TableCell>
                           <TableCell sx={{ fontSize: "0.85rem", color: "text.secondary", display: { xs: "none", md: "table-cell" } }}>{p.bill_id ? `#${String(p.bill_id).slice(0, 8)}` : "—"}</TableCell>
-                          <TableCell align="center">
+                          <TableCell align="center" data-actions-cell onClick={(e) => e.stopPropagation()}>
                             <Tooltip title="View receipt">
                               <IconButton size="small" color="primary" onClick={() => setReceiptDialogPaymentId(p.id)} aria-label="View receipt">
                                 <ReceiptIcon />
@@ -1169,36 +1218,46 @@ export default function WardManagement() {
         </DialogActions>
       </Dialog>
 
-      {/* Bed create/edit dialog */}
+      {/* Bed create/edit/view dialog */}
       <Dialog open={bedDialog.open} onClose={() => setBedDialog((p) => ({ ...p, open: false }))} maxWidth="sm" fullWidth PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
-        <DialogTitle>{bedDialog.mode === "create" ? "Add Bed" : "Edit Bed"}</DialogTitle>
+        <DialogTitle>{bedDialog.mode === "create" ? "Add Bed" : bedDialog.mode === "view" ? "View Bed" : "Edit Bed"}</DialogTitle>
         <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ pt: 1 }}>
-            <FormControl fullWidth size="small" required>
-              <InputLabel>Ward</InputLabel>
-              <Select value={bedForm.ward_id} label="Ward" onChange={(e) => setBedForm((p) => ({ ...p, ward_id: e.target.value }))}>
-                <MenuItem value="">Select ward</MenuItem>
-                {wardOptions.map((w) => (
-                  <MenuItem key={w.id} value={w.id}>{w.name}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField fullWidth size="small" label="Bed number" value={bedForm.bed_number} onChange={(e) => setBedForm((p) => ({ ...p, bed_number: e.target.value }))} required />
-            {bedDialog.mode === "edit" && (
-              <FormControl fullWidth size="small">
-                <InputLabel>Status</InputLabel>
-                <Select value={bedForm.status} label="Status" onChange={(e) => setBedForm((p) => ({ ...p, status: e.target.value }))}>
-                  <MenuItem value="available">Available</MenuItem>
-                  <MenuItem value="occupied">Occupied</MenuItem>
-                  <MenuItem value="maintenance">Maintenance</MenuItem>
-                </Select>
-              </FormControl>
+            {bedDialog.mode === "view" ? (
+              <>
+                <Box><Typography variant="caption" color="text.secondary">Ward</Typography><Typography sx={{ fontWeight: 700 }}>{wardOptions.find((w) => w.id === bedForm.ward_id)?.name ?? "—"}</Typography></Box>
+                <Box><Typography variant="caption" color="text.secondary">Bed number</Typography><Typography sx={{ fontWeight: 700 }}>{bedForm.bed_number || "—"}</Typography></Box>
+                <Box><Typography variant="caption" color="text.secondary">Status</Typography><Typography sx={{ fontWeight: 700 }}>{bedForm.status || "—"}</Typography></Box>
+              </>
+            ) : (
+              <>
+                <FormControl fullWidth size="small" required>
+                  <InputLabel>Ward</InputLabel>
+                  <Select value={bedForm.ward_id} label="Ward" onChange={(e) => setBedForm((p) => ({ ...p, ward_id: e.target.value }))}>
+                    <MenuItem value="">Select ward</MenuItem>
+                    {wardOptions.map((w) => (
+                      <MenuItem key={w.id} value={w.id}>{w.name}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <TextField fullWidth size="small" label="Bed number" value={bedForm.bed_number} onChange={(e) => setBedForm((p) => ({ ...p, bed_number: e.target.value }))} required />
+                {bedDialog.mode === "edit" && (
+                  <FormControl fullWidth size="small">
+                    <InputLabel>Status</InputLabel>
+                    <Select value={bedForm.status} label="Status" onChange={(e) => setBedForm((p) => ({ ...p, status: e.target.value }))}>
+                      <MenuItem value="available">Available</MenuItem>
+                      <MenuItem value="occupied">Occupied</MenuItem>
+                      <MenuItem value="maintenance">Maintenance</MenuItem>
+                    </Select>
+                  </FormControl>
+                )}
+              </>
             )}
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setBedDialog((p) => ({ ...p, open: false }))}>Cancel</Button>
-          <Button variant="contained" onClick={saveBed} disabled={bedSaving}>{bedSaving ? "Saving…" : "Save"}</Button>
+          <Button onClick={() => setBedDialog((p) => ({ ...p, open: false }))}>{bedDialog.mode === "view" ? "Close" : "Cancel"}</Button>
+          {bedDialog.mode !== "view" && <Button variant="contained" onClick={saveBed} disabled={bedSaving}>{bedSaving ? "Saving…" : "Save"}</Button>}
         </DialogActions>
       </Dialog>
 

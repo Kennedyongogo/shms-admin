@@ -1024,7 +1024,15 @@ export default function LaboratoryManagement() {
                       </TableRow>
                     ) : tests.length ? (
                       tests.map((t, idx) => (
-                        <TableRow key={t.id} hover>
+                        <TableRow
+                          key={t.id}
+                          hover
+                          onClick={(e) => {
+                            if (e.target.closest("[data-actions-cell]")) return;
+                            openEditTest(t);
+                          }}
+                          sx={{ cursor: { xs: "pointer", sm: "default" } }}
+                        >
                           <TableCell
                             sx={{ color: "text.secondary", fontWeight: 700 }}
                           >
@@ -1035,7 +1043,7 @@ export default function LaboratoryManagement() {
                           </TableCell>
                           <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{t.test_code}</TableCell>
                           <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{fmt(t.price)}</TableCell>
-                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} data-actions-cell onClick={(e) => e.stopPropagation()}>
                             <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
                               {isAdmin && (
                                 <>
@@ -1182,7 +1190,15 @@ export default function LaboratoryManagement() {
                       </TableRow>
                     ) : orders.length ? (
                       orders.map((o, idx) => (
-                        <TableRow key={o.id} hover>
+                        <TableRow
+                          key={o.id}
+                          hover
+                          onClick={(e) => {
+                            if (e.target.closest("[data-actions-cell]")) return;
+                            openOrder(o);
+                          }}
+                          sx={{ cursor: { xs: "pointer", sm: "default" } }}
+                        >
                           <TableCell
                             sx={{ color: "text.secondary", fontWeight: 700 }}
                           >
@@ -1229,7 +1245,7 @@ export default function LaboratoryManagement() {
                             />
                           </TableCell>
                           <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{o.items?.length || 0}</TableCell>
-                          <TableCell align="right">
+                          <TableCell align="right" data-actions-cell onClick={(e) => e.stopPropagation()}>
                             <Tooltip title="View / Enter results">
                               <IconButton
                                 onClick={() => openOrder(o)}
@@ -1480,7 +1496,15 @@ export default function LaboratoryManagement() {
                         const balance = Math.max(0, total - paidAmt);
                         const status = b?.paid ? "paid" : (b?.status || "unpaid");
                         return (
-                          <TableRow key={b.id} hover>
+                          <TableRow
+                            key={b.id}
+                            hover
+                            onClick={(e) => {
+                              if (e.target.closest("[data-actions-cell]")) return;
+                              openLabBillView(b.id);
+                            }}
+                            sx={{ cursor: { xs: "pointer", sm: "default" } }}
+                          >
                             <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>
                               {labBillsPage * labBillsRowsPerPage + idx + 1}
                             </TableCell>
@@ -1496,7 +1520,7 @@ export default function LaboratoryManagement() {
                               />
                             </TableCell>
                             <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{formatDateTime(b.createdAt)}</TableCell>
-                            <TableCell align="right">
+                            <TableCell align="right" data-actions-cell onClick={(e) => e.stopPropagation()}>
                               <Tooltip title="View">
                                 <IconButton size="small" color="primary" onClick={() => openLabBillView(b.id)} aria-label="View">
                                   <Visibility fontSize="inherit" />

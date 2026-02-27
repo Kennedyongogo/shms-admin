@@ -8,10 +8,11 @@ import {
   CircularProgress,
   Avatar,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import { useMediaQuery } from "@mui/material";
 import {
   Menu as MenuIcon,
   ArrowDropDown as ArrowDropDownIcon,
-  Person as PersonIcon,
   AccountCircle as AccountCircleIcon,
   Logout as LogoutIcon,
 } from "@mui/icons-material";
@@ -70,6 +71,48 @@ const getInitials = (name) => {
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 };
 
+// Animated hamburger that morphs into X when open (for mobile menu)
+const HamburgerToCloseIcon = ({ open, ...rest }) => (
+  <Box
+    aria-hidden
+    sx={{
+      width: 24,
+      height: 24,
+      position: "relative",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+      alignItems: "center",
+      "& span": {
+        display: "block",
+        width: 22,
+        height: 2,
+        borderRadius: 1,
+        backgroundColor: "currentColor",
+        position: "absolute",
+        transition: "transform 0.25s ease, opacity 0.2s ease",
+      },
+      "& span:nth-of-type(1)": {
+        top: "6px",
+        transform: open ? "translateY(6px) rotate(45deg)" : "none",
+      },
+      "& span:nth-of-type(2)": {
+        top: "11px",
+        opacity: open ? 0 : 1,
+      },
+      "& span:nth-of-type(3)": {
+        top: "16px",
+        transform: open ? "translateY(-6px) rotate(-45deg)" : "none",
+      },
+    }}
+    {...rest}
+  >
+    <span />
+    <span />
+    <span />
+  </Box>
+);
+
 export default function Header(props) {
   const [currentUser, setCurrentUser] = useState("");
   const [currentRoleName, setCurrentRoleName] = useState("");
@@ -77,6 +120,8 @@ export default function Header(props) {
   const [toggleAccount, setToggleAccount] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   useEffect(() => {
     const bootstrap = async () => {
@@ -174,16 +219,20 @@ export default function Header(props) {
         }}
       >
         <IconButton
-          aria-label="open drawer"
+          aria-label={props.mobileMenuOpen ? "Close menu" : "Open menu"}
           onClick={props.handleDrawerOpen}
           edge="start"
           sx={{
             color: "white",
             marginRight: 5,
-            ...(props.open && { display: "none" }),
+            ...(props.open && !isMobile && { display: "none" }),
           }}
         >
-          <MenuIcon />
+          {isMobile ? (
+            <HamburgerToCloseIcon open={Boolean(props.mobileMenuOpen)} />
+          ) : (
+            <MenuIcon />
+          )}
         </IconButton>
 
         <Box sx={{ flexGrow: 1 }}></Box>

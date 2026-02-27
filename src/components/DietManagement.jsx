@@ -356,6 +356,10 @@ export default function DietManagement() {
     setTypeForm({ name: "", description: "" });
     setTypeDialog({ open: true, mode: "create", id: null });
   };
+  const openTypeView = (row) => {
+    setTypeForm({ name: row.name || "", description: row.description || "" });
+    setTypeDialog({ open: true, mode: "view", id: row.id });
+  };
   const openTypeEdit = (row) => {
     setTypeForm({ name: row.name || "", description: row.description || "" });
     setTypeDialog({ open: true, mode: "edit", id: row.id });
@@ -398,6 +402,16 @@ export default function DietManagement() {
     const today = new Date().toISOString().slice(0, 10);
     setOrderForm({ admission_id: "", diet_type_id: "", prescribed_by: "", start_date: today, end_date: "" });
     setOrderDialog({ open: true, mode: "create", id: null });
+  };
+  const openOrderView = (row) => {
+    setOrderForm({
+      admission_id: row.admission_id || "",
+      diet_type_id: row.diet_type_id || "",
+      prescribed_by: row.prescribed_by || "",
+      start_date: row.start_date ? String(row.start_date).slice(0, 10) : "",
+      end_date: row.end_date ? String(row.end_date).slice(0, 10) : "",
+    });
+    setOrderDialog({ open: true, mode: "view", id: row.id });
   };
   const openOrderEdit = (row) => {
     setOrderForm({
@@ -452,6 +466,16 @@ export default function DietManagement() {
     setPlanForm({ diet_type_id: "", breakfast: "", lunch: "", dinner: "", snack: "" });
     setPlanDialog({ open: true, mode: "create", id: null });
   };
+  const openPlanView = (row) => {
+    setPlanForm({
+      diet_type_id: row.diet_type_id || "",
+      breakfast: row.breakfast || "",
+      lunch: row.lunch || "",
+      dinner: row.dinner || "",
+      snack: row.snack || "",
+    });
+    setPlanDialog({ open: true, mode: "view", id: row.id });
+  };
   const openPlanEdit = (row) => {
     setPlanForm({
       diet_type_id: row.diet_type_id || "",
@@ -505,6 +529,16 @@ export default function DietManagement() {
     const today = new Date().toISOString().slice(0, 10);
     setLogForm({ admission_id: "", meal_type: "breakfast", date: today, delivered_by: "", status: "delivered" });
     setLogDialog({ open: true, mode: "create", id: null });
+  };
+  const openLogView = (row) => {
+    setLogForm({
+      admission_id: row.admission_id || "",
+      meal_type: row.meal_type || "breakfast",
+      date: row.date ? String(row.date).slice(0, 10) : "",
+      delivered_by: row.delivered_by || "",
+      status: row.status || "delivered",
+    });
+    setLogDialog({ open: true, mode: "view", id: row.id });
   };
   const openLogEdit = (row) => {
     setLogForm({
@@ -629,11 +663,19 @@ export default function DietManagement() {
                     </TableRow>
                   ) : dietTypes.length ? (
                     dietTypes.map((row, idx) => (
-                      <TableRow key={row.id} hover>
+                      <TableRow
+                        key={row.id}
+                        hover
+                        onClick={(e) => {
+                          if (e.target.closest("[data-actions-cell]")) return;
+                          openTypeView(row);
+                        }}
+                        sx={{ cursor: { xs: "pointer", sm: "default" } }}
+                      >
                         <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{dietTypesPage * dietTypesRowsPerPage + idx + 1}</TableCell>
                         <TableCell sx={{ fontWeight: 800 }}>{row.name}</TableCell>
                         <TableCell sx={{ maxWidth: 360, display: { xs: "none", md: "table-cell" } }}>{row.description || "—"}</TableCell>
-                        <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                        <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} data-actions-cell onClick={(e) => e.stopPropagation()}>
                           <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
                             <Tooltip title="Edit">
                               <IconButton size="small" color="primary" onClick={() => openTypeEdit(row)} aria-label="Edit"><EditIcon fontSize="inherit" /></IconButton>
@@ -703,7 +745,15 @@ export default function DietManagement() {
                     orders.map((row, idx) => {
                       const status = dietOrderStatus(row);
                       return (
-                        <TableRow key={row.id} hover>
+                        <TableRow
+                          key={row.id}
+                          hover
+                          onClick={(e) => {
+                            if (e.target.closest("[data-actions-cell]")) return;
+                            openOrderView(row);
+                          }}
+                          sx={{ cursor: { xs: "pointer", sm: "default" } }}
+                        >
                           <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{ordersPage * ordersRowsPerPage + idx + 1}</TableCell>
                           <TableCell>{admissionLabel(row.admission)}</TableCell>
                           <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{row.dietType?.name ?? "—"}</TableCell>
@@ -713,7 +763,7 @@ export default function DietManagement() {
                             <Chip size="small" label={status} color={status === "Active" ? "success" : "default"} variant="outlined" />
                           </TableCell>
                           <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{row.prescribedBy?.user?.full_name ?? "—"}</TableCell>
-                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} data-actions-cell onClick={(e) => e.stopPropagation()}>
                             <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
                               <Tooltip title="Edit">
                                 <IconButton size="small" color="primary" onClick={() => openOrderEdit(row)} aria-label="Edit"><EditIcon fontSize="inherit" /></IconButton>
@@ -764,6 +814,10 @@ export default function DietManagement() {
                   <Card
                     key={row.id}
                     variant="outlined"
+                    onClick={(e) => {
+                      if (e.target.closest("[data-actions-cell]")) return;
+                      openPlanView(row);
+                    }}
                     sx={{
                       width: "100%",
                       borderRadius: 2,
@@ -771,6 +825,7 @@ export default function DietManagement() {
                       boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
                       "&:hover": { boxShadow: "0 4px 16px rgba(0,0,0,0.08)" },
                       transition: "box-shadow 0.2s ease",
+                      cursor: { xs: "pointer", sm: "default" },
                     }}
                   >
                     <Box sx={{ px: 2.5, py: 1.5, bgcolor: "rgba(0,0,0,0.04)", borderBottom: "1px solid", borderColor: "divider", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 1 }}>
@@ -778,7 +833,7 @@ export default function DietManagement() {
                         <Chip label={mealPlansPage * mealPlansRowsPerPage + idx + 1} size="small" sx={{ fontWeight: 800, minWidth: 32 }} />
                         <Typography variant="h6" sx={{ fontWeight: 800 }}>{row.dietType?.name ?? "—"}</Typography>
                       </Stack>
-                      <Stack direction="row" spacing={0.5}>
+                      <Stack direction="row" spacing={0.5} data-actions-cell onClick={(e) => e.stopPropagation()}>
                         <Tooltip title="Edit">
                           <IconButton size="small" color="primary" onClick={() => openPlanEdit(row)} aria-label="Edit"><EditIcon fontSize="inherit" /></IconButton>
                         </Tooltip>
@@ -861,14 +916,22 @@ export default function DietManagement() {
                     </TableRow>
                   ) : deliveryLogs.length ? (
                     deliveryLogs.map((row, idx) => (
-                      <TableRow key={row.id} hover>
+                      <TableRow
+                        key={row.id}
+                        hover
+                        onClick={(e) => {
+                          if (e.target.closest("[data-actions-cell]")) return;
+                          openLogView(row);
+                        }}
+                        sx={{ cursor: { xs: "pointer", sm: "default" } }}
+                      >
                         <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{deliveryLogsPage * deliveryLogsRowsPerPage + idx + 1}</TableCell>
                         <TableCell>{admissionLabel(row.admission)}</TableCell>
                         <TableCell sx={{ textTransform: "capitalize", display: { xs: "none", sm: "table-cell" } }}>{row.meal_type}</TableCell>
                         <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{formatDate(row.date)}</TableCell>
                         <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{row.deliveredBy?.user?.full_name ?? "—"}</TableCell>
                         <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}><Chip size="small" label={row.status} color={row.status === "delivered" ? "success" : "default"} variant="outlined" /></TableCell>
-                        <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                        <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} data-actions-cell onClick={(e) => e.stopPropagation()}>
                           <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
                             <Tooltip title="Edit">
                               <IconButton size="small" color="primary" onClick={() => openLogEdit(row)} aria-label="Edit"><EditIcon fontSize="inherit" /></IconButton>
@@ -959,115 +1022,158 @@ export default function DietManagement() {
 
       {/* Diet type dialog */}
       <Dialog open={typeDialog.open} onClose={() => setTypeDialog((p) => ({ ...p, open: false }))} maxWidth="sm" fullWidth>
-        <DialogTitle>{typeDialog.mode === "create" ? "Add diet type" : "Edit diet type"}</DialogTitle>
+        <DialogTitle>{typeDialog.mode === "create" ? "Add diet type" : typeDialog.mode === "view" ? "View diet type" : "Edit diet type"}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
-            <TextField fullWidth size="small" label="Name" value={typeForm.name} onChange={(e) => setTypeForm((p) => ({ ...p, name: e.target.value }))} required />
-            <TextField fullWidth size="small" label="Description" value={typeForm.description} onChange={(e) => setTypeForm((p) => ({ ...p, description: e.target.value }))} multiline rows={3} />
+            {typeDialog.mode === "view" ? (
+              <>
+                <Box><Typography variant="caption" color="text.secondary">Name</Typography><Typography sx={{ fontWeight: 700 }}>{typeForm.name || "—"}</Typography></Box>
+                <Box><Typography variant="caption" color="text.secondary">Description</Typography><Typography sx={{ fontWeight: 700 }}>{typeForm.description || "—"}</Typography></Box>
+              </>
+            ) : (
+              <>
+                <TextField fullWidth size="small" label="Name" value={typeForm.name} onChange={(e) => setTypeForm((p) => ({ ...p, name: e.target.value }))} required />
+                <TextField fullWidth size="small" label="Description" value={typeForm.description} onChange={(e) => setTypeForm((p) => ({ ...p, description: e.target.value }))} multiline rows={3} />
+              </>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setTypeDialog((p) => ({ ...p, open: false }))}>Cancel</Button>
-          <Button variant="contained" onClick={saveType} disabled={typeSaving}>{typeSaving ? "Saving…" : "Save"}</Button>
+          <Button onClick={() => setTypeDialog((p) => ({ ...p, open: false }))}>{typeDialog.mode === "view" ? "Close" : "Cancel"}</Button>
+          {typeDialog.mode !== "view" && <Button variant="contained" onClick={saveType} disabled={typeSaving}>{typeSaving ? "Saving…" : "Save"}</Button>}
         </DialogActions>
       </Dialog>
 
       {/* Diet order dialog */}
       <Dialog open={orderDialog.open} onClose={() => setOrderDialog((p) => ({ ...p, open: false }))} maxWidth="sm" fullWidth>
-        <DialogTitle>{orderDialog.mode === "create" ? "Add diet order" : "Edit diet order"}</DialogTitle>
+        <DialogTitle>{orderDialog.mode === "create" ? "Add diet order" : orderDialog.mode === "view" ? "View diet order" : "Edit diet order"}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
-            <FormControl fullWidth size="small" required>
-              <InputLabel>Admission</InputLabel>
-              <Select value={orderForm.admission_id} label="Admission" onChange={(e) => setOrderForm((p) => ({ ...p, admission_id: e.target.value }))}>
-                <MenuItem value="">Select admission</MenuItem>
-                {admissionsOptions.map((a) => (
-                  <MenuItem key={a.id} value={a.id}>{admissionLabel(a)}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl fullWidth size="small" required>
-              <InputLabel>Diet type</InputLabel>
-              <Select value={orderForm.diet_type_id} label="Diet type" onChange={(e) => setOrderForm((p) => ({ ...p, diet_type_id: e.target.value }))}>
-                <MenuItem value="">Select diet type</MenuItem>
-                {dietTypesOptions.map((d) => (
-                  <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField fullWidth size="small" type="date" label="Start date" value={orderForm.start_date} onChange={(e) => setOrderForm((p) => ({ ...p, start_date: e.target.value }))} InputLabelProps={{ shrink: true }} />
-            <TextField fullWidth size="small" type="date" label="End date (optional)" value={orderForm.end_date} onChange={(e) => setOrderForm((p) => ({ ...p, end_date: e.target.value }))} InputLabelProps={{ shrink: true }} />
+            {orderDialog.mode === "view" ? (
+              <>
+                <Box><Typography variant="caption" color="text.secondary">Admission</Typography><Typography sx={{ fontWeight: 700 }}>{admissionsOptions.find((a) => a.id === orderForm.admission_id) ? admissionLabel(admissionsOptions.find((a) => a.id === orderForm.admission_id)) : "—"}</Typography></Box>
+                <Box><Typography variant="caption" color="text.secondary">Diet type</Typography><Typography sx={{ fontWeight: 700 }}>{dietTypesOptions.find((d) => d.id === orderForm.diet_type_id)?.name ?? "—"}</Typography></Box>
+                <Box><Typography variant="caption" color="text.secondary">Start date</Typography><Typography sx={{ fontWeight: 700 }}>{orderForm.start_date || "—"}</Typography></Box>
+                <Box><Typography variant="caption" color="text.secondary">End date</Typography><Typography sx={{ fontWeight: 700 }}>{orderForm.end_date || "—"}</Typography></Box>
+              </>
+            ) : (
+              <>
+                <FormControl fullWidth size="small" required>
+                  <InputLabel>Admission</InputLabel>
+                  <Select value={orderForm.admission_id} label="Admission" onChange={(e) => setOrderForm((p) => ({ ...p, admission_id: e.target.value }))}>
+                    <MenuItem value="">Select admission</MenuItem>
+                    {admissionsOptions.map((a) => (
+                      <MenuItem key={a.id} value={a.id}>{admissionLabel(a)}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth size="small" required>
+                  <InputLabel>Diet type</InputLabel>
+                  <Select value={orderForm.diet_type_id} label="Diet type" onChange={(e) => setOrderForm((p) => ({ ...p, diet_type_id: e.target.value }))}>
+                    <MenuItem value="">Select diet type</MenuItem>
+                    {dietTypesOptions.map((d) => (
+                      <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <TextField fullWidth size="small" type="date" label="Start date" value={orderForm.start_date} onChange={(e) => setOrderForm((p) => ({ ...p, start_date: e.target.value }))} InputLabelProps={{ shrink: true }} />
+                <TextField fullWidth size="small" type="date" label="End date (optional)" value={orderForm.end_date} onChange={(e) => setOrderForm((p) => ({ ...p, end_date: e.target.value }))} InputLabelProps={{ shrink: true }} />
+              </>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOrderDialog((p) => ({ ...p, open: false }))}>Cancel</Button>
-          <Button variant="contained" onClick={saveOrder} disabled={orderSaving}>{orderSaving ? "Saving…" : "Save"}</Button>
+          <Button onClick={() => setOrderDialog((p) => ({ ...p, open: false }))}>{orderDialog.mode === "view" ? "Close" : "Cancel"}</Button>
+          {orderDialog.mode !== "view" && <Button variant="contained" onClick={saveOrder} disabled={orderSaving}>{orderSaving ? "Saving…" : "Save"}</Button>}
         </DialogActions>
       </Dialog>
 
       {/* Meal plan dialog */}
       <Dialog open={planDialog.open} onClose={() => setPlanDialog((p) => ({ ...p, open: false }))} maxWidth="md" fullWidth>
-        <DialogTitle>{planDialog.mode === "create" ? "Add meal plan" : "Edit meal plan"}</DialogTitle>
+        <DialogTitle>{planDialog.mode === "create" ? "Add meal plan" : planDialog.mode === "view" ? "View meal plan" : "Edit meal plan"}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
-            <FormControl fullWidth size="small" required>
-              <InputLabel>Diet type</InputLabel>
-              <Select value={planForm.diet_type_id} label="Diet type" onChange={(e) => setPlanForm((p) => ({ ...p, diet_type_id: e.target.value }))}>
-                <MenuItem value="">Select diet type</MenuItem>
-                {dietTypesOptions.map((d) => (
-                  <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField fullWidth size="small" label="Breakfast" value={planForm.breakfast} onChange={(e) => setPlanForm((p) => ({ ...p, breakfast: e.target.value }))} multiline rows={2} placeholder="e.g. Oatmeal, fruit" />
-            <TextField fullWidth size="small" label="Lunch" value={planForm.lunch} onChange={(e) => setPlanForm((p) => ({ ...p, lunch: e.target.value }))} multiline rows={2} placeholder="e.g. Grilled chicken, rice, vegetables" />
-            <TextField fullWidth size="small" label="Dinner" value={planForm.dinner} onChange={(e) => setPlanForm((p) => ({ ...p, dinner: e.target.value }))} multiline rows={2} placeholder="e.g. Fish, salad" />
-            <TextField fullWidth size="small" label="Snack" value={planForm.snack} onChange={(e) => setPlanForm((p) => ({ ...p, snack: e.target.value }))} multiline rows={2} placeholder="e.g. Yogurt, nuts" />
+            {planDialog.mode === "view" ? (
+              <>
+                <Box><Typography variant="caption" color="text.secondary">Diet type</Typography><Typography sx={{ fontWeight: 700 }}>{dietTypesOptions.find((d) => d.id === planForm.diet_type_id)?.name ?? "—"}</Typography></Box>
+                <Box><Typography variant="caption" color="text.secondary">Breakfast</Typography><Typography sx={{ fontWeight: 700 }}>{planForm.breakfast || "—"}</Typography></Box>
+                <Box><Typography variant="caption" color="text.secondary">Lunch</Typography><Typography sx={{ fontWeight: 700 }}>{planForm.lunch || "—"}</Typography></Box>
+                <Box><Typography variant="caption" color="text.secondary">Dinner</Typography><Typography sx={{ fontWeight: 700 }}>{planForm.dinner || "—"}</Typography></Box>
+                <Box><Typography variant="caption" color="text.secondary">Snack</Typography><Typography sx={{ fontWeight: 700 }}>{planForm.snack || "—"}</Typography></Box>
+              </>
+            ) : (
+              <>
+                <FormControl fullWidth size="small" required>
+                  <InputLabel>Diet type</InputLabel>
+                  <Select value={planForm.diet_type_id} label="Diet type" onChange={(e) => setPlanForm((p) => ({ ...p, diet_type_id: e.target.value }))}>
+                    <MenuItem value="">Select diet type</MenuItem>
+                    {dietTypesOptions.map((d) => (
+                      <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <TextField fullWidth size="small" label="Breakfast" value={planForm.breakfast} onChange={(e) => setPlanForm((p) => ({ ...p, breakfast: e.target.value }))} multiline rows={2} placeholder="e.g. Oatmeal, fruit" />
+                <TextField fullWidth size="small" label="Lunch" value={planForm.lunch} onChange={(e) => setPlanForm((p) => ({ ...p, lunch: e.target.value }))} multiline rows={2} placeholder="e.g. Grilled chicken, rice, vegetables" />
+                <TextField fullWidth size="small" label="Dinner" value={planForm.dinner} onChange={(e) => setPlanForm((p) => ({ ...p, dinner: e.target.value }))} multiline rows={2} placeholder="e.g. Fish, salad" />
+                <TextField fullWidth size="small" label="Snack" value={planForm.snack} onChange={(e) => setPlanForm((p) => ({ ...p, snack: e.target.value }))} multiline rows={2} placeholder="e.g. Yogurt, nuts" />
+              </>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setPlanDialog((p) => ({ ...p, open: false }))}>Cancel</Button>
-          <Button variant="contained" onClick={savePlan} disabled={planSaving}>{planSaving ? "Saving…" : "Save"}</Button>
+          <Button onClick={() => setPlanDialog((p) => ({ ...p, open: false }))}>{planDialog.mode === "view" ? "Close" : "Cancel"}</Button>
+          {planDialog.mode !== "view" && <Button variant="contained" onClick={savePlan} disabled={planSaving}>{planSaving ? "Saving…" : "Save"}</Button>}
         </DialogActions>
       </Dialog>
 
       {/* Delivery log dialog */}
       <Dialog open={logDialog.open} onClose={() => setLogDialog((p) => ({ ...p, open: false }))} maxWidth="sm" fullWidth>
-        <DialogTitle>{logDialog.mode === "create" ? "Log meal delivery" : "Edit delivery log"}</DialogTitle>
+        <DialogTitle>{logDialog.mode === "create" ? "Log meal delivery" : logDialog.mode === "view" ? "View delivery log" : "Edit delivery log"}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
-            <FormControl fullWidth size="small" required>
-              <InputLabel>Admission</InputLabel>
-              <Select value={logForm.admission_id} label="Admission" onChange={(e) => setLogForm((p) => ({ ...p, admission_id: e.target.value }))}>
-                <MenuItem value="">Select admission</MenuItem>
-                {admissionsOptions.map((a) => (
-                  <MenuItem key={a.id} value={a.id}>{admissionLabel(a)}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl fullWidth size="small">
-              <InputLabel>Meal type</InputLabel>
-              <Select value={logForm.meal_type} label="Meal type" onChange={(e) => setLogForm((p) => ({ ...p, meal_type: e.target.value }))}>
-                <MenuItem value="breakfast">Breakfast</MenuItem>
-                <MenuItem value="lunch">Lunch</MenuItem>
-                <MenuItem value="dinner">Dinner</MenuItem>
-                <MenuItem value="snack">Snack</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField fullWidth size="small" type="date" label="Date" value={logForm.date} onChange={(e) => setLogForm((p) => ({ ...p, date: e.target.value }))} InputLabelProps={{ shrink: true }} />
-            <FormControl fullWidth size="small">
-              <InputLabel>Status</InputLabel>
-              <Select value={logForm.status} label="Status" onChange={(e) => setLogForm((p) => ({ ...p, status: e.target.value }))}>
-                <MenuItem value="delivered">Delivered</MenuItem>
-                <MenuItem value="skipped">Skipped</MenuItem>
-                <MenuItem value="refused">Refused</MenuItem>
-              </Select>
-            </FormControl>
+            {logDialog.mode === "view" ? (
+              <>
+                <Box><Typography variant="caption" color="text.secondary">Admission</Typography><Typography sx={{ fontWeight: 700 }}>{admissionsOptions.find((a) => a.id === logForm.admission_id) ? admissionLabel(admissionsOptions.find((a) => a.id === logForm.admission_id)) : "—"}</Typography></Box>
+                <Box><Typography variant="caption" color="text.secondary">Meal type</Typography><Typography sx={{ fontWeight: 700, textTransform: "capitalize" }}>{logForm.meal_type || "—"}</Typography></Box>
+                <Box><Typography variant="caption" color="text.secondary">Date</Typography><Typography sx={{ fontWeight: 700 }}>{logForm.date || "—"}</Typography></Box>
+                <Box><Typography variant="caption" color="text.secondary">Status</Typography><Typography sx={{ fontWeight: 700 }}>{logForm.status || "—"}</Typography></Box>
+              </>
+            ) : (
+              <>
+                <FormControl fullWidth size="small" required>
+                  <InputLabel>Admission</InputLabel>
+                  <Select value={logForm.admission_id} label="Admission" onChange={(e) => setLogForm((p) => ({ ...p, admission_id: e.target.value }))}>
+                    <MenuItem value="">Select admission</MenuItem>
+                    {admissionsOptions.map((a) => (
+                      <MenuItem key={a.id} value={a.id}>{admissionLabel(a)}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Meal type</InputLabel>
+                  <Select value={logForm.meal_type} label="Meal type" onChange={(e) => setLogForm((p) => ({ ...p, meal_type: e.target.value }))}>
+                    <MenuItem value="breakfast">Breakfast</MenuItem>
+                    <MenuItem value="lunch">Lunch</MenuItem>
+                    <MenuItem value="dinner">Dinner</MenuItem>
+                    <MenuItem value="snack">Snack</MenuItem>
+                  </Select>
+                </FormControl>
+                <TextField fullWidth size="small" type="date" label="Date" value={logForm.date} onChange={(e) => setLogForm((p) => ({ ...p, date: e.target.value }))} InputLabelProps={{ shrink: true }} />
+                <FormControl fullWidth size="small">
+                  <InputLabel>Status</InputLabel>
+                  <Select value={logForm.status} label="Status" onChange={(e) => setLogForm((p) => ({ ...p, status: e.target.value }))}>
+                    <MenuItem value="delivered">Delivered</MenuItem>
+                    <MenuItem value="skipped">Skipped</MenuItem>
+                    <MenuItem value="refused">Refused</MenuItem>
+                  </Select>
+                </FormControl>
+              </>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setLogDialog((p) => ({ ...p, open: false }))}>Cancel</Button>
-          <Button variant="contained" onClick={saveLog} disabled={logSaving}>{logSaving ? "Saving…" : "Save"}</Button>
+          <Button onClick={() => setLogDialog((p) => ({ ...p, open: false }))}>{logDialog.mode === "view" ? "Close" : "Cancel"}</Button>
+          {logDialog.mode !== "view" && <Button variant="contained" onClick={saveLog} disabled={logSaving}>{logSaving ? "Saving…" : "Save"}</Button>}
         </DialogActions>
       </Dialog>
     </Card>

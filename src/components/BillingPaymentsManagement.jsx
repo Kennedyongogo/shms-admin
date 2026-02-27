@@ -561,7 +561,7 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
                           <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} data-actions-cell onClick={(e) => e.stopPropagation()}>
                             <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
                               <Tooltip title="View bill">
-                                <IconButton size="small" color="primary" onClick={() => openBillById(b.id)} aria-label="View bill" sx={{ display: { xs: "none", sm: "inline-flex" } }}>
+                                <IconButton size="small" color="primary" onClick={() => openBillById(b.id)} aria-label="View bill">
                                   <VisibilityIcon fontSize="inherit" />
                                 </IconButton>
                               </Tooltip>
@@ -775,18 +775,10 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
 
               <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
                 <Typography sx={{ fontWeight: 900, mb: 1 }}>Bill items</Typography>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 900, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No</TableCell>
-                      <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "18vw", sm: 100 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Type</TableCell>
-                      <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Reference</TableCell>
-                      <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "18vw", sm: 90 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Amount</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {(billView.bill.items || []).length ? (
-                      (billView.bill.items || []).flatMap((it, idx) => {
+                {isMobile ? (
+                  (billView.bill.items || []).length ? (
+                    <Stack spacing={1.5}>
+                      {(billView.bill.items || []).map((it, idx) => {
                         const key = it?.reference_id ? refKey(it.item_type, it.reference_id) : null;
                         const d = key ? refDetails[key] : null;
                         const hasBreakdown = it.item_type === "lab_order" && Array.isArray(d?.tests) && d.tests.length > 0;
@@ -794,78 +786,145 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
                         const testsSum = Number(d?.tests_total || 0);
                         const itemAmount = Number(it.amount || 0);
                         const showDiffNote = hasBreakdown && Math.abs(itemAmount - testsSum) > 0.009;
-
-                        const mainRow = (
-                          <TableRow key={it.id} hover>
-                            <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{idx + 1}</TableCell>
-                            <TableCell sx={{ fontWeight: 800 }}>{it.item_type}</TableCell>
-                            <TableCell>
-                              <Typography sx={{ fontWeight: 800 }}>{labelForRef(it, billView.bill)}</Typography>
-                              <Typography variant="caption" color="text.secondary" sx={{ fontFamily: "monospace", display: "block" }}>
-                                {!it.reference_id ? "—" : isUuidLike(it.reference_id) ? shortId(it.reference_id) : String(it.reference_id)}
-                              </Typography>
-                              {hasBreakdown && (
-                                <Button size="small" variant="text" onClick={() => toggleItemExpanded(it.id)} sx={{ px: 0, mt: 0.5, fontWeight: 800 }}>
-                                  {expanded ? "Hide tests" : "Show tests"}
-                                </Button>
-                              )}
-                            </TableCell>
-                            <TableCell>{money(it.amount)}</TableCell>
-                          </TableRow>
-                        );
-
-                        if (!hasBreakdown || !expanded) return [mainRow];
-
-                        const detailsRow = (
-                          <TableRow key={`${it.id}__details`}>
-                            <TableCell colSpan={4} sx={{ bgcolor: "rgba(0,0,0,0.01)" }}>
-                              <Box sx={{ px: 0.5, py: 1 }}>
-                                <Typography sx={{ fontWeight: 900, mb: 1 }}>Lab tests breakdown</Typography>
-                                <Table size="small">
-                                  <TableHead>
-                                    <TableRow>
-                                      <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 140 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Test</TableCell>
-                                      <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "16vw", sm: 100 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Code</TableCell>
-                                      <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "18vw", sm: 90 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Price</TableCell>
-                                    </TableRow>
-                                  </TableHead>
-                                  <TableBody>
-                                    {d.tests.map((t) => (
-                                      <TableRow key={t.id} hover>
-                                        <TableCell sx={{ fontWeight: 800 }}>{t.name}</TableCell>
-                                        <TableCell>{t.code || "—"}</TableCell>
-                                        <TableCell>{money(t.price)}</TableCell>
-                                      </TableRow>
-                                    ))}
-                                    <TableRow>
-                                      <TableCell colSpan={2} sx={{ fontWeight: 900 }}>
-                                        Total
-                                      </TableCell>
-                                      <TableCell sx={{ fontWeight: 900 }}>{money(testsSum)}</TableCell>
-                                    </TableRow>
-                                  </TableBody>
-                                </Table>
-                                {showDiffNote && (
-                                  <Alert severity="info" sx={{ mt: 1 }}>
-                                    Bill item amount is {money(itemAmount)} but tests sum to {money(testsSum)}. (This can happen if an adjustment was added.)
-                                  </Alert>
+                        return (
+                          <Card key={it.id} variant="outlined" sx={{ borderRadius: 2, overflow: "hidden" }}>
+                            <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
+                              <Stack spacing={0.75}>
+                                <Stack direction="row" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={0.5}>
+                                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>#{idx + 1} · {it.item_type}</Typography>
+                                  <Typography sx={{ fontWeight: 900 }}>{money(it.amount)}</Typography>
+                                </Stack>
+                                <Typography variant="body2" sx={{ fontWeight: 800 }}>{labelForRef(it, billView.bill)}</Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontFamily: "monospace" }}>
+                                  {!it.reference_id ? "—" : isUuidLike(it.reference_id) ? shortId(it.reference_id) : String(it.reference_id)}
+                                </Typography>
+                                {hasBreakdown && (
+                                  <>
+                                    <Button size="small" variant="text" onClick={() => toggleItemExpanded(it.id)} sx={{ alignSelf: "flex-start", px: 0, minWidth: 0, fontWeight: 800 }}>
+                                      {expanded ? "Hide tests" : "Show tests"}
+                                    </Button>
+                                    {expanded && d?.tests && (
+                                      <Box sx={{ bgcolor: "rgba(0,0,0,0.03)", borderRadius: 1, p: 1 }}>
+                                        <Typography variant="caption" sx={{ fontWeight: 900, display: "block", mb: 0.5 }}>Lab tests breakdown</Typography>
+                                        {d.tests.map((t) => (
+                                          <Stack key={t.id} direction="row" justifyContent="space-between" sx={{ py: 0.25 }}>
+                                            <Typography variant="caption">{t.name}</Typography>
+                                            <Typography variant="caption">{money(t.price)}</Typography>
+                                          </Stack>
+                                        ))}
+                                        <Stack direction="row" justifyContent="space-between" sx={{ mt: 0.5, pt: 0.5, borderTop: "1px solid", borderColor: "divider" }}>
+                                          <Typography variant="caption" sx={{ fontWeight: 900 }}>Total</Typography>
+                                          <Typography variant="caption" sx={{ fontWeight: 900 }}>{money(testsSum)}</Typography>
+                                        </Stack>
+                                        {showDiffNote && (
+                                          <Alert severity="info" sx={{ mt: 1, py: 0.5 }}>Item amount {money(itemAmount)} vs tests sum {money(testsSum)}.</Alert>
+                                        )}
+                                      </Box>
+                                    )}
+                                  </>
                                 )}
-                              </Box>
-                            </TableCell>
-                          </TableRow>
+                              </Stack>
+                            </CardContent>
+                          </Card>
                         );
-
-                        return [mainRow, detailsRow];
-                      })
-                    ) : (
+                      })}
+                    </Stack>
+                  ) : (
+                    <Typography color="text.secondary">No items yet.</Typography>
+                  )
+                ) : (
+                  <Table size="small">
+                    <TableHead>
                       <TableRow>
-                        <TableCell colSpan={4}>
-                          <Typography color="text.secondary">No items yet.</Typography>
-                        </TableCell>
+                        <TableCell sx={{ fontWeight: 900, width: 64, maxWidth: { xs: "16vw", sm: 64 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No</TableCell>
+                        <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "18vw", sm: 100 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Type</TableCell>
+                        <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 140, md: 220 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Reference</TableCell>
+                        <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "18vw", sm: 90 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Amount</TableCell>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
+                    </TableHead>
+                    <TableBody>
+                      {(billView.bill.items || []).length ? (
+                        (billView.bill.items || []).flatMap((it, idx) => {
+                          const key = it?.reference_id ? refKey(it.item_type, it.reference_id) : null;
+                          const d = key ? refDetails[key] : null;
+                          const hasBreakdown = it.item_type === "lab_order" && Array.isArray(d?.tests) && d.tests.length > 0;
+                          const expanded = Boolean(expandedItemIds[it.id]);
+                          const testsSum = Number(d?.tests_total || 0);
+                          const itemAmount = Number(it.amount || 0);
+                          const showDiffNote = hasBreakdown && Math.abs(itemAmount - testsSum) > 0.009;
+
+                          const mainRow = (
+                            <TableRow key={it.id} hover>
+                              <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{idx + 1}</TableCell>
+                              <TableCell sx={{ fontWeight: 800 }}>{it.item_type}</TableCell>
+                              <TableCell>
+                                <Typography sx={{ fontWeight: 800 }}>{labelForRef(it, billView.bill)}</Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ fontFamily: "monospace", display: "block" }}>
+                                  {!it.reference_id ? "—" : isUuidLike(it.reference_id) ? shortId(it.reference_id) : String(it.reference_id)}
+                                </Typography>
+                                {hasBreakdown && (
+                                  <Button size="small" variant="text" onClick={() => toggleItemExpanded(it.id)} sx={{ px: 0, mt: 0.5, fontWeight: 800 }}>
+                                    {expanded ? "Hide tests" : "Show tests"}
+                                  </Button>
+                                )}
+                              </TableCell>
+                              <TableCell>{money(it.amount)}</TableCell>
+                            </TableRow>
+                          );
+
+                          if (!hasBreakdown || !expanded) return [mainRow];
+
+                          const detailsRow = (
+                            <TableRow key={`${it.id}__details`}>
+                              <TableCell colSpan={4} sx={{ bgcolor: "rgba(0,0,0,0.01)" }}>
+                                <Box sx={{ px: 0.5, py: 1 }}>
+                                  <Typography sx={{ fontWeight: 900, mb: 1 }}>Lab tests breakdown</Typography>
+                                  <Table size="small">
+                                    <TableHead>
+                                      <TableRow>
+                                        <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 140 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Test</TableCell>
+                                        <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "16vw", sm: 100 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Code</TableCell>
+                                        <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "18vw", sm: 90 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Price</TableCell>
+                                      </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                      {d.tests.map((t) => (
+                                        <TableRow key={t.id} hover>
+                                          <TableCell sx={{ fontWeight: 800 }}>{t.name}</TableCell>
+                                          <TableCell>{t.code || "—"}</TableCell>
+                                          <TableCell>{money(t.price)}</TableCell>
+                                        </TableRow>
+                                      ))}
+                                      <TableRow>
+                                        <TableCell colSpan={2} sx={{ fontWeight: 900 }}>
+                                          Total
+                                        </TableCell>
+                                        <TableCell sx={{ fontWeight: 900 }}>{money(testsSum)}</TableCell>
+                                      </TableRow>
+                                    </TableBody>
+                                  </Table>
+                                  {showDiffNote && (
+                                    <Alert severity="info" sx={{ mt: 1 }}>
+                                      Bill item amount is {money(itemAmount)} but tests sum to {money(testsSum)}. (This can happen if an adjustment was added.)
+                                    </Alert>
+                                  )}
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                          );
+
+                          return [mainRow, detailsRow];
+                        })
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={4}>
+                            <Typography color="text.secondary">No items yet.</Typography>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                )}
               </Box>
 
               <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>

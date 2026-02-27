@@ -2,6 +2,7 @@ import React, { cloneElement, useEffect, useState } from "react";
 import { Assessment, EventNote, History, Hotel, Inventory, LocalHospital, LocalPharmacy, Logout, PeopleAlt, PersonalInjury, ReceiptLong, RestaurantMenu, Science, Settings as SettingsIcon } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { styled, useTheme } from "@mui/material/styles";
+import { useMediaQuery } from "@mui/material";
 import MuiDrawer from "@mui/material/Drawer";
 import MuiAppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
@@ -94,9 +95,11 @@ const Navbar = (props) => {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const [open, setOpen] = useState(() => {
     return window.innerWidth >= theme.breakpoints.values.md;
   });
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Keys must match backend ALL_MENU_KEYS (constants/menuKeys.js)
   const adminItems = [
@@ -140,8 +143,19 @@ const Navbar = (props) => {
         : adminItems.filter((item) => allowedMenuKeys.includes(item.key));
   const menuItems = visibleItems;
 
-  const handleDrawerOpen = () => setOpen(true);
+  const handleDrawerOpen = () => {
+    if (isDesktop) setOpen(true);
+    else setMobileMenuOpen((prev) => !prev);
+  };
   const handleDrawerClose = () => setOpen(false);
+  const handleMobileNav = (path) => {
+    navigate(path);
+    setMobileMenuOpen(false);
+  };
+  const handleMobileLogout = () => {
+    logout();
+    setMobileMenuOpen(false);
+  };
 
   const logout = () => {
     localStorage.clear();
@@ -158,70 +172,154 @@ const Navbar = (props) => {
     return () => window.removeEventListener("resize", handleResize);
   }, [theme.breakpoints.values.md]);
 
+  const menuListContent = (
+    <>
+      <List>
+        {menuItems.map((item) => (
+          <ListItem
+            key={item.key}
+            button
+            onClick={() => (isDesktop ? navigate(item.path) : handleMobileNav(item.path))}
+            selected={location.pathname === item.path}
+            sx={{
+              cursor: "pointer",
+              bgcolor: location.pathname === item.path ? "action.selected" : "transparent",
+            }}
+          >
+            <ListItemIcon>
+              {cloneElement(item.icon, {
+                color: location.pathname === item.path ? "primary" : "textSecondary",
+              })}
+            </ListItemIcon>
+            <ListItemText
+              primary={item.text}
+              sx={{
+                color: location.pathname === item.path ? "primary" : "textSecondary",
+                fontWeight: location.pathname === item.path ? "bold" : "normal",
+              }}
+            />
+          </ListItem>
+        ))}
+      </List>
+      <Divider />
+      <List>
+        <ListItem button onClick={isDesktop ? logout : handleMobileLogout} sx={{ cursor: "pointer" }}>
+          <ListItemIcon>
+            <Logout />
+          </ListItemIcon>
+          <ListItemText primary="Logout" />
+        </ListItem>
+      </List>
+    </>
+  );
+
   return (
     <Box sx={{ display: "flex" }}>
       <CssBaseline />
-      <AppBar position="fixed" open={open}>
+      <AppBar position="fixed" open={isDesktop && open}>
         <Toolbar>
           <Header
             setUser={props.setUser}
             handleDrawerOpen={handleDrawerOpen}
-            open={open}
+            open={isDesktop && open}
+            mobileMenuOpen={mobileMenuOpen}
           />
         </Toolbar>
       </AppBar>
-      <Drawer variant="permanent" open={open}>
-        <DrawerHeader>
-          <Box></Box>
-          <IconButton onClick={handleDrawerClose}>
-            {theme.direction === "rtl" ? (
-              <ChevronRightIcon />
-            ) : (
-              <ChevronLeftIcon />
-            )}
-          </IconButton>
-        </DrawerHeader>
-        <Divider />
-        <List>
-          {menuItems.map((item) => (
-            <Tooltip key={item.key} title={!open ? item.text : ""} placement="right" arrow>
-              <ListItem
-                button
-                onClick={() => navigate(item.path)}
-                selected={location.pathname === item.path}
-                sx={{
-                  cursor: "pointer",
-                  bgcolor: location.pathname === item.path ? "action.selected" : "transparent",
-                }}
-              >
-                <ListItemIcon>
-                  {cloneElement(item.icon, {
-                    color: location.pathname === item.path ? "primary" : "textSecondary",
-                  })}
-                </ListItemIcon>
-                <ListItemText
-                  primary={item.text}
+      {isDesktop && (
+        <Drawer variant="permanent" open={open}>
+          <DrawerHeader>
+            <Box></Box>
+            <IconButton onClick={handleDrawerClose}>
+              {theme.direction === "rtl" ? (
+                <ChevronRightIcon />
+              ) : (
+                <ChevronLeftIcon />
+              )}
+            </IconButton>
+          </DrawerHeader>
+          <Divider />
+          <List>
+            {menuItems.map((item) => (
+              <Tooltip key={item.key} title={!open ? item.text : ""} placement="right" arrow>
+                <ListItem
+                  button
+                  onClick={() => navigate(item.path)}
+                  selected={location.pathname === item.path}
                   sx={{
-                    color: location.pathname === item.path ? "primary" : "textSecondary",
-                    fontWeight: location.pathname === item.path ? "bold" : "normal",
+                    cursor: "pointer",
+                    bgcolor: location.pathname === item.path ? "action.selected" : "transparent",
                   }}
-                />
+                >
+                  <ListItemIcon>
+                    {cloneElement(item.icon, {
+                      color: location.pathname === item.path ? "primary" : "textSecondary",
+                    })}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={item.text}
+                    sx={{
+                      color: location.pathname === item.path ? "primary" : "textSecondary",
+                      fontWeight: location.pathname === item.path ? "bold" : "normal",
+                    }}
+                  />
+                </ListItem>
+              </Tooltip>
+            ))}
+          </List>
+          <Divider />
+          <List>
+            <Tooltip title={!open ? "Logout" : ""} placement="right" arrow>
+              <ListItem button onClick={logout} sx={{ cursor: "pointer" }}>
+                <ListItemIcon>
+                  <Logout />
+                </ListItemIcon>
+                <ListItemText primary="Logout" />
               </ListItem>
             </Tooltip>
-          ))}
-        </List>
-        <Divider />
-        <List>
-          <Tooltip title={!open ? "Logout" : ""} placement="right" arrow>
-            <ListItem button onClick={logout} sx={{ cursor: "pointer" }}>
-              <ListItemIcon>
-                <Logout />
-              </ListItemIcon>
-              <ListItemText primary="Logout" />
-            </ListItem>
-          </Tooltip>
-        </List>
-      </Drawer>
+          </List>
+        </Drawer>
+      )}
+      <MuiDrawer
+        variant="temporary"
+        anchor="left"
+        open={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        ModalProps={{ keepMounted: true }}
+        sx={{ display: { xs: "block", md: "none" } }}
+        PaperProps={{
+          sx: (theme) => ({
+            width: drawerWidth,
+            boxSizing: "border-box",
+            borderRight: "none",
+            top: theme.mixins.toolbar.minHeight ?? 64,
+            bottom: 0,
+            left: 0,
+            height: "auto",
+            maxHeight: "none",
+            mt: 0,
+            position: "fixed",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+          }),
+        }}
+      >
+        <Box
+          sx={{
+            flex: "1 1 0",
+            minHeight: 0,
+            overflowY: "auto",
+            overflowX: "hidden",
+            WebkitOverflowScrolling: "touch",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <Divider />
+          {menuListContent}
+        </Box>
+      </MuiDrawer>
     </Box>
   );
 };
