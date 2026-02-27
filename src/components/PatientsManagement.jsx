@@ -498,8 +498,8 @@ export default function PatientsManagement() {
                       <TableCell sx={{ display: { xs: "none", md: "table-cell" }, maxWidth: { md: 180 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{fmt(p.email)}</TableCell>
                       <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{fmt(p.patient_source)}</TableCell>
                       <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{fmt(p.status)}</TableCell>
-                      <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} data-actions-cell onClick={(e) => e.stopPropagation()}>
-                        <Box sx={{ display: "flex", flexDirection: "row", flexWrap: "wrap", gap: 0.5, justifyContent: "flex-end", maxWidth: "100%" }}>
+                      <TableCell align="right" sx={{ overflow: "hidden", minWidth: { xs: 96, md: 160 } }} data-actions-cell onClick={(e) => e.stopPropagation()}>
+                        <Box sx={{ display: "flex", flexDirection: "row", flexWrap: { xs: "wrap", md: "nowrap" }, gap: 0.5, justifyContent: "flex-end", maxWidth: "100%" }}>
                           <Tooltip title="Medical reports">
                             <IconButton size="small" onClick={() => navigate(`/patients/${p.id}/reports`)} sx={{ display: { xs: "none", sm: "inline-flex" } }} aria-label="View medical records">
                               <ReportIcon fontSize="inherit" />
