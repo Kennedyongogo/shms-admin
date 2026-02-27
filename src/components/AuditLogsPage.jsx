@@ -1,9 +1,14 @@
 import React, { useEffect, useState } from "react";
 import {
   Box,
+  Button,
   Card,
   CardContent,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControl,
   IconButton,
   InputLabel,
@@ -20,7 +25,7 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { History as HistoryIcon } from "@mui/icons-material";
+import { History as HistoryIcon, Visibility as VisibilityIcon } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
 import Swal from "sweetalert2";
 
@@ -59,6 +64,12 @@ const formatDateTime = (value) => {
 
 const fmt = (v) => (v == null || v === "" ? "—" : String(v));
 
+const shortId = (v) => {
+  if (v == null || v === "") return "—";
+  const s = String(v);
+  return s.length > 12 ? `${s.slice(0, 8)}…` : s;
+};
+
 export default function AuditLogsPage() {
   const theme = useTheme();
   const token = getToken();
@@ -72,6 +83,9 @@ export default function AuditLogsPage() {
   const [filterTable, setFilterTable] = useState("");
   const [filterUserId, setFilterUserId] = useState("");
   const [users, setUsers] = useState([]);
+  const [viewLogId, setViewLogId] = useState(null);
+  const [viewLogData, setViewLogData] = useState(null);
+  const [viewLogLoading, setViewLogLoading] = useState(false);
 
   const heroGradient = `linear-gradient(135deg, ${theme.palette.primary.dark || "#00695C"} 0%, ${theme.palette.primary.main} 100%)`;
 
@@ -115,6 +129,26 @@ export default function AuditLogsPage() {
   useEffect(() => {
     loadLogs();
   }, [token, page, limit, filterAction, filterTable, filterUserId]);
+
+  const loadViewLog = async (id) => {
+    if (!token || !id) return;
+    setViewLogLoading(true);
+    setViewLogData(null);
+    try {
+      const data = await fetchJson(`${API.auditLogs}/${id}`, { token });
+      setViewLogData(data?.data ?? null);
+    } catch (e) {
+      setViewLogData(null);
+      Swal.fire({ icon: "error", title: "Failed to load audit log", text: e?.message });
+    } finally {
+      setViewLogLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (viewLogId) loadViewLog(viewLogId);
+    else setViewLogData(null);
+  }, [viewLogId, token]);
 
   const uniqueActions = [...new Set(rows.map((r) => r.action).concat(filterAction ? [filterAction] : []))].filter(Boolean).sort();
   const uniqueTables = [...new Set(rows.map((r) => r.table_name).concat(filterTable ? [filterTable] : []))].filter(Boolean).sort();
@@ -220,11 +254,10 @@ export default function AuditLogsPage() {
                   <TableCell align="center" sx={{ width: 64, minWidth: 0, maxWidth: { xs: "16vw", sm: 64 }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
                     No
                   </TableCell>
-                  <TableCell sx={{ width: 165, minWidth: 0, maxWidth: { md: 165 }, display: { xs: "none", md: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Date & time</TableCell>
                   <TableCell sx={{ minWidth: 0, maxWidth: { sm: 150, md: 180 }, display: { xs: "none", sm: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>User</TableCell>
                   <TableCell sx={{ minWidth: 0, maxWidth: { xs: "28vw", sm: 160 }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Action</TableCell>
                   <TableCell sx={{ width: 120, minWidth: 0, maxWidth: { md: 120 }, display: { xs: "none", md: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Resource</TableCell>
-                  <TableCell sx={{ width: 130, minWidth: 0, maxWidth: { md: 130 }, display: { xs: "none", md: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Record ID</TableCell>
+                  <TableCell align="center" sx={{ width: 72, minWidth: 72 }}>Action</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -268,9 +301,6 @@ export default function AuditLogsPage() {
                       <TableCell align="center" sx={{ fontWeight: 700, color: "text.secondary", fontVariantNumeric: "tabular-nums" }}>
                         {page * limit + idx + 1}
                       </TableCell>
-                      <TableCell sx={{ fontVariantNumeric: "tabular-nums", display: { xs: "none", md: "table-cell" } }}>
-                        {formatDateTime(log.createdAt ?? log.timestamp)}
-                      </TableCell>
                       <TableCell sx={{ fontWeight: 500, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 140, md: 180 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
                         {log.user ? (log.user.full_name || log.user.email || log.user_id) : fmt(log.user_id)}
                       </TableCell>
@@ -280,8 +310,17 @@ export default function AuditLogsPage() {
                         </Typography>
                       </TableCell>
                       <TableCell sx={{ color: "text.secondary", display: { xs: "none", md: "table-cell" }, maxWidth: { md: 120 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{fmt(log.table_name)}</TableCell>
-                      <TableCell sx={{ fontFamily: "monospace", fontSize: "0.8rem", color: "text.secondary", display: { xs: "none", md: "table-cell" } }} title={log.record_id}>
-                        {log.record_id ? (log.record_id.length > 12 ? `${log.record_id.slice(0, 8)}…` : log.record_id) : "—"}
+                      <TableCell align="center" sx={{ width: 72, minWidth: 72 }}>
+                        <Tooltip title="View">
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={() => setViewLogId(log.id)}
+                            aria-label="View audit log"
+                          >
+                            <VisibilityIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   ))
@@ -314,6 +353,44 @@ export default function AuditLogsPage() {
           />
         </CardContent>
       </Card>
+
+      {/* View audit log detail dialog */}
+      <Dialog
+        open={!!viewLogId}
+        onClose={() => setViewLogId(null)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { maxHeight: "90vh", m: 1 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 800 }}>Audit log details</DialogTitle>
+        <DialogContent dividers sx={{ overflowY: "auto" }}>
+          {viewLogLoading ? (
+            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ py: 3 }}>
+              <CircularProgress size={24} />
+              <Typography color="text.secondary">Loading…</Typography>
+            </Stack>
+          ) : viewLogData ? (
+            <Stack spacing={2} sx={{ py: 0.5 }}>
+              <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, mb: 1.5 }}>All fields from backend</Typography>
+                <Stack spacing={1.25} component="dl" sx={{ m: 0 }}>
+                  <Box><Typography component="dt" variant="caption" color="text.secondary" sx={{ display: "block", fontWeight: 600 }}>Log</Typography><Typography component="dd" sx={{ mt: 0.25 }}>{shortId(viewLogData.id)}</Typography></Box>
+                  <Box><Typography component="dt" variant="caption" color="text.secondary" sx={{ display: "block", fontWeight: 600 }}>User</Typography><Typography component="dd" sx={{ mt: 0.25 }}>{viewLogData.user ? [viewLogData.user.full_name, viewLogData.user.email].filter(Boolean).join(" · ") || "—" : shortId(viewLogData.user_id)}</Typography></Box>
+                  <Box><Typography component="dt" variant="caption" color="text.secondary" sx={{ display: "block", fontWeight: 600 }}>Action</Typography><Typography component="dd" sx={{ mt: 0.25, fontWeight: 600, color: "primary.main" }}>{fmt(viewLogData.action)}</Typography></Box>
+                  <Box><Typography component="dt" variant="caption" color="text.secondary" sx={{ display: "block", fontWeight: 600 }}>Resource</Typography><Typography component="dd" sx={{ mt: 0.25 }}>{fmt(viewLogData.table_name)}</Typography></Box>
+                  <Box><Typography component="dt" variant="caption" color="text.secondary" sx={{ display: "block", fontWeight: 600 }}>Record</Typography><Typography component="dd" sx={{ mt: 0.25 }}>{shortId(viewLogData.record_id)}</Typography></Box>
+                  <Box><Typography component="dt" variant="caption" color="text.secondary" sx={{ display: "block", fontWeight: 600 }}>Date & time</Typography><Typography component="dd" sx={{ mt: 0.25, fontVariantNumeric: "tabular-nums" }}>{formatDateTime(viewLogData.createdAt ?? viewLogData.timestamp)}</Typography></Box>
+                </Stack>
+              </Box>
+            </Stack>
+          ) : (
+            <Typography color="text.secondary">No data.</Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setViewLogId(null)}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
