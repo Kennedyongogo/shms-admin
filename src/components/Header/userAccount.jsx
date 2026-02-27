@@ -53,6 +53,8 @@ export default function UserAccount({ open, onClose, currentUser, roleName }) {
         sx: {
           borderRadius: 3,
           boxShadow: "0 10px 40px rgba(2, 132, 122, 0.18)",
+          m: { xs: 1, sm: 2 },
+          maxHeight: { xs: "calc(100vh - 16px)", sm: "calc(100vh - 32px)" },
         },
       }}
     >
@@ -98,13 +100,19 @@ export default function UserAccount({ open, onClose, currentUser, roleName }) {
 
       <DialogContent sx={{ p: 2 }}>
         <Stack spacing={1.5}>
-          <Stack direction="row" spacing={1.5} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={1.5}
+            alignItems="center"
+            sx={{ flexWrap: "wrap", gap: 1.5 }}
+          >
             <Avatar
               src={buildImageUrl(currentUser?.profile_image_path)}
               alt={currentUser?.full_name}
               sx={{
                 width: 46,
                 height: 46,
+                flexShrink: 0,
                 bgcolor: "rgba(0, 137, 123, 0.12)",
                 color: theme.palette.primary.dark,
                 fontWeight: 900,
@@ -112,11 +120,11 @@ export default function UserAccount({ open, onClose, currentUser, roleName }) {
             >
               {(currentUser?.full_name || "U").trim().charAt(0).toUpperCase()}
             </Avatar>
-            <Box sx={{ flex: 1 }}>
+            <Box sx={{ flex: "1 1 auto", minWidth: 0 }}>
               <Typography sx={{ fontWeight: 900, fontSize: 16, lineHeight: 1.2 }}>
                 {currentUser?.full_name || "—"}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary" noWrap>
                 {currentUser?.email || "—"}
               </Typography>
             </Box>
@@ -125,7 +133,7 @@ export default function UserAccount({ open, onClose, currentUser, roleName }) {
               label={status}
               color={isActive ? "success" : "default"}
               variant={isActive ? "filled" : "outlined"}
-              sx={{ fontWeight: 800, textTransform: "lowercase" }}
+              sx={{ fontWeight: 800, textTransform: "lowercase", flexShrink: 0 }}
             />
           </Stack>
 
