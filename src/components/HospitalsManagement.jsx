@@ -1494,14 +1494,23 @@ export default function HospitalsManagement() {
                   {hospitals.map((h) => (
                     <Card key={h.id} variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
                       <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
-                        <Stack direction={{ xs: "column", md: "row" }} sx={{ minHeight: 0 }}>
-                          {/* Left half: logo fills the frame (rectangular, not circle) */}
+                        <Stack
+                          direction={{ xs: "column", md: "row" }}
+                          sx={{
+                            minHeight: 0,
+                            position: { md: "relative" },
+                          }}
+                        >
+                          {/* Left half: logo frame height = details height (absolute on md so it doesn't stretch the row) */}
                           <Box
                             sx={{
                               width: { xs: "100%", md: "50%" },
+                              height: { xs: 140, md: "100%" },
+                              position: { xs: "relative", md: "absolute" },
+                              left: { md: 0 },
+                              top: { md: 0 },
+                              bottom: { md: 0 },
                               flexShrink: 0,
-                              aspectRatio: { xs: "2 / 1", md: "auto" },
-                              minHeight: { md: 160 },
                               bgcolor: "grey.100",
                               display: "flex",
                               alignItems: "center",
@@ -1522,8 +1531,18 @@ export default function HospitalsManagement() {
                               </Typography>
                             )}
                           </Box>
-                          {/* Right half: details */}
-                          <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", p: { xs: 2, md: 2.5 } }}>
+                          {/* Right half: details (in flow so row height = details height) */}
+                          <Box
+                            sx={{
+                              flex: 1,
+                              minWidth: 0,
+                              display: "flex",
+                              flexDirection: "column",
+                              justifyContent: "center",
+                              p: { xs: 2, md: 2.5 },
+                              ml: { md: "50%" },
+                            }}
+                          >
                             <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1} sx={{ mb: 1.5 }}>
                               <Typography sx={{ fontWeight: 900, fontSize: 18, lineHeight: 1.2, color: "text.primary" }}>{h.name || "—"}</Typography>
                               {isAdmin && (
