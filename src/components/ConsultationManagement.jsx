@@ -382,6 +382,7 @@ export default function ConsultationManagement() {
   };
 
   const apptSearchDebounceSkipped = useRef(true);
+  const apptSearchLoadedRef = useRef("");
   const consSearchDebounceSkipped = useRef(true);
 
   useEffect(() => {
@@ -407,8 +408,11 @@ export default function ConsultationManagement() {
         apptSearchDebounceSkipped.current = false;
         return;
       }
-      if (apptPage !== 0) setApptPage(0);
-      else loadAppointments();
+      if (apptSearchLoadedRef.current !== apptSearch) {
+        apptSearchLoadedRef.current = apptSearch;
+        if (apptPage !== 0) setApptPage(0);
+        else loadAppointments();
+      }
     }, 450);
     return () => clearTimeout(t);
   }, [apptSearch, tab]);

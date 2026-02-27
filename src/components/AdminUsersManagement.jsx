@@ -975,7 +975,7 @@ export default function AdminUsersManagement() {
                           <TableCell sx={{ fontWeight: 700, maxWidth: { xs: "28vw", sm: 160, md: 220 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
                             {u.full_name}
                           </TableCell>
-                          <TableCell sx={{ display: { xs: "none", md: "table-cell" }, maxWidth: { md: 180 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{u.email}</TableCell>
+                          <TableCell sx={{ display: { xs: "none", md: "table-cell" }, maxWidth: 180, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={u.email}>{u.email}</TableCell>
                           <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
                             <Chip
                               size="small"

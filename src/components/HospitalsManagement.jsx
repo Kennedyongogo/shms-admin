@@ -1759,6 +1759,8 @@ export default function HospitalsManagement() {
                           <CardContent sx={{ flex: 1, display: "flex", flexDirection: "column", "&:last-child": { pb: 2 } }}>
                             <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ mb: 1.5 }}>
                               <Avatar
+                                src={buildImageUrl(s.user?.profile_image_path)}
+                                alt={s.user?.full_name}
                                 sx={{
                                   width: 48,
                                   height: 48,
@@ -2372,10 +2374,27 @@ export default function HospitalsManagement() {
         <DialogTitle sx={{ fontWeight: 900 }}>Staff Details</DialogTitle>
         <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={1.25} sx={{ mt: 0.5 }}>
-            <Typography sx={{ fontWeight: 900, fontSize: 18 }}>{staffView.staff?.user?.full_name || "—"}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {staffView.staff?.user?.email || "—"}
-            </Typography>
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Avatar
+                src={buildImageUrl(staffView.staff?.user?.profile_image_path)}
+                alt={staffView.staff?.user?.full_name}
+                sx={{
+                  width: 64,
+                  height: 64,
+                  bgcolor: "rgba(0, 137, 123, 0.12)",
+                  color: "primary.dark",
+                  fontWeight: 900,
+                }}
+              >
+                {(staffView.staff?.user?.full_name || "?").trim().charAt(0).toUpperCase()}
+              </Avatar>
+              <Box>
+                <Typography sx={{ fontWeight: 900, fontSize: 18 }}>{staffView.staff?.user?.full_name || "—"}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {staffView.staff?.user?.email || "—"}
+                </Typography>
+              </Box>
+            </Stack>
             <Divider />
             <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
               <Box sx={{ flex: 1 }}>
