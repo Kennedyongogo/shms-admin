@@ -909,6 +909,13 @@ export default function InventoryManagement() {
                 setSuppliersPage(0);
               }}
               rowsPerPageOptions={[5, 10, 25, 50]}
+              sx={{
+                width: "100%",
+                overflow: "hidden",
+                "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+                "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+              }}
             />
           </Box>
         )}
@@ -1011,6 +1018,13 @@ export default function InventoryManagement() {
                 setInventoryItemsPage(0);
               }}
               rowsPerPageOptions={[5, 10, 25, 50]}
+              sx={{
+                width: "100%",
+                overflow: "hidden",
+                "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+                "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+              }}
             />
           </Box>
         )}
@@ -1106,6 +1120,13 @@ export default function InventoryManagement() {
                 setPurchaseOrdersPage(0);
               }}
               rowsPerPageOptions={[5, 10, 25, 50]}
+              sx={{
+                width: "100%",
+                overflow: "hidden",
+                "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+                "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+              }}
             />
           </Box>
         )}
@@ -1184,6 +1205,13 @@ export default function InventoryManagement() {
                 setTransactionsPage(0);
               }}
               rowsPerPageOptions={[5, 10, 25, 50]}
+              sx={{
+                width: "100%",
+                overflow: "hidden",
+                "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+                "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+              }}
             />
           </Box>
         )}

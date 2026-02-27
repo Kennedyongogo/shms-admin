@@ -433,8 +433,8 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
     <>
       {singleTab == null && (
         <>
-          {isMobile ? (
-            <FormControl fullWidth size="small" sx={{ px: 2, py: 1.5 }}>
+          <Box sx={{ display: { xs: "block", sm: "none" }, mt: 3, px: 2, pb: 1.5 }}>
+            <FormControl fullWidth size="small">
               <InputLabel id="billing-section-label">Section</InputLabel>
               <Select
                 labelId="billing-section-label"
@@ -447,16 +447,19 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
                 <MenuItem value={1}>Payments</MenuItem>
               </Select>
             </FormControl>
-          ) : (
-            <Tabs
-              value={tab}
-              onChange={(_, v) => setTab(v)}
-              sx={{ px: 2, "& .MuiTabs-indicator": { backgroundColor: theme.palette.primary.main } }}
-            >
-              <Tab icon={<ReceiptLongIcon />} iconPosition="start" label="Billing" />
-              <Tab icon={<PaymentsIcon />} iconPosition="start" label="Payments" />
-            </Tabs>
-          )}
+          </Box>
+          <Tabs
+            value={tab}
+            onChange={(_, v) => setTab(v)}
+            sx={{
+              display: { xs: "none", sm: "flex" },
+              px: 2,
+              "& .MuiTabs-indicator": { backgroundColor: theme.palette.primary.main },
+            }}
+          >
+            <Tab icon={<ReceiptLongIcon />} iconPosition="start" label="Billing" />
+            <Tab icon={<PaymentsIcon />} iconPosition="start" label="Payments" />
+          </Tabs>
           <Divider />
         </>
       )}
@@ -525,7 +528,15 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
                       const patientName = b?.patient?.full_name || b?.patient?.user?.full_name || "—";
                       const status = b?.paid ? "paid" : b?.status || "unpaid";
                       return (
-                        <TableRow key={b.id} hover>
+                        <TableRow
+                          key={b.id}
+                          hover
+                          onClick={(e) => {
+                            if (e.target.closest("[data-actions-cell]")) return;
+                            openBillById(b.id);
+                          }}
+                          sx={{ cursor: { xs: "pointer", sm: "default" } }}
+                        >
                           <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>
                             {billsPage * billsRowsPerPage + idx + 1}
                           </TableCell>
@@ -547,10 +558,10 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
                             />
                           </TableCell>
                           <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{formatDateTime(b.createdAt)}</TableCell>
-                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} data-actions-cell onClick={(e) => e.stopPropagation()}>
                             <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
                               <Tooltip title="View bill">
-                                <IconButton size="small" color="primary" onClick={() => openBillById(b.id)} aria-label="View bill">
+                                <IconButton size="small" color="primary" onClick={() => openBillById(b.id)} aria-label="View bill" sx={{ display: { xs: "none", sm: "inline-flex" } }}>
                                   <VisibilityIcon fontSize="inherit" />
                                 </IconButton>
                               </Tooltip>
@@ -581,6 +592,13 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
                 setBillsPage(0);
               }}
               rowsPerPageOptions={[5, 10, 25, 50]}
+              sx={{
+                width: "100%",
+                overflow: "hidden",
+                "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+                "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+              }}
             />
           </Box>
         )}
@@ -690,6 +708,13 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
                 setPaymentsPage(0);
               }}
               rowsPerPageOptions={[5, 10, 25, 50]}
+              sx={{
+                width: "100%",
+                overflow: "hidden",
+                "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+                "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+              }}
             />
           </Box>
         )}
@@ -916,7 +941,7 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
           </Stack>
         </Stack>
       </Box>
-      <CardContent sx={{ p: 0 }}>{tabsAndContent}</CardContent>
+      <CardContent sx={{ p: 0, pt: { xs: 2, sm: 0 } }}>{tabsAndContent}</CardContent>
       {billViewDialog}
     </Card>
   );

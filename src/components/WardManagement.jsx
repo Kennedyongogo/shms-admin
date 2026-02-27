@@ -692,9 +692,9 @@ export default function WardManagement() {
         </Stack>
       </Box>
 
-      <CardContent sx={{ p: 0 }}>
-        {isMobile ? (
-          <FormControl fullWidth size="small" sx={{ px: 2, py: 1.5 }}>
+      <CardContent sx={{ p: 0, pt: { xs: 2, sm: 0 } }}>
+        <Box sx={{ display: { xs: "block", sm: "none" }, mt: 3, px: 2, pb: 1.5 }}>
+          <FormControl fullWidth size="small">
             <InputLabel id="ward-section-label">Section</InputLabel>
             <Select
               labelId="ward-section-label"
@@ -710,15 +710,14 @@ export default function WardManagement() {
               <MenuItem value={4}>Payment</MenuItem>
             </Select>
           </FormControl>
-        ) : (
-          <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ px: 2, "& .MuiTabs-indicator": { backgroundColor: theme.palette.primary.main } }}>
-            <Tab icon={<WardIcon />} iconPosition="start" label="Wards" />
-            <Tab icon={<BedIcon />} iconPosition="start" label="Beds" />
-            <Tab icon={<AdmissionIcon />} iconPosition="start" label="Admissions" />
-            <Tab icon={<ReceiptLongIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Billing" />
-            <Tab icon={<PaymentsIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Payment" />
-          </Tabs>
-        )}
+        </Box>
+        <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ display: { xs: "none", sm: "flex" }, px: 2, "& .MuiTabs-indicator": { backgroundColor: theme.palette.primary.main } }}>
+          <Tab icon={<WardIcon />} iconPosition="start" label="Wards" />
+          <Tab icon={<BedIcon />} iconPosition="start" label="Beds" />
+          <Tab icon={<AdmissionIcon />} iconPosition="start" label="Admissions" />
+          <Tab icon={<ReceiptLongIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Billing" />
+          <Tab icon={<PaymentsIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Payment" />
+        </Tabs>
         <Divider />
 
         {/* Wards tab */}
@@ -789,7 +788,7 @@ export default function WardManagement() {
                 </TableBody>
               </Table>
             </TableContainer>
-            <TablePagination component="div" count={wardsTotal} page={wardsPage} onPageChange={(_, p) => setWardsPage(p)} rowsPerPage={wardsRowsPerPage} onRowsPerPageChange={(e) => { setWardsRowsPerPage(parseInt(e.target.value, 10)); setWardsPage(0); }} rowsPerPageOptions={[5, 10, 25, 50]} />
+            <TablePagination component="div" count={wardsTotal} page={wardsPage} onPageChange={(_, p) => setWardsPage(p)} rowsPerPage={wardsRowsPerPage} onRowsPerPageChange={(e) => { setWardsRowsPerPage(parseInt(e.target.value, 10)); setWardsPage(0); }} rowsPerPageOptions={[5, 10, 25, 50]} sx={{ width: "100%", overflow: "hidden", "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 }, "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } }, "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } } }} />
           </Box>
         )}
 
@@ -851,7 +850,7 @@ export default function WardManagement() {
                                 </Tooltip>
                               )}
                               <Tooltip title="Delete">
-                                <IconButton size="small" color="error" onClick={() => deleteBed(b.id)} aria-label="Delete"><DeleteIcon fontSize="inherit" /></IconButton>
+                                <IconButton size="small" color="error" onClick={() => deleteBed(b.id)} aria-label="Delete" sx={{ display: { xs: "none", sm: "inline-flex" } }}><DeleteIcon fontSize="inherit" /></IconButton>
                               </Tooltip>
                             </Box>
                           </TableCell>
@@ -868,7 +867,7 @@ export default function WardManagement() {
                 </TableBody>
               </Table>
             </TableContainer>
-            <TablePagination component="div" count={bedsTotal} page={bedsPage} onPageChange={(_, p) => setBedsPage(p)} rowsPerPage={bedsRowsPerPage} onRowsPerPageChange={(e) => { setBedsRowsPerPage(parseInt(e.target.value, 10)); setBedsPage(0); }} rowsPerPageOptions={[5, 10, 25, 50]} />
+            <TablePagination component="div" count={bedsTotal} page={bedsPage} onPageChange={(_, p) => setBedsPage(p)} rowsPerPage={bedsRowsPerPage} onRowsPerPageChange={(e) => { setBedsRowsPerPage(parseInt(e.target.value, 10)); setBedsPage(0); }} rowsPerPageOptions={[5, 10, 25, 50]} sx={{ width: "100%", overflow: "hidden", "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 }, "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } }, "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } } }} />
           </Box>
         )}
 
@@ -940,7 +939,7 @@ export default function WardManagement() {
                 </TableBody>
               </Table>
             </TableContainer>
-            <TablePagination component="div" count={admissionsTotal} page={admissionsPage} onPageChange={(_, p) => setAdmissionsPage(p)} rowsPerPage={admissionsRowsPerPage} onRowsPerPageChange={(e) => { setAdmissionsRowsPerPage(parseInt(e.target.value, 10)); setAdmissionsPage(0); }} rowsPerPageOptions={[5, 10, 25, 50]} />
+            <TablePagination component="div" count={admissionsTotal} page={admissionsPage} onPageChange={(_, p) => setAdmissionsPage(p)} rowsPerPage={admissionsRowsPerPage} onRowsPerPageChange={(e) => { setAdmissionsRowsPerPage(parseInt(e.target.value, 10)); setAdmissionsPage(0); }} rowsPerPageOptions={[5, 10, 25, 50]} sx={{ width: "100%", overflow: "hidden", "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 }, "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } }, "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } } }} />
           </Box>
         )}
 
@@ -1012,7 +1011,7 @@ export default function WardManagement() {
                 </TableBody>
               </Table>
             </TableContainer>
-            <TablePagination component="div" count={admissionBillsTotal} page={admissionBillsPage} onPageChange={(_, p) => setAdmissionBillsPage(p)} rowsPerPage={admissionBillsRowsPerPage} onRowsPerPageChange={(e) => { setAdmissionBillsRowsPerPage(parseInt(e.target.value, 10)); setAdmissionBillsPage(0); }} rowsPerPageOptions={[5, 10, 25, 50]} />
+            <TablePagination component="div" count={admissionBillsTotal} page={admissionBillsPage} onPageChange={(_, p) => setAdmissionBillsPage(p)} rowsPerPage={admissionBillsRowsPerPage} onRowsPerPageChange={(e) => { setAdmissionBillsRowsPerPage(parseInt(e.target.value, 10)); setAdmissionBillsPage(0); }} rowsPerPageOptions={[5, 10, 25, 50]} sx={{ width: "100%", overflow: "hidden", "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 }, "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } }, "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } } }} />
           </Box>
         )}
 
@@ -1076,7 +1075,7 @@ export default function WardManagement() {
                 </TableBody>
               </Table>
             </TableContainer>
-            <TablePagination component="div" count={admissionPaymentsTotal} page={admissionPaymentsPage} onPageChange={(_, p) => setAdmissionPaymentsPage(p)} rowsPerPage={admissionPaymentsRowsPerPage} onRowsPerPageChange={(e) => { setAdmissionPaymentsRowsPerPage(parseInt(e.target.value, 10)); setAdmissionPaymentsPage(0); }} rowsPerPageOptions={[5, 10, 25, 50]} />
+            <TablePagination component="div" count={admissionPaymentsTotal} page={admissionPaymentsPage} onPageChange={(_, p) => setAdmissionPaymentsPage(p)} rowsPerPage={admissionPaymentsRowsPerPage} onRowsPerPageChange={(e) => { setAdmissionPaymentsRowsPerPage(parseInt(e.target.value, 10)); setAdmissionPaymentsPage(0); }} rowsPerPageOptions={[5, 10, 25, 50]} sx={{ width: "100%", overflow: "hidden", "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 }, "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } }, "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } } }} />
           </Box>
         )}
       </CardContent>

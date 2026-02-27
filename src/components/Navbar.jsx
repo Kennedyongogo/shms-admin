@@ -14,6 +14,7 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import ListItem from "@mui/material/ListItem";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
+import Tooltip from "@mui/material/Tooltip";
 import { Box } from "@mui/material";
 import Header from "./Header/Header";
 
@@ -183,39 +184,42 @@ const Navbar = (props) => {
         <Divider />
         <List>
           {menuItems.map((item) => (
-            <ListItem
-              key={item.key}
-              button
-              onClick={() => navigate(item.path)}
-              selected={location.pathname === item.path}
-              sx={{
-                cursor: "pointer",
-                bgcolor: location.pathname === item.path ? "action.selected" : "transparent",
-              }}
-            >
-              <ListItemIcon>
-                {cloneElement(item.icon, {
-                  color: location.pathname === item.path ? "primary" : "textSecondary",
-                })}
-              </ListItemIcon>
-              <ListItemText
-                primary={item.text}
+            <Tooltip key={item.key} title={!open ? item.text : ""} placement="right" arrow>
+              <ListItem
+                button
+                onClick={() => navigate(item.path)}
+                selected={location.pathname === item.path}
                 sx={{
-                  color: location.pathname === item.path ? "primary" : "textSecondary",
-                  fontWeight: location.pathname === item.path ? "bold" : "normal",
+                  cursor: "pointer",
+                  bgcolor: location.pathname === item.path ? "action.selected" : "transparent",
                 }}
-              />
-            </ListItem>
+              >
+                <ListItemIcon>
+                  {cloneElement(item.icon, {
+                    color: location.pathname === item.path ? "primary" : "textSecondary",
+                  })}
+                </ListItemIcon>
+                <ListItemText
+                  primary={item.text}
+                  sx={{
+                    color: location.pathname === item.path ? "primary" : "textSecondary",
+                    fontWeight: location.pathname === item.path ? "bold" : "normal",
+                  }}
+                />
+              </ListItem>
+            </Tooltip>
           ))}
         </List>
         <Divider />
         <List>
-          <ListItem button onClick={logout} sx={{ cursor: "pointer" }}>
-            <ListItemIcon>
-              <Logout />
-            </ListItemIcon>
-            <ListItemText primary="Logout" />
-          </ListItem>
+          <Tooltip title={!open ? "Logout" : ""} placement="right" arrow>
+            <ListItem button onClick={logout} sx={{ cursor: "pointer" }}>
+              <ListItemIcon>
+                <Logout />
+              </ListItemIcon>
+              <ListItemText primary="Logout" />
+            </ListItem>
+          </Tooltip>
         </List>
       </Drawer>
     </Box>

@@ -302,11 +302,14 @@ export default function AuditLogsPage() {
             }}
             rowsPerPageOptions={[10, 25, 50, 100]}
             sx={{
+              width: "100%",
+              overflow: "hidden",
               borderTop: "1px solid",
               borderColor: "divider",
               mt: 0,
-              ".MuiTablePagination-toolbar": { minHeight: 52 },
-              ".MuiTablePagination-selectLabel, .MuiTablePagination-displayedRows": { fontSize: "0.875rem" },
+              "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+              "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+              "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
             }}
           />
         </CardContent>

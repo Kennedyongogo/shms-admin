@@ -32,7 +32,6 @@ import {
   TextField,
   Tooltip,
   Typography,
-  useMediaQuery,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -173,7 +172,6 @@ const slugify = (value) =>
 
 export default function HospitalsManagement() {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const token = getToken();
   const isAdmin = getRoleName() === "admin";
 
@@ -1440,9 +1438,9 @@ export default function HospitalsManagement() {
           </Stack>
         </Box>
 
-        <CardContent sx={{ p: 0 }}>
-          {isMobile ? (
-            <FormControl fullWidth size="small" sx={{ px: 2, py: 1.5 }}>
+        <CardContent sx={{ p: 0, pt: { xs: 2, sm: 0 } }}>
+          <Box sx={{ display: { xs: "block", sm: "none" }, mt: 3, px: 2, pb: 1.5 }}>
+            <FormControl fullWidth size="small">
               <InputLabel id="hospitals-section-label">Section</InputLabel>
               <Select
                 labelId="hospitals-section-label"
@@ -1458,24 +1456,24 @@ export default function HospitalsManagement() {
                 <MenuItem value={4}>News & Events</MenuItem>
               </Select>
             </FormControl>
-          ) : (
-            <Tabs
-              value={tab}
-              onChange={(_, v) => setTab(v)}
-              sx={{
-                px: 2,
-                "& .MuiTabs-indicator": { backgroundColor: "primary.main" },
-                "& .MuiTab-root.Mui-selected": { color: "primary.main", fontWeight: 700 },
-                "& .MuiTab-root": { color: "text.secondary" },
-              }}
-            >
-              <Tab icon={<LocalHospitalIcon />} iconPosition="start" label="Hospital" />
-              <Tab icon={<PeopleAltIcon />} iconPosition="start" label="Departments" />
-              <Tab icon={<PeopleAltIcon />} iconPosition="start" label="Staff" />
-              <Tab icon={<MedicalServicesIcon />} iconPosition="start" label="Services" />
-              <Tab icon={<CampaignIcon />} iconPosition="start" label="News & Events" />
-            </Tabs>
-          )}
+          </Box>
+          <Tabs
+            value={tab}
+            onChange={(_, v) => setTab(v)}
+            sx={{
+              display: { xs: "none", sm: "flex" },
+              px: 2,
+              "& .MuiTabs-indicator": { backgroundColor: "primary.main" },
+              "& .MuiTab-root.Mui-selected": { color: "primary.main", fontWeight: 700 },
+              "& .MuiTab-root": { color: "text.secondary" },
+            }}
+          >
+            <Tab icon={<LocalHospitalIcon />} iconPosition="start" label="Hospital" />
+            <Tab icon={<PeopleAltIcon />} iconPosition="start" label="Departments" />
+            <Tab icon={<PeopleAltIcon />} iconPosition="start" label="Staff" />
+            <Tab icon={<MedicalServicesIcon />} iconPosition="start" label="Services" />
+            <Tab icon={<CampaignIcon />} iconPosition="start" label="News & Events" />
+          </Tabs>
           <Divider />
 
           {/* Hospital */}
@@ -1608,7 +1606,15 @@ export default function HospitalsManagement() {
                       </TableRow>
                     ) : departments.length ? (
                       departments.map((d, idx) => (
-                        <TableRow key={d.id} hover>
+                        <TableRow
+                          key={d.id}
+                          hover
+                          onClick={(e) => {
+                            if (e.target.closest("[data-actions-cell]")) return;
+                            openViewDept(d);
+                          }}
+                          sx={{ cursor: { xs: "pointer", sm: "default" } }}
+                        >
                           <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{deptPage * deptRowsPerPage + idx + 1}</TableCell>
                           <TableCell sx={{ fontWeight: 800, maxWidth: { xs: "28vw", sm: 160, md: 220 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{d.name}</TableCell>
                           <TableCell
@@ -1624,22 +1630,22 @@ export default function HospitalsManagement() {
                           >
                             {d.description || "—"}
                           </TableCell>
-                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} data-actions-cell onClick={(e) => e.stopPropagation()}>
                             <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
                               <Tooltip title="View">
-                                <IconButton onClick={() => openViewDept(d)} size="small">
+                                <IconButton onClick={() => openViewDept(d)} size="small" sx={{ display: { xs: "none", sm: "inline-flex" } }}>
                                   <VisibilityIcon fontSize="inherit" />
                                 </IconButton>
                               </Tooltip>
                               {isAdmin && (
                                 <>
                                   <Tooltip title="Edit">
-                                    <IconButton onClick={() => openEditDept(d)} size="small">
+                                    <IconButton onClick={(e) => { e.stopPropagation(); openEditDept(d); }} size="small">
                                       <EditIcon fontSize="inherit" />
                                     </IconButton>
                                   </Tooltip>
                                   <Tooltip title="Delete">
-                                    <IconButton onClick={() => deleteDept(d)} size="small" color="error">
+                                    <IconButton onClick={(e) => { e.stopPropagation(); deleteDept(d); }} size="small" color="error">
                                       <DeleteIcon fontSize="inherit" />
                                     </IconButton>
                                   </Tooltip>
@@ -1673,6 +1679,13 @@ export default function HospitalsManagement() {
                   setDeptPage(0);
                 }}
                 rowsPerPageOptions={[5, 10, 25, 50]}
+                sx={{
+                  width: "100%",
+                  overflow: "hidden",
+                  "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+                  "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                  "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                }}
               />
             </Box>
           )}
@@ -1834,7 +1847,16 @@ export default function HospitalsManagement() {
                       setStaffPage(0);
                     }}
                     rowsPerPageOptions={[6, 12, 24, 48]}
-                    sx={{ borderTop: 1, borderColor: "divider", mt: 2 }}
+                    sx={{
+                      borderTop: 1,
+                      borderColor: "divider",
+                      mt: 2,
+                      width: "100%",
+                      overflow: "hidden",
+                      "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+                      "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                      "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                    }}
                   />
                 </>
               ) : (
@@ -1897,14 +1919,22 @@ export default function HospitalsManagement() {
                       </TableRow>
                     ) : services.length ? (
                       services.map((s, idx) => (
-                        <TableRow key={s.id} hover>
+                        <TableRow
+                          key={s.id}
+                          hover
+                          onClick={(e) => {
+                            if (e.target.closest("[data-actions-cell]")) return;
+                            openViewService(s);
+                          }}
+                          sx={{ cursor: { xs: "pointer", sm: "default" } }}
+                        >
                           <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>{svcPage * svcRowsPerPage + idx + 1}</TableCell>
                           <TableCell>
                             <Stack direction="row" spacing={1.2} alignItems="center">
                               <Avatar
                                 src={buildImageUrl(s.image_path)}
                                 alt={s.name}
-                                sx={{ width: 32, height: 32, bgcolor: "grey.100", color: "secondary.main", fontWeight: 900 }}
+                                sx={{ width: 32, height: 32, bgcolor: "grey.100", color: "secondary.main", fontWeight: 900, display: { xs: "none", sm: "flex" } }}
                               >
                                 {(s.name || "S").trim().charAt(0).toUpperCase()}
                               </Avatar>
@@ -1921,22 +1951,22 @@ export default function HospitalsManagement() {
                           <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
                             <Chip size="small" label={s.status} color={s.status === "active" ? "success" : "default"} variant={s.status === "active" ? "filled" : "outlined"} />
                           </TableCell>
-                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
+                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} data-actions-cell onClick={(e) => e.stopPropagation()}>
                             <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
                               <Tooltip title="View">
-                                <IconButton onClick={() => openViewService(s)} size="small">
+                                <IconButton onClick={() => openViewService(s)} size="small" sx={{ display: { xs: "none", sm: "inline-flex" } }}>
                                   <VisibilityIcon fontSize="inherit" />
                                 </IconButton>
                               </Tooltip>
                               {isAdmin && (
                                 <>
                                   <Tooltip title="Edit">
-                                    <IconButton onClick={() => openEditService(s)} size="small">
+                                    <IconButton onClick={(e) => { e.stopPropagation(); openEditService(s); }} size="small">
                                       <EditIcon fontSize="inherit" />
                                     </IconButton>
                                   </Tooltip>
                                   <Tooltip title="Delete">
-                                    <IconButton onClick={() => deleteService(s)} size="small" color="error">
+                                    <IconButton onClick={(e) => { e.stopPropagation(); deleteService(s); }} size="small" color="error">
                                       <DeleteIcon fontSize="inherit" />
                                     </IconButton>
                                   </Tooltip>
@@ -1970,6 +2000,13 @@ export default function HospitalsManagement() {
                   setSvcPage(0);
                 }}
                 rowsPerPageOptions={[5, 10, 25, 50]}
+                sx={{
+                  width: "100%",
+                  overflow: "hidden",
+                  "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+                  "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                  "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                }}
               />
             </Box>
           )}
@@ -1977,30 +2014,27 @@ export default function HospitalsManagement() {
           {/* News & Events */}
           {tab === 4 && (
             <Box sx={{ p: 2 }}>
-              {isMobile ? (
-                <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-                  <InputLabel id="news-events-label">Content</InputLabel>
-                  <Select
-                    labelId="news-events-label"
-                    value={contentTab}
-                    label="Content"
-                    onChange={(e) => setContentTab(Number(e.target.value))}
-                    sx={{ borderRadius: 1 }}
-                  >
-                    <MenuItem value={0}>News</MenuItem>
-                    <MenuItem value={1}>Events</MenuItem>
-                  </Select>
-                </FormControl>
-              ) : (
-                <Tabs
+              <FormControl fullWidth size="small" sx={{ mb: 2, display: { xs: "block", sm: "none" } }}>
+                <InputLabel id="news-events-label">Content</InputLabel>
+                <Select
+                  labelId="news-events-label"
                   value={contentTab}
-                  onChange={(_, v) => setContentTab(v)}
-                  sx={{ mb: 2, "& .MuiTabs-indicator": { backgroundColor: "primary.main" }, "& .MuiTab-root.Mui-selected": { color: "primary.main", fontWeight: 700 }, "& .MuiTab-root": { color: "text.secondary" } }}
+                  label="Content"
+                  onChange={(e) => setContentTab(Number(e.target.value))}
+                  sx={{ borderRadius: 1 }}
                 >
-                  <Tab icon={<ArticleIcon />} iconPosition="start" label="News" />
-                  <Tab icon={<EventIcon />} iconPosition="start" label="Events" />
-                </Tabs>
-              )}
+                  <MenuItem value={0}>News</MenuItem>
+                  <MenuItem value={1}>Events</MenuItem>
+                </Select>
+              </FormControl>
+              <Tabs
+                value={contentTab}
+                onChange={(_, v) => setContentTab(v)}
+                sx={{ display: { xs: "none", sm: "flex" }, mb: 2, "& .MuiTabs-indicator": { backgroundColor: "primary.main" }, "& .MuiTab-root.Mui-selected": { color: "primary.main", fontWeight: 700 }, "& .MuiTab-root": { color: "text.secondary" } }}
+              >
+                <Tab icon={<ArticleIcon />} iconPosition="start" label="News" />
+                <Tab icon={<EventIcon />} iconPosition="start" label="Events" />
+              </Tabs>
               <Divider sx={{ mb: 2 }} />
 
               {contentTab === 0 && (
@@ -2104,6 +2138,13 @@ export default function HospitalsManagement() {
                       setNewsPage(0);
                     }}
                     rowsPerPageOptions={[5, 10, 25, 50]}
+                    sx={{
+                      width: "100%",
+                      overflow: "hidden",
+                      "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+                      "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                      "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                    }}
                   />
                 </>
               )}
@@ -2209,6 +2250,13 @@ export default function HospitalsManagement() {
                       setEventsPage(0);
                     }}
                     rowsPerPageOptions={[5, 10, 25, 50]}
+                    sx={{
+                      width: "100%",
+                      overflow: "hidden",
+                      "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+                      "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                      "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                    }}
                   />
                 </>
               )}

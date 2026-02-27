@@ -32,7 +32,6 @@ import {
   TextField,
   Tooltip,
   Typography,
-  useMediaQuery,
 } from "@mui/material";
 import {
   Add,
@@ -101,7 +100,6 @@ const fmt = (v) => (v == null || v === "" ? "—" : String(v));
 
 export default function LaboratoryManagement() {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const token = getToken();
   const navigate = useNavigate();
   const roleName = getRoleName();
@@ -912,9 +910,9 @@ export default function LaboratoryManagement() {
           </Stack>
         </Box>
 
-        <CardContent sx={{ p: 0 }}>
-          {isMobile ? (
-            <FormControl fullWidth size="small" sx={{ px: 2, py: 1.5 }}>
+        <CardContent sx={{ p: 0, pt: { xs: 2, sm: 0 } }}>
+          <Box sx={{ display: { xs: "block", sm: "none" }, mt: 3, px: 2, pb: 1.5 }}>
+            <FormControl fullWidth size="small">
               <InputLabel id="lab-section-label">Section</InputLabel>
               <Select
                 labelId="lab-section-label"
@@ -930,24 +928,24 @@ export default function LaboratoryManagement() {
                 <MenuItem value={4}>Payment</MenuItem>
               </Select>
             </FormControl>
-          ) : (
-            <Tabs
-              value={tab}
-              onChange={(_, v) => setTab(v)}
-              sx={{
-                px: 2,
-                "& .MuiTabs-indicator": {
-                  backgroundColor: theme.palette.primary.main,
-                },
-              }}
-            >
-              <Tab label="Lab Tests" />
-              <Tab label="Lab Orders" />
-              <Tab label="Results" />
-              <Tab icon={<ReceiptIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Billing" />
-              <Tab icon={<PaymentsIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Payment" />
-            </Tabs>
-          )}
+          </Box>
+          <Tabs
+            value={tab}
+            onChange={(_, v) => setTab(v)}
+            sx={{
+              display: { xs: "none", sm: "flex" },
+              px: 2,
+              "& .MuiTabs-indicator": {
+                backgroundColor: theme.palette.primary.main,
+              },
+            }}
+          >
+            <Tab label="Lab Tests" />
+            <Tab label="Lab Orders" />
+            <Tab label="Results" />
+            <Tab icon={<ReceiptIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Billing" />
+            <Tab icon={<PaymentsIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Payment" />
+          </Tabs>
           <Divider />
 
           {tab === 0 && (
@@ -1081,6 +1079,13 @@ export default function LaboratoryManagement() {
                   setTestPage(0);
                 }}
                 rowsPerPageOptions={[5, 10, 25, 50]}
+                sx={{
+                  width: "100%",
+                  overflow: "hidden",
+                  "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+                  "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                  "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                }}
               />
             </Box>
           )}
@@ -1271,6 +1276,13 @@ export default function LaboratoryManagement() {
                   setOrderPage(0);
                 }}
                 rowsPerPageOptions={[5, 10, 25, 50]}
+                sx={{
+                  width: "100%",
+                  overflow: "hidden",
+                  "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+                  "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                  "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                }}
               />
             </Box>
           )}
@@ -1412,6 +1424,13 @@ export default function LaboratoryManagement() {
                   setResultPage(0);
                 }}
                 rowsPerPageOptions={[5, 10, 25, 50]}
+                sx={{
+                  width: "100%",
+                  overflow: "hidden",
+                  "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+                  "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                  "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                }}
               />
             </Box>
           )}
@@ -1510,6 +1529,13 @@ export default function LaboratoryManagement() {
                   setLabBillsPage(0);
                 }}
                 rowsPerPageOptions={[5, 10, 25, 50]}
+                sx={{
+                  width: "100%",
+                  overflow: "hidden",
+                  "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+                  "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                  "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                }}
               />
             </Box>
           )}
@@ -1598,6 +1624,13 @@ export default function LaboratoryManagement() {
                   setLabPaymentsPage(0);
                 }}
                 rowsPerPageOptions={[5, 10, 25, 50]}
+                sx={{
+                  width: "100%",
+                  overflow: "hidden",
+                  "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+                  "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                  "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                }}
               />
             </Box>
           )}

@@ -36,7 +36,6 @@ import {
   Typography,
   CircularProgress,
   Tooltip,
-  useMediaQuery,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -198,7 +197,6 @@ const normalizeKenyanPhone = (input) => {
 
 export default function AdminUsersManagement() {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const token = getToken();
   const roleName = getRoleName();
   const isAdmin = roleName === "admin";
@@ -815,9 +813,9 @@ export default function AdminUsersManagement() {
             </Stack>
           </Stack>
         </Box>
-        <CardContent sx={{ p: 0 }}>
-          {isMobile ? (
-            <FormControl fullWidth size="small" sx={{ px: 2, py: 1.5 }}>
+        <CardContent sx={{ p: 0, pt: { xs: 2, sm: 0 } }}>
+          <Box sx={{ display: { xs: "block", sm: "none" }, mt: 3, px: 2, pb: 1.5 }}>
+            <FormControl fullWidth size="small">
               <InputLabel id="users-section-label">Section</InputLabel>
               <Select
                 labelId="users-section-label"
@@ -830,21 +828,21 @@ export default function AdminUsersManagement() {
                 <MenuItem value={1}>Roles</MenuItem>
               </Select>
             </FormControl>
-          ) : (
-            <Tabs
-              value={tab}
-              onChange={(_, v) => setTab(v)}
-              sx={{
-                px: 2,
-                "& .MuiTabs-indicator": {
-                  backgroundColor: theme.palette.primary.main,
-                },
-              }}
-            >
-              <Tab icon={<PersonIcon />} iconPosition="start" label="Users" />
-              <Tab icon={<ShieldIcon />} iconPosition="start" label="Roles" />
-            </Tabs>
-          )}
+          </Box>
+          <Tabs
+            value={tab}
+            onChange={(_, v) => setTab(v)}
+            sx={{
+              display: { xs: "none", sm: "flex" },
+              px: 2,
+              "& .MuiTabs-indicator": {
+                backgroundColor: theme.palette.primary.main,
+              },
+            }}
+          >
+            <Tab icon={<PersonIcon />} iconPosition="start" label="Users" />
+            <Tab icon={<ShieldIcon />} iconPosition="start" label="Roles" />
+          </Tabs>
           <Divider />
 
           {/* USERS TAB */}
@@ -942,7 +940,15 @@ export default function AdminUsersManagement() {
                       </TableRow>
                     ) : users.length ? (
                       users.map((u, idx) => (
-                        <TableRow key={u.id} hover>
+                        <TableRow
+                          key={u.id}
+                          hover
+                          onClick={(e) => {
+                            if (e.target.closest("[data-actions-cell]")) return;
+                            openViewUser(u);
+                          }}
+                          sx={{ cursor: { xs: "pointer", sm: "default" } }}
+                        >
                           <TableCell
                             sx={{ color: "text.secondary", fontWeight: 700 }}
                           >
@@ -995,16 +1001,8 @@ export default function AdminUsersManagement() {
                               }
                             />
                           </TableCell>
-                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
-                            <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
-                              <Tooltip title="View">
-                                <IconButton
-                                  onClick={() => openViewUser(u)}
-                                  size="small"
-                                >
-                                  <VisibilityIcon fontSize="inherit" />
-                                </IconButton>
-                              </Tooltip>
+                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} data-actions-cell onClick={(e) => e.stopPropagation()}>
+                            <Box sx={{ display: "flex", flexDirection: "row", flexWrap: "wrap", gap: 0.5, justifyContent: "flex-end", maxWidth: "100%" }}>
                               {isAdmin && (
                                 <>
                                   <Tooltip title="Edit">
@@ -1020,6 +1018,8 @@ export default function AdminUsersManagement() {
                                       onClick={() => deactivateUser(u)}
                                       size="small"
                                       disabled={u.status !== "active"}
+                                      sx={{ display: { xs: "none", sm: "inline-flex" } }}
+                                      aria-label="Deactivate"
                                     >
                                       <BlockIcon fontSize="inherit" />
                                     </IconButton>
@@ -1063,6 +1063,13 @@ export default function AdminUsersManagement() {
                   setUsersPage(0);
                 }}
                 rowsPerPageOptions={[5, 10, 25, 50]}
+                sx={{
+                  width: "100%",
+                  overflow: "hidden",
+                  "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+                  "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                  "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                }}
               />
             </Box>
           )}
@@ -1157,7 +1164,15 @@ export default function AdminUsersManagement() {
                       </TableRow>
                     ) : roles.length ? (
                       roles.map((r, idx) => (
-                        <TableRow key={r.id} hover>
+                        <TableRow
+                          key={r.id}
+                          hover
+                          onClick={(e) => {
+                            if (e.target.closest("[data-actions-cell]")) return;
+                            openViewRole(r);
+                          }}
+                          sx={{ cursor: { xs: "pointer", sm: "default" } }}
+                        >
                           <TableCell
                             sx={{ color: "text.secondary", fontWeight: 700 }}
                           >
@@ -1167,12 +1182,13 @@ export default function AdminUsersManagement() {
                             {r.name}
                           </TableCell>
                           <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{formatDateTime(r.createdAt)}</TableCell>
-                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
-                            <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
+                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} data-actions-cell onClick={(e) => e.stopPropagation()}>
+                            <Box sx={{ display: "flex", flexDirection: "row", flexWrap: "wrap", gap: 0.5, justifyContent: "flex-end", maxWidth: "100%" }}>
                               <Tooltip title="View">
                                 <IconButton
                                   onClick={() => openViewRole(r)}
                                   size="small"
+                                  sx={{ display: { xs: "none", sm: "inline-flex" } }}
                                 >
                                   <VisibilityIcon fontSize="inherit" />
                                 </IconButton>
@@ -1181,16 +1197,17 @@ export default function AdminUsersManagement() {
                                 <>
                                   <Tooltip title="Navbar menu items">
                                     <IconButton
-                                      onClick={() => openMenuItemsDialog(r)}
+                                      onClick={(e) => { e.stopPropagation(); openMenuItemsDialog(r); }}
                                       size="small"
                                       aria-label="Menu items"
+                                      sx={{ display: { xs: "none", sm: "inline-flex" } }}
                                     >
                                       <ListIcon fontSize="inherit" />
                                     </IconButton>
                                   </Tooltip>
                                   <Tooltip title="Edit">
                                     <IconButton
-                                      onClick={() => openEditRole(r)}
+                                      onClick={(e) => { e.stopPropagation(); openEditRole(r); }}
                                       size="small"
                                     >
                                       <EditIcon fontSize="inherit" />
@@ -1198,7 +1215,7 @@ export default function AdminUsersManagement() {
                                   </Tooltip>
                                   <Tooltip title="Delete">
                                     <IconButton
-                                      onClick={() => deleteRole(r)}
+                                      onClick={(e) => { e.stopPropagation(); deleteRole(r); }}
                                       size="small"
                                       color="error"
                                     >
@@ -1235,6 +1252,13 @@ export default function AdminUsersManagement() {
                   setRolesPage(0);
                 }}
                 rowsPerPageOptions={[5, 10, 25, 50]}
+                sx={{
+                  width: "100%",
+                  overflow: "hidden",
+                  "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+                  "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                  "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                }}
               />
             </Box>
           )}
@@ -1378,7 +1402,7 @@ export default function AdminUsersManagement() {
                 setRoleView({ open: false, role: null });
                 openMenuItemsDialog(roleView.role);
               }}
-              sx={{ mr: "auto" }}
+              sx={{ mr: "auto", display: { xs: "none", sm: "inline-flex" } }}
             >
               Edit menu items
             </Button>

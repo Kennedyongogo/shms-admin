@@ -31,7 +31,6 @@ import {
   Typography,
   CircularProgress,
   Tooltip,
-  useMediaQuery,
 } from "@mui/material";
 import {
   Edit as EditIcon,
@@ -100,7 +99,6 @@ const formatDateTime = (value) => {
 
 export default function PharmacyManagement() {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const token = getToken();
   const navigate = useNavigate();
   const isAdmin = getRoleName() === "admin";
@@ -876,9 +874,9 @@ export default function PharmacyManagement() {
           </Stack>
         </Box>
 
-        <CardContent sx={{ p: 0 }}>
-          {isMobile ? (
-            <FormControl fullWidth size="small" sx={{ px: 2, py: 1.5 }}>
+        <CardContent sx={{ p: 0, pt: { xs: 2, sm: 0 } }}>
+          <Box sx={{ display: { xs: "block", sm: "none" }, mt: 3, px: 2, pb: 1.5 }}>
+            <FormControl fullWidth size="small">
               <InputLabel id="pharmacy-section-label">Section</InputLabel>
               <Select
                 labelId="pharmacy-section-label"
@@ -894,44 +892,44 @@ export default function PharmacyManagement() {
                 <MenuItem value={4}>Payment</MenuItem>
               </Select>
             </FormControl>
-          ) : (
-            <Tabs
-              value={tab}
-              onChange={(_, v) => setTab(v)}
-              sx={{
-                px: 2,
-                "& .MuiTabs-indicator": {
-                  backgroundColor: theme.palette.primary.main,
-                },
-              }}
-            >
-              <Tab
-                icon={<InventoryIcon />}
-                iconPosition="start"
-                label="Medicine Catalogue"
-              />
-              <Tab
-                icon={<ReceiptLongIcon />}
-                iconPosition="start"
-                label="Prescriptions"
-              />
-              <Tab
-                icon={<LocalPharmacyIcon />}
-                iconPosition="start"
-                label="Dispense Records"
-              />
-              <Tab
-                icon={<ReceiptIcon />}
-                iconPosition="start"
-                label="Billing"
-              />
-              <Tab
-                icon={<PaymentIcon />}
-                iconPosition="start"
-                label="Payment"
-              />
+          </Box>
+          <Tabs
+            value={tab}
+            onChange={(_, v) => setTab(v)}
+            sx={{
+              display: { xs: "none", sm: "flex" },
+              px: 2,
+              "& .MuiTabs-indicator": {
+                backgroundColor: theme.palette.primary.main,
+              },
+            }}
+          >
+            <Tab
+              icon={<InventoryIcon />}
+              iconPosition="start"
+              label="Medicine Catalogue"
+            />
+            <Tab
+              icon={<ReceiptLongIcon />}
+              iconPosition="start"
+              label="Prescriptions"
+            />
+            <Tab
+              icon={<LocalPharmacyIcon />}
+              iconPosition="start"
+              label="Dispense Records"
+            />
+            <Tab
+              icon={<ReceiptIcon />}
+              iconPosition="start"
+              label="Billing"
+            />
+            <Tab
+              icon={<PaymentIcon />}
+              iconPosition="start"
+              label="Payment"
+            />
             </Tabs>
-          )}
           <Divider />
 
           {/* MEDS */}
@@ -998,7 +996,15 @@ export default function PharmacyManagement() {
                       </TableRow>
                     ) : medications.length ? (
                       medications.map((m, idx) => (
-                        <TableRow key={m.id} hover>
+                        <TableRow
+                          key={m.id}
+                          hover
+                          onClick={(e) => {
+                            if (e.target.closest("[data-actions-cell]")) return;
+                            openViewMed(m);
+                          }}
+                          sx={{ cursor: { xs: "pointer", sm: "default" } }}
+                        >
                           <TableCell
                             sx={{ color: "text.secondary", fontWeight: 700 }}
                           >
@@ -1022,12 +1028,13 @@ export default function PharmacyManagement() {
                               ? (m.inventoryItem.quantity_in_pharmacy ?? 0)
                               : "—"}
                           </TableCell>
-                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
-                            <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
+                          <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} data-actions-cell onClick={(e) => e.stopPropagation()}>
+                            <Box sx={{ display: "flex", flexDirection: "row", flexWrap: "wrap", gap: 0.5, justifyContent: "flex-end", maxWidth: "100%" }}>
                               <Tooltip title="View">
                                 <IconButton
                                   onClick={() => openViewMed(m)}
                                   size="small"
+                                  sx={{ display: { xs: "none", sm: "inline-flex" } }}
                                 >
                                   <VisibilityIcon fontSize="inherit" />
                                 </IconButton>
@@ -1036,7 +1043,7 @@ export default function PharmacyManagement() {
                                 <>
                                   <Tooltip title="Edit">
                                     <IconButton
-                                      onClick={() => openEditMed(m)}
+                                      onClick={(e) => { e.stopPropagation(); openEditMed(m); }}
                                       size="small"
                                     >
                                       <EditIcon fontSize="inherit" />
@@ -1044,7 +1051,7 @@ export default function PharmacyManagement() {
                                   </Tooltip>
                                   <Tooltip title="Delete">
                                     <IconButton
-                                      onClick={() => deleteMed(m)}
+                                      onClick={(e) => { e.stopPropagation(); deleteMed(m); }}
                                       size="small"
                                       color="error"
                                     >
@@ -1081,6 +1088,13 @@ export default function PharmacyManagement() {
                   setMedsPage(0);
                 }}
                 rowsPerPageOptions={[5, 10, 25, 50]}
+                sx={{
+                  width: "100%",
+                  overflow: "hidden",
+                  "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+                  "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                  "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                }}
               />
             </Box>
           )}
@@ -1201,6 +1215,13 @@ export default function PharmacyManagement() {
                   setPresPage(0);
                 }}
                 rowsPerPageOptions={[5, 10, 25, 50]}
+                sx={{
+                  width: "100%",
+                  overflow: "hidden",
+                  "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+                  "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                  "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                }}
               />
             </Box>
           )}
@@ -1328,6 +1349,13 @@ export default function PharmacyManagement() {
                   setDispPage(0);
                 }}
                 rowsPerPageOptions={[5, 10, 25, 50]}
+                sx={{
+                  width: "100%",
+                  overflow: "hidden",
+                  "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+                  "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                  "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                }}
               />
             </Box>
           )}
@@ -1409,6 +1437,13 @@ export default function PharmacyManagement() {
                 rowsPerPage={pharmBillsRowsPerPage}
                 onRowsPerPageChange={(e) => { setPharmBillsRowsPerPage(parseInt(e.target.value, 10)); setPharmBillsPage(0); }}
                 rowsPerPageOptions={[5, 10, 25, 50]}
+                sx={{
+                  width: "100%",
+                  overflow: "hidden",
+                  "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+                  "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                  "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                }}
               />
             </Box>
           )}
@@ -1484,6 +1519,13 @@ export default function PharmacyManagement() {
                 rowsPerPage={pharmPaymentsRowsPerPage}
                 onRowsPerPageChange={(e) => { setPharmPaymentsRowsPerPage(parseInt(e.target.value, 10)); setPharmPaymentsPage(0); }}
                 rowsPerPageOptions={[5, 10, 25, 50]}
+                sx={{
+                  width: "100%",
+                  overflow: "hidden",
+                  "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+                  "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                  "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+                }}
               />
             </Box>
           )}

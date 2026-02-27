@@ -471,11 +471,19 @@ export default function PatientsManagement() {
                   </TableRow>
                 ) : (
                   rows.map((p, idx) => (
-                    <TableRow key={p.id} hover>
+                    <TableRow
+                      key={p.id}
+                      hover
+                      onClick={(e) => {
+                        if (e.target.closest("[data-actions-cell]")) return;
+                        openView(p);
+                      }}
+                      sx={{ cursor: { xs: "pointer", sm: "default" } }}
+                    >
                       <TableCell sx={{ fontWeight: 800 }}>{page * limit + idx + 1}</TableCell>
                       <TableCell sx={{ maxWidth: { xs: "28vw", sm: 180, md: 260 }, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
                         <Stack direction="row" spacing={1.2} alignItems="center" sx={{ minWidth: 0 }}>
-                          <Avatar sx={{ bgcolor: theme.palette.primary.main, width: 32, height: 32, flexShrink: 0 }}>
+                          <Avatar sx={{ bgcolor: theme.palette.primary.main, width: 32, height: 32, flexShrink: 0, display: { xs: "none", sm: "flex" } }}>
                             {(p.full_name || "?").slice(0, 1).toUpperCase()}
                           </Avatar>
                           <Box sx={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -490,15 +498,15 @@ export default function PatientsManagement() {
                       <TableCell sx={{ display: { xs: "none", md: "table-cell" }, maxWidth: { md: 180 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{fmt(p.email)}</TableCell>
                       <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{fmt(p.patient_source)}</TableCell>
                       <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{fmt(p.status)}</TableCell>
-                      <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }}>
-                        <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
+                      <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} data-actions-cell onClick={(e) => e.stopPropagation()}>
+                        <Box sx={{ display: "flex", flexDirection: "row", flexWrap: "wrap", gap: 0.5, justifyContent: "flex-end", maxWidth: "100%" }}>
                           <Tooltip title="Medical reports">
-                            <IconButton size="small" onClick={() => navigate(`/patients/${p.id}/reports`)}>
+                            <IconButton size="small" onClick={() => navigate(`/patients/${p.id}/reports`)} sx={{ display: { xs: "none", sm: "inline-flex" } }} aria-label="View medical records">
                               <ReportIcon fontSize="inherit" />
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="View">
-                            <IconButton size="small" onClick={() => openView(p)}>
+                            <IconButton size="small" onClick={() => openView(p)} sx={{ display: { xs: "none", sm: "inline-flex" } }}>
                               <Visibility fontSize="inherit" />
                             </IconButton>
                           </Tooltip>
@@ -536,6 +544,13 @@ export default function PatientsManagement() {
               setPage(0);
             }}
             rowsPerPageOptions={[5, 10, 25, 50]}
+            sx={{
+              width: "100%",
+              overflow: "hidden",
+              "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 },
+              "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+              "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } },
+            }}
           />
         </CardContent>
       </Card>

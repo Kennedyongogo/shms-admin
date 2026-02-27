@@ -572,9 +572,9 @@ export default function DietManagement() {
         </Stack>
       </Box>
 
-      <CardContent sx={{ p: 0 }}>
-        {isMobile ? (
-          <FormControl fullWidth size="small" sx={{ px: 2, py: 1.5 }}>
+      <CardContent sx={{ p: 0, pt: { xs: 2, sm: 0 } }}>
+        <Box sx={{ display: { xs: "block", sm: "none" }, mt: 3, px: 2, pb: 1.5 }}>
+          <FormControl fullWidth size="small">
             <InputLabel id="diet-section-label">Section</InputLabel>
             <Select
               labelId="diet-section-label"
@@ -590,15 +590,14 @@ export default function DietManagement() {
               <MenuItem value={4}>Round sheet</MenuItem>
             </Select>
           </FormControl>
-        ) : (
-          <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ px: 2, "& .MuiTabs-indicator": { backgroundColor: theme.palette.primary.main } }}>
-            <Tab icon={<DietIcon />} iconPosition="start" label="Diet types" />
-            <Tab icon={<OrderIcon />} iconPosition="start" label="Diet orders" />
-            <Tab icon={<MealPlanIcon />} iconPosition="start" label="Meal plans" />
-            <Tab icon={<DeliveryIcon />} iconPosition="start" label="Delivery logs" />
-            <Tab icon={<PrintIcon />} iconPosition="start" label="Round sheet" />
-          </Tabs>
-        )}
+        </Box>
+        <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ display: { xs: "none", sm: "flex" }, px: 2, "& .MuiTabs-indicator": { backgroundColor: theme.palette.primary.main } }}>
+          <Tab icon={<DietIcon />} iconPosition="start" label="Diet types" />
+          <Tab icon={<OrderIcon />} iconPosition="start" label="Diet orders" />
+          <Tab icon={<MealPlanIcon />} iconPosition="start" label="Meal plans" />
+          <Tab icon={<DeliveryIcon />} iconPosition="start" label="Delivery logs" />
+          <Tab icon={<PrintIcon />} iconPosition="start" label="Round sheet" />
+        </Tabs>
         <Divider />
 
         {/* Tab 0: Diet types */}
@@ -654,7 +653,7 @@ export default function DietManagement() {
                 </TableBody>
               </Table>
             </TableContainer>
-            <TablePagination component="div" count={dietTypesTotal} page={dietTypesPage} onPageChange={(_, p) => setDietTypesPage(p)} rowsPerPage={dietTypesRowsPerPage} onRowsPerPageChange={(e) => { setDietTypesRowsPerPage(parseInt(e.target.value, 10)); setDietTypesPage(0); }} rowsPerPageOptions={[5, 10, 25, 50]} />
+            <TablePagination component="div" count={dietTypesTotal} page={dietTypesPage} onPageChange={(_, p) => setDietTypesPage(p)} rowsPerPage={dietTypesRowsPerPage} onRowsPerPageChange={(e) => { setDietTypesRowsPerPage(parseInt(e.target.value, 10)); setDietTypesPage(0); }} rowsPerPageOptions={[5, 10, 25, 50]} sx={{ width: "100%", overflow: "hidden", "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 }, "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } }, "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } } }} />
           </Box>
         )}
 
@@ -735,7 +734,7 @@ export default function DietManagement() {
                 </TableBody>
               </Table>
             </TableContainer>
-            <TablePagination component="div" count={ordersTotal} page={ordersPage} onPageChange={(_, p) => setOrdersPage(p)} rowsPerPage={ordersRowsPerPage} onRowsPerPageChange={(e) => { setOrdersRowsPerPage(parseInt(e.target.value, 10)); setOrdersPage(0); }} rowsPerPageOptions={[5, 10, 25, 50]} />
+            <TablePagination component="div" count={ordersTotal} page={ordersPage} onPageChange={(_, p) => setOrdersPage(p)} rowsPerPage={ordersRowsPerPage} onRowsPerPageChange={(e) => { setOrdersRowsPerPage(parseInt(e.target.value, 10)); setOrdersPage(0); }} rowsPerPageOptions={[5, 10, 25, 50]} sx={{ width: "100%", overflow: "hidden", "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 }, "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } }, "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } } }} />
           </Box>
         )}
 
@@ -817,7 +816,7 @@ export default function DietManagement() {
               </Box>
             )}
             {mealPlans.length > 0 && (
-              <TablePagination component="div" count={mealPlansTotal} page={mealPlansPage} onPageChange={(_, p) => setMealPlansPage(p)} rowsPerPage={mealPlansRowsPerPage} onRowsPerPageChange={(e) => { setMealPlansRowsPerPage(parseInt(e.target.value, 10)); setMealPlansPage(0); }} rowsPerPageOptions={[5, 10, 25, 50]} sx={{ borderTop: "1px solid", borderColor: "divider", mt: 2 }} />
+              <TablePagination component="div" count={mealPlansTotal} page={mealPlansPage} onPageChange={(_, p) => setMealPlansPage(p)} rowsPerPage={mealPlansRowsPerPage} onRowsPerPageChange={(e) => { setMealPlansRowsPerPage(parseInt(e.target.value, 10)); setMealPlansPage(0); }} rowsPerPageOptions={[5, 10, 25, 50]} sx={{ borderTop: "1px solid", borderColor: "divider", mt: 2, width: "100%", overflow: "hidden", "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 }, "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } }, "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } } }} />
             )}
           </Box>
         )}
@@ -889,7 +888,7 @@ export default function DietManagement() {
                 </TableBody>
               </Table>
             </TableContainer>
-            <TablePagination component="div" count={deliveryLogsTotal} page={deliveryLogsPage} onPageChange={(_, p) => setDeliveryLogsPage(p)} rowsPerPage={deliveryLogsRowsPerPage} onRowsPerPageChange={(e) => { setDeliveryLogsRowsPerPage(parseInt(e.target.value, 10)); setDeliveryLogsPage(0); }} rowsPerPageOptions={[5, 10, 25, 50]} />
+            <TablePagination component="div" count={deliveryLogsTotal} page={deliveryLogsPage} onPageChange={(_, p) => setDeliveryLogsPage(p)} rowsPerPage={deliveryLogsRowsPerPage} onRowsPerPageChange={(e) => { setDeliveryLogsRowsPerPage(parseInt(e.target.value, 10)); setDeliveryLogsPage(0); }} rowsPerPageOptions={[5, 10, 25, 50]} sx={{ width: "100%", overflow: "hidden", "& .MuiTablePagination-toolbar": { flexWrap: "wrap", gap: 0.5, px: { xs: 1, sm: 2 }, minHeight: 52 }, "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": { fontSize: { xs: "0.75rem", sm: "0.875rem" } }, "& .MuiTablePagination-select": { fontSize: { xs: "0.75rem", sm: "0.875rem" } } }} />
           </Box>
         )}
 
