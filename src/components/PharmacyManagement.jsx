@@ -53,6 +53,7 @@ const API = {
   dispense: "/api/dispense",
   billing: "/api/billing",
   payments: "/api/payments",
+  mpesa: "/api/mpesa",
   inventory: "/api/inventory",
 };
 
@@ -169,9 +170,6 @@ export default function PharmacyManagement() {
   const [pharmBillsRowsPerPage, setPharmBillsRowsPerPage] = useState(10);
   const [pharmBillsTotal, setPharmBillsTotal] = useState(0);
   const [pharmBillView, setPharmBillView] = useState({ open: false, bill: null, loading: false });
-  const [pharmBillPayAmount, setPharmBillPayAmount] = useState("");
-  const [pharmBillPayMethod, setPharmBillPayMethod] = useState("cash");
-  const [pharmBillPaySaving, setPharmBillPaySaving] = useState(false);
 
   // Pharmacy Payment tab (payments for prescription bills only)
   const [pharmPayments, setPharmPayments] = useState([]);
@@ -549,6 +547,43 @@ export default function PharmacyManagement() {
     }
   };
 
+  const pollForPaymentAndRefreshPres = (prescriptionId, options = {}) => {
+    const { maxAttempts = 30, intervalMs = 2000 } = options;
+    let attempts = 0;
+    const timerRef = { current: null };
+    const poll = async () => {
+      if (attempts >= maxAttempts) return;
+      attempts += 1;
+      try {
+        const qs = new URLSearchParams({
+          item_type: "prescription",
+          reference_id: String(prescriptionId),
+        });
+        const res = await fetchJson(
+          `${API.billing}/by-reference?${qs.toString()}`,
+          { token },
+        );
+        const billing = res?.data || null;
+        setPresBilling(billing);
+        const isPaid = billing?.paid === true || billing?.status === "paid";
+        if (isPaid) {
+          await loadPrescriptionBilling(prescriptionId);
+          loadPharmBills();
+          loadPharmPayments();
+          Swal.fire({ icon: "success", title: "Payment received", text: "Prescription bill updated.", timer: 2000, showConfirmButton: false });
+          return;
+        }
+      } catch {
+        // ignore
+      }
+      timerRef.current = setTimeout(poll, intervalMs);
+    };
+    timerRef.current = setTimeout(poll, intervalMs);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  };
+
   const openPharmBillView = async (billId) => {
     if (!billId) return;
     setPharmBillView({ open: true, bill: null, loading: true });
@@ -556,44 +591,9 @@ export default function PharmacyManagement() {
       const data = await fetchJson(`${API.billing}/${billId}`, { token });
       const b = data?.data || null;
       setPharmBillView({ open: true, bill: b, loading: false });
-      const total = Number(b?.total_amount || 0);
-      const paid = Number(b?.paid_amount || 0);
-      const balance = Math.max(0, total - paid);
-      setPharmBillPayAmount(String(balance > 0 ? balance : total));
-      setPharmBillPayMethod("cash");
     } catch (e) {
       setPharmBillView({ open: false, bill: null, loading: false });
       showToast("error", e.message);
-    }
-  };
-
-  const recordPaymentForPharmBill = async () => {
-    const b = pharmBillView.bill;
-    if (!b?.id) return;
-    const amountRaw = Number(pharmBillPayAmount);
-    if (!Number.isFinite(amountRaw) || amountRaw <= 0) {
-      Swal.fire({ icon: "warning", title: "Invalid amount", text: "Enter a positive amount." });
-      return;
-    }
-    setPharmBillPaySaving(true);
-    try {
-      await fetchJson(`${API.payments}/process`, {
-        method: "POST",
-        token,
-        body: {
-          bill_id: b.id,
-          amount_paid: amountRaw,
-          payment_method: pharmBillPayMethod || "cash",
-          payment_date: new Date().toISOString(),
-        },
-      });
-      await openPharmBillView(b.id);
-      await loadPharmBills();
-      showToast("success", "Payment recorded.");
-    } catch (e) {
-      Swal.fire({ icon: "error", title: "Payment failed", text: e.message });
-    } finally {
-      setPharmBillPaySaving(false);
     }
   };
 
@@ -702,7 +702,42 @@ export default function PharmacyManagement() {
     });
     if (!ask.isConfirmed || !ask.value) return false;
     const { amount, payment_method } = ask.value;
+    const isMpesa = (payment_method || "cash") === "mpesa";
     try {
+      if (isMpesa) {
+        const prescription = presView.prescription;
+        let phone = prescription?.patient?.phone || prescription?.patient?.user?.phone || "";
+        if (!(phone || "").trim()) {
+          try {
+            const presRes = await fetchJson(`${API.prescriptions}/${prescription.id}`, { token });
+            const p = presRes?.data?.patient;
+            phone = p?.phone || p?.user?.phone || "";
+          } catch {
+            // ignore
+          }
+        }
+        const rawPhone = (phone || "").trim().replace(/^\++/, "");
+        if (!rawPhone) {
+          Swal.fire({
+            icon: "error",
+            title: "No phone number",
+            text: "Patient has no phone number. Add phone in patient record or use another payment method.",
+          });
+          return false;
+        }
+        await fetchJson(`${API.mpesa}/pay`, {
+          method: "POST",
+          token,
+          body: { phone: rawPhone, amount, bill_id: presBilling.bill_id },
+        });
+        Swal.fire({
+          icon: "success",
+          title: "STK Push sent",
+          text: "Ask the patient to enter M-Pesa PIN. The bill will update automatically when they pay.",
+        });
+        if (prescription?.id) pollForPaymentAndRefreshPres(prescription.id, { maxAttempts: 35, intervalMs: 2000 });
+        return false;
+      }
       await fetchJson(`${API.payments}/process`, {
         method: "POST",
         token,
@@ -714,6 +749,8 @@ export default function PharmacyManagement() {
         },
       });
       await loadPrescriptionBilling(presView.prescription.id);
+      loadPharmBills();
+      loadPharmPayments();
       Swal.fire({ icon: "success", title: "Payment recorded", text: "You can dispense once the bill is fully paid." });
       return true;
     } catch (e) {
@@ -730,6 +767,47 @@ export default function PharmacyManagement() {
       Swal.fire({ icon: "warning", title: "Invalid amount", text: "Enter a positive amount." });
       return;
     }
+    const isMpesa = (presPayMethod || "cash") === "mpesa";
+    if (isMpesa) {
+      let phone = prescription?.patient?.phone || prescription?.patient?.user?.phone || "";
+      if (!(phone || "").trim()) {
+        try {
+          const presRes = await fetchJson(`${API.prescriptions}/${prescription.id}`, { token });
+          const p = presRes?.data?.patient;
+          phone = p?.phone || p?.user?.phone || "";
+        } catch {
+          // ignore
+        }
+      }
+      const rawPhone = (phone || "").trim().replace(/^\++/, "");
+      if (!rawPhone) {
+        Swal.fire({
+          icon: "error",
+          title: "No phone number",
+          text: "Patient has no phone number. Add phone in patient record or use another payment method.",
+        });
+        return;
+      }
+      setPresPaySaving(true);
+      try {
+        await fetchJson(`${API.mpesa}/pay`, {
+          method: "POST",
+          token,
+          body: { phone: rawPhone, amount: amountRaw, bill_id: presBilling.bill_id },
+        });
+        Swal.fire({
+          icon: "success",
+          title: "STK Push sent",
+          text: "Ask the patient to enter M-Pesa PIN. The bill will update automatically when they pay.",
+        });
+        pollForPaymentAndRefreshPres(prescription.id, { maxAttempts: 35, intervalMs: 2000 });
+      } catch (e) {
+        Swal.fire({ icon: "error", title: "M-Pesa failed", text: e?.message ?? "Something went wrong." });
+      } finally {
+        setPresPaySaving(false);
+      }
+      return;
+    }
     setPresPaySaving(true);
     try {
       await fetchJson(`${API.payments}/process`, {
@@ -744,10 +822,76 @@ export default function PharmacyManagement() {
       });
       Swal.fire({ icon: "success", title: "Payment recorded", text: "You can dispense once the bill is fully paid." });
       await loadPrescriptionBilling(prescription.id);
+      loadPharmBills();
+      loadPharmPayments();
     } catch (e) {
       Swal.fire({ icon: "error", title: "Payment failed", text: e?.message ?? "Something went wrong." });
     } finally {
       setPresPaySaving(false);
+    }
+  };
+
+  const payWithMpesaForPrescription = async () => {
+    const prescription = presView.prescription;
+    if (!requireTokenGuard() || !prescription?.id || !presBilling?.bill_id) return;
+    let phone = prescription?.patient?.phone || prescription?.patient?.user?.phone || "";
+    if (!(phone || "").trim()) {
+      try {
+        const presRes = await fetchJson(`${API.prescriptions}/${prescription.id}`, { token });
+        const p = presRes?.data?.patient;
+        phone = p?.phone || p?.user?.phone || "";
+      } catch {
+        // ignore
+      }
+    }
+    const rawPhone = (phone || "").trim().replace(/^\++/, "");
+    if (!rawPhone) {
+      Swal.fire({
+        icon: "error",
+        title: "No phone number",
+        text: "Patient has no phone number. Add phone in patient record.",
+      });
+      return;
+    }
+    const defaultAmount = String(presBilling?.balance ?? presBilling?.total_amount ?? "0");
+    const ask = await Swal.fire({
+      icon: "question",
+      title: "Pay with M-Pesa",
+      html: `
+        <p style="text-align:left; margin-bottom:12px;">An M-Pesa prompt will be sent to the patient's phone. They must enter their PIN to complete payment.</p>
+        <label for="swal-mpesa-amount" style="display:block; text-align:left; margin-bottom:4px;">Amount (KES)</label>
+        <input id="swal-mpesa-amount" class="swal2-input" type="number" min="1" step="0.01" value="${defaultAmount}" style="margin-bottom:12px" />
+      `,
+      showCancelButton: true,
+      confirmButtonText: "Send M-Pesa prompt",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+      preConfirm: () => {
+        const raw = document.getElementById("swal-mpesa-amount")?.value;
+        const n = Number(raw);
+        if (!Number.isFinite(n) || n < 0) {
+          Swal.showValidationMessage("Enter a valid amount");
+          return undefined;
+        }
+        return n;
+      },
+    });
+    if (!ask.isConfirmed || ask.value == null) return;
+    const amount = ask.value;
+    try {
+      await fetchJson(`${API.mpesa}/pay`, {
+        method: "POST",
+        token,
+        body: { phone: rawPhone, amount, bill_id: presBilling.bill_id },
+      });
+      Swal.fire({
+        icon: "success",
+        title: "STK Push sent",
+        text: "Ask the patient to enter M-Pesa PIN. The bill will update automatically when they pay.",
+      });
+      pollForPaymentAndRefreshPres(prescription.id, { maxAttempts: 35, intervalMs: 2000 });
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "M-Pesa failed", text: e?.message ?? "Something went wrong." });
     }
   };
 
@@ -1532,7 +1676,7 @@ export default function PharmacyManagement() {
         </CardContent>
       </Card>
 
-      {/* Pharmacy bill view & record payment */}
+      {/* Pharmacy bill view (view only) */}
       <Dialog
         open={pharmBillView.open}
         onClose={() => setPharmBillView({ open: false, bill: null, loading: false })}
@@ -1564,31 +1708,6 @@ export default function PharmacyManagement() {
                   sx={{ mt: 0.5 }}
                 />
               </Box>
-              {Number(pharmBillView.bill.balance ?? 0) > 0 && (
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }}>
-                  <TextField
-                    size="small"
-                    label="Amount"
-                    type="number"
-                    value={pharmBillPayAmount}
-                    onChange={(e) => setPharmBillPayAmount(e.target.value)}
-                    inputProps={{ min: 0, step: 0.01 }}
-                    sx={{ width: { xs: "100%", sm: 130 } }}
-                  />
-                  <FormControl size="small" sx={{ minWidth: 120 }}>
-                    <InputLabel>Method</InputLabel>
-                    <Select value={pharmBillPayMethod} label="Method" onChange={(e) => setPharmBillPayMethod(e.target.value)}>
-                      <MenuItem value="cash">Cash</MenuItem>
-                      <MenuItem value="card">Card</MenuItem>
-                      <MenuItem value="mobile">Mobile</MenuItem>
-                      <MenuItem value="other">Other</MenuItem>
-                    </Select>
-                  </FormControl>
-                  <Button variant="contained" onClick={recordPaymentForPharmBill} disabled={pharmBillPaySaving} sx={{ fontWeight: 800 }}>
-                    {pharmBillPaySaving ? "Recording…" : "Record payment"}
-                  </Button>
-                </Stack>
-              )}
             </Stack>
           ) : null}
         </DialogContent>
@@ -1922,6 +2041,14 @@ export default function PharmacyManagement() {
                         sx={{ fontWeight: 800 }}
                       >
                         {presPaySaving ? "Recording…" : "Record payment"}
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        onClick={payWithMpesaForPrescription}
+                        disabled={presPaySaving}
+                        sx={{ fontWeight: 800 }}
+                      >
+                        Pay with M-Pesa
                       </Button>
                     </Stack>
                   </>

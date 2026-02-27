@@ -53,6 +53,7 @@ const API = {
   labResults: "/api/lab-results",
   billing: "/api/billing",
   payments: "/api/payments",
+  mpesa: "/api/mpesa",
 };
 
 const getToken = () => localStorage.getItem("token");
@@ -201,9 +202,6 @@ export default function LaboratoryManagement() {
   const [labBillsRowsPerPage, setLabBillsRowsPerPage] = useState(10);
   const [labBillsTotal, setLabBillsTotal] = useState(0);
   const [labBillView, setLabBillView] = useState({ open: false, bill: null, loading: false });
-  const [labBillPayAmount, setLabBillPayAmount] = useState("");
-  const [labBillPayMethod, setLabBillPayMethod] = useState("cash");
-  const [labBillPaySaving, setLabBillPaySaving] = useState(false);
 
   // Lab payments tab (payments for lab order bills)
   const labPaymentsReqId = useRef(0);
@@ -544,6 +542,44 @@ export default function LaboratoryManagement() {
     }
   };
 
+  const pollForPaymentAndRefreshLab = (orderId, options = {}) => {
+    const { maxAttempts = 30, intervalMs = 2000 } = options;
+    let attempts = 0;
+    const poll = async () => {
+      if (attempts >= maxAttempts) return;
+      attempts += 1;
+      try {
+        const qs = new URLSearchParams({
+          item_type: "lab_order",
+          reference_id: String(orderId),
+        });
+        const res = await fetchJson(
+          `${API.billing}/by-reference?${qs.toString()}`,
+          { token },
+        );
+        const billing = res?.data || null;
+        setOrderBilling(billing);
+        const isPaid = billing?.paid === true || billing?.status === "paid";
+        if (isPaid) {
+          await loadOrderBilling(orderId);
+          loadLabBills();
+          loadLabPayments();
+          loadOrders();
+          Swal.fire({ icon: "success", title: "Payment received", text: "Lab bill updated.", timer: 2000, showConfirmButton: false });
+          return;
+        }
+      } catch {
+        // ignore
+      }
+      timerRef.current = setTimeout(poll, intervalMs);
+    };
+    const timerRef = { current: null };
+    timerRef.current = setTimeout(poll, intervalMs);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  };
+
   const addOrderBillItem = async () => {
     const billId = orderBilling?.bill_id;
     const order = orderView.order;
@@ -588,6 +624,47 @@ export default function LaboratoryManagement() {
       Swal.fire({ icon: "warning", title: "Invalid amount", text: "Enter a positive amount." });
       return;
     }
+    const isMpesa = (orderPayMethod || "cash") === "mpesa";
+    if (isMpesa) {
+      let phone = order?.patient?.phone || order?.patient?.user?.phone || "";
+      if (!(phone || "").trim()) {
+        try {
+          const orderRes = await fetchJson(`${API.labOrders}/${order.id}`, { token });
+          const p = orderRes?.data?.patient;
+          phone = p?.phone || p?.user?.phone || "";
+        } catch {
+          // ignore
+        }
+      }
+      const rawPhone = (phone || "").trim().replace(/^\++/, "");
+      if (!rawPhone) {
+        Swal.fire({
+          icon: "error",
+          title: "No phone number",
+          text: "Patient has no phone number. Add phone in patient record or use another payment method.",
+        });
+        return;
+      }
+      setOrderPaySaving(true);
+      try {
+        await fetchJson(`${API.mpesa}/pay`, {
+          method: "POST",
+          token,
+          body: { phone: rawPhone, amount: amountRaw, bill_id: billId },
+        });
+        Swal.fire({
+          icon: "success",
+          title: "STK Push sent",
+          text: "Ask the patient to enter M-Pesa PIN. The bill will update automatically when they pay.",
+        });
+        pollForPaymentAndRefreshLab(order.id, { maxAttempts: 35, intervalMs: 2000 });
+      } catch (e) {
+        Swal.fire({ icon: "error", title: "M-Pesa failed", text: e?.message });
+      } finally {
+        setOrderPaySaving(false);
+      }
+      return;
+    }
     setOrderPaySaving(true);
     try {
       await fetchJson(`${API.payments}/process`, {
@@ -602,10 +679,76 @@ export default function LaboratoryManagement() {
       });
       Swal.fire({ icon: "success", title: "Payment recorded", text: "You can now enter results for this lab order." });
       await loadOrderBilling(order.id);
+      loadLabBills();
+      loadLabPayments();
     } catch (e) {
       Swal.fire({ icon: "error", title: "Payment failed", text: e?.message });
     } finally {
       setOrderPaySaving(false);
+    }
+  };
+
+  const payWithMpesaForLabOrder = async () => {
+    const order = orderView.order;
+    if (!requireTokenGuard() || !order?.id || !orderBilling?.bill_id) return;
+    let phone = order?.patient?.phone || order?.patient?.user?.phone || "";
+    if (!(phone || "").trim()) {
+      try {
+        const orderRes = await fetchJson(`${API.labOrders}/${order.id}`, { token });
+        const p = orderRes?.data?.patient;
+        phone = p?.phone || p?.user?.phone || "";
+      } catch {
+        // ignore
+      }
+    }
+    const rawPhone = (phone || "").trim().replace(/^\++/, "");
+    if (!rawPhone) {
+      Swal.fire({
+        icon: "error",
+        title: "No phone number",
+        text: "Patient has no phone number. Add phone in patient record.",
+      });
+      return;
+    }
+    const defaultAmount = String(orderBilling?.balance ?? orderBilling?.total_amount ?? "0");
+    const ask = await Swal.fire({
+      icon: "question",
+      title: "Pay with M-Pesa",
+      html: `
+        <p style="text-align:left; margin-bottom:12px;">An M-Pesa prompt will be sent to the patient's phone. They must enter their PIN to complete payment.</p>
+        <label for="swal-mpesa-amount" style="display:block; text-align:left; margin-bottom:4px;">Amount (KES)</label>
+        <input id="swal-mpesa-amount" class="swal2-input" type="number" min="1" step="0.01" value="${defaultAmount}" style="margin-bottom:12px" />
+      `,
+      showCancelButton: true,
+      confirmButtonText: "Send M-Pesa prompt",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+      preConfirm: () => {
+        const raw = document.getElementById("swal-mpesa-amount")?.value;
+        const n = Number(raw);
+        if (!Number.isFinite(n) || n < 0) {
+          Swal.showValidationMessage("Enter a valid amount");
+          return undefined;
+        }
+        return n;
+      },
+    });
+    if (!ask.isConfirmed || ask.value == null) return;
+    const amount = ask.value;
+    try {
+      await fetchJson(`${API.mpesa}/pay`, {
+        method: "POST",
+        token,
+        body: { phone: rawPhone, amount, bill_id: orderBilling.bill_id },
+      });
+      Swal.fire({
+        icon: "success",
+        title: "STK Push sent",
+        text: "Ask the patient to enter M-Pesa PIN. The bill will update automatically when they pay.",
+      });
+      pollForPaymentAndRefreshLab(order.id, { maxAttempts: 35, intervalMs: 2000 });
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "M-Pesa failed", text: e?.message ?? "Something went wrong." });
     }
   };
 
@@ -635,44 +778,9 @@ export default function LaboratoryManagement() {
       const data = await fetchJson(`${API.billing}/${billId}`, { token });
       const b = data?.data || null;
       setLabBillView({ open: true, bill: b, loading: false });
-      const total = Number(b?.total_amount || 0);
-      const paid = Number(b?.paid_amount || 0);
-      const balance = Math.max(0, total - paid);
-      setLabBillPayAmount(String(balance > 0 ? balance : total));
-      setLabBillPayMethod("cash");
     } catch (e) {
       setLabBillView({ open: false, bill: null, loading: false });
       Swal.fire({ icon: "error", title: "Failed", text: e.message });
-    }
-  };
-
-  const recordPaymentForLabBill = async () => {
-    const b = labBillView.bill;
-    if (!b?.id) return;
-    const amountRaw = Number(labBillPayAmount);
-    if (!Number.isFinite(amountRaw) || amountRaw <= 0) {
-      Swal.fire({ icon: "warning", title: "Invalid amount", text: "Enter a positive amount." });
-      return;
-    }
-    setLabBillPaySaving(true);
-    try {
-      await fetchJson(`${API.payments}/process`, {
-        method: "POST",
-        token,
-        body: {
-          bill_id: b.id,
-          amount_paid: amountRaw,
-          payment_method: labBillPayMethod || "cash",
-          payment_date: new Date().toISOString(),
-        },
-      });
-      await openLabBillView(b.id);
-      await loadLabBills();
-      Swal.fire({ icon: "success", title: "Paid", text: "Payment recorded." });
-    } catch (e) {
-      Swal.fire({ icon: "error", title: "Payment failed", text: e.message });
-    } finally {
-      setLabBillPaySaving(false);
     }
   };
 
@@ -1661,7 +1769,7 @@ export default function LaboratoryManagement() {
         </CardContent>
       </Card>
 
-      {/* Lab bill view & record payment */}
+      {/* Lab bill view (view only) */}
       <Dialog
         open={labBillView.open}
         onClose={() => setLabBillView({ open: false, bill: null, loading: false })}
@@ -1814,6 +1922,7 @@ export default function LaboratoryManagement() {
                         onChange={(e) => setOrderPayMethod(e.target.value)}
                       >
                         <MenuItem value="cash">Cash</MenuItem>
+                        <MenuItem value="mpesa">M-Pesa</MenuItem>
                         <MenuItem value="card">Card</MenuItem>
                         <MenuItem value="mobile">Mobile</MenuItem>
                         <MenuItem value="insurance">Insurance</MenuItem>
@@ -1827,6 +1936,14 @@ export default function LaboratoryManagement() {
                       sx={{ fontWeight: 800 }}
                     >
                       {orderPaySaving ? "Recording…" : "Record payment"}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={payWithMpesaForLabOrder}
+                      disabled={orderPaySaving}
+                      sx={{ fontWeight: 800 }}
+                    >
+                      Pay with M-Pesa
                     </Button>
                   </Stack>
                 </>

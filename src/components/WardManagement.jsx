@@ -57,6 +57,7 @@ const API = {
   nursingNotes: "/api/nursing-notes",
   billing: "/api/billing",
   payments: "/api/payments",
+  mpesa: "/api/mpesa",
   departments: "/api/departments",
 };
 
@@ -325,6 +326,43 @@ export default function WardManagement() {
     } finally {
       if (reqId === admissionPaymentsReqId.current) setAdmissionPaymentsLoading(false);
     }
+  };
+
+  const pollForPaymentAndRefreshAdmission = (admissionId, options = {}) => {
+    const { maxAttempts = 30, intervalMs = 2000 } = options;
+    let attempts = 0;
+    const timerRef = { current: null };
+    const poll = async () => {
+      if (attempts >= maxAttempts) return;
+      attempts += 1;
+      try {
+        const res = await fetchJson(
+          `${API.billing}/by-reference?item_type=admission&reference_id=${admissionId}`,
+          { token },
+        );
+        const billing = res?.data || null;
+        setAdmissionView((p) => ({ ...p, billing: billing ?? p.billing }));
+        const isPaid = billing?.paid === true || billing?.status === "paid";
+        if (isPaid) {
+          const billingRes = await fetchJson(
+            `${API.billing}/by-reference?item_type=admission&reference_id=${admissionId}`,
+            { token },
+          ).catch(() => ({ data: null }));
+          setAdmissionView((p) => ({ ...p, billing: billingRes?.data ?? p.billing }));
+          loadAdmissionBills();
+          loadAdmissionPayments();
+          Swal.fire({ icon: "success", title: "Payment received", text: "Admission bill updated.", timer: 2000, showConfirmButton: false });
+          return;
+        }
+      } catch {
+        // ignore
+      }
+      timerRef.current = setTimeout(poll, intervalMs);
+    };
+    timerRef.current = setTimeout(poll, intervalMs);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   };
 
   const openAdmissionBillView = async (billId) => {
@@ -625,9 +663,51 @@ export default function WardManagement() {
       Swal.fire({ icon: "warning", title: "Invalid amount", text: "Enter a positive amount." });
       return;
     }
+    const isMpesa = (admissionPayMethod || "cash") === "mpesa";
+    if (isMpesa) {
+      const admission = admissionView.admission;
+      let phone = admission?.patient?.phone || admission?.patient?.user?.phone || "";
+      if (!(phone || "").trim()) {
+        try {
+          const admRes = await fetchJson(`${API.admissions}/${admissionId}`, { token });
+          const p = admRes?.data?.patient;
+          phone = p?.phone || p?.user?.phone || "";
+        } catch {
+          // ignore
+        }
+      }
+      const rawPhone = (phone || "").trim().replace(/^\++/, "");
+      if (!rawPhone) {
+        Swal.fire({
+          icon: "error",
+          title: "No phone number",
+          text: "Patient has no phone number. Add phone in patient record or use another payment method.",
+        });
+        return;
+      }
+      setAdmissionPaySaving(true);
+      try {
+        await fetchJson(`${API.mpesa}/pay`, {
+          method: "POST",
+          token,
+          body: { phone: rawPhone, amount: amountRaw, bill_id: billId },
+        });
+        Swal.fire({
+          icon: "success",
+          title: "STK Push sent",
+          text: "Ask the patient to enter M-Pesa PIN. The bill will update automatically when they pay.",
+        });
+        pollForPaymentAndRefreshAdmission(admissionId, { maxAttempts: 35, intervalMs: 2000 });
+      } catch (e) {
+        Swal.fire({ icon: "error", title: "M-Pesa failed", text: e?.message ?? "Something went wrong." });
+      } finally {
+        setAdmissionPaySaving(false);
+      }
+      return;
+    }
     setAdmissionPaySaving(true);
     try {
-      const res = await fetchJson(`${API.payments}/process`, {
+      await fetchJson(`${API.payments}/process`, {
         method: "POST",
         token,
         body: {
@@ -641,10 +721,78 @@ export default function WardManagement() {
       const billingRes = await fetchJson(`${API.billing}/by-reference?item_type=admission&reference_id=${admissionId}`, { token }).catch(() => ({ data: null }));
       setAdmissionView((p) => ({ ...p, billing: billingRes?.data ?? p.billing }));
       setAdmissionPayAmount("");
+      loadAdmissionBills();
+      loadAdmissionPayments();
     } catch (e) {
       Swal.fire({ icon: "error", title: "Payment failed", text: e?.message });
     } finally {
       setAdmissionPaySaving(false);
+    }
+  };
+
+  const payWithMpesaForAdmission = async () => {
+    const admissionId = admissionView.admission?.id;
+    const billId = admissionView.billing?.bill_id;
+    if (!admissionId || !billId) return;
+    const admission = admissionView.admission;
+    let phone = admission?.patient?.phone || admission?.patient?.user?.phone || "";
+    if (!(phone || "").trim()) {
+      try {
+        const admRes = await fetchJson(`${API.admissions}/${admissionId}`, { token });
+        const p = admRes?.data?.patient;
+        phone = p?.phone || p?.user?.phone || "";
+      } catch {
+        // ignore
+      }
+    }
+    const rawPhone = (phone || "").trim().replace(/^\++/, "");
+    if (!rawPhone) {
+      Swal.fire({
+        icon: "error",
+        title: "No phone number",
+        text: "Patient has no phone number. Add phone in patient record.",
+      });
+      return;
+    }
+    const balance = Number(admissionView.billing?.balance ?? admissionView.billing?.total_amount ?? 0);
+    const ask = await Swal.fire({
+      icon: "question",
+      title: "Pay with M-Pesa",
+      html: `
+        <p style="text-align:left; margin-bottom:12px;">An M-Pesa prompt will be sent to the patient's phone. They must enter their PIN to complete payment.</p>
+        <label for="swal-mpesa-amount" style="display:block; text-align:left; margin-bottom:4px;">Amount (KES)</label>
+        <input id="swal-mpesa-amount" class="swal2-input" type="number" min="1" step="0.01" value="${balance}" style="margin-bottom:12px" />
+      `,
+      showCancelButton: true,
+      confirmButtonText: "Send M-Pesa prompt",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+      preConfirm: () => {
+        const raw = document.getElementById("swal-mpesa-amount")?.value;
+        const n = Number(raw);
+        if (!Number.isFinite(n) || n < 0) {
+          Swal.showValidationMessage("Enter a valid amount");
+          return undefined;
+        }
+        return n;
+      },
+    });
+    if (!ask.isConfirmed || ask.value == null) return;
+    const amount = ask.value;
+    try {
+      await fetchJson(`${API.mpesa}/pay`, {
+        method: "POST",
+        token,
+        body: { phone: rawPhone, amount, bill_id: billId },
+      });
+      Swal.fire({
+        icon: "success",
+        title: "STK Push sent",
+        text: "Ask the patient to enter M-Pesa PIN. The bill will update automatically when they pay.",
+      });
+      pollForPaymentAndRefreshAdmission(admissionId, { maxAttempts: 35, intervalMs: 2000 });
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "M-Pesa failed", text: e?.message ?? "Something went wrong." });
     }
   };
 
@@ -1339,6 +1487,7 @@ export default function WardManagement() {
                                 onChange={(e) => setAdmissionPayMethod(e.target.value)}
                               >
                                 <MenuItem value="cash">Cash</MenuItem>
+                                <MenuItem value="mpesa">M-Pesa</MenuItem>
                                 <MenuItem value="card">Card</MenuItem>
                                 <MenuItem value="mobile">Mobile</MenuItem>
                                 <MenuItem value="insurance">Insurance</MenuItem>
@@ -1352,6 +1501,14 @@ export default function WardManagement() {
                               sx={{ fontWeight: 800 }}
                             >
                               {admissionPaySaving ? "Recording…" : "Record payment"}
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              onClick={payWithMpesaForAdmission}
+                              disabled={admissionPaySaving}
+                              sx={{ fontWeight: 800 }}
+                            >
+                              Pay with M-Pesa
                             </Button>
                           </Stack>
                         </Stack>

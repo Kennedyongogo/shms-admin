@@ -65,6 +65,7 @@ const API = {
   prescriptions: "/api/prescriptions",
   billing: "/api/billing",
   payments: "/api/payments",
+  mpesa: "/api/mpesa",
   admissions: "/api/admissions",
   beds: "/api/beds",
   wards: "/api/wards",
@@ -859,12 +860,13 @@ export default function VisitsManagement() {
           Swal.showValidationMessage("Enter a valid amount");
           return undefined;
         }
-        const method = document.getElementById("swal-method")?.value || "cash";
+        const method = (document.getElementById("swal-method")?.value || "cash").toString().toLowerCase().trim();
         return { amount: n, payment_method: method };
       },
     });
     if (!ask.isConfirmed || !ask.value) return false;
     const { amount, payment_method } = ask.value;
+    const isMpesa = payment_method === "mpesa";
 
     try {
       const qs = new URLSearchParams({
@@ -900,6 +902,45 @@ export default function VisitsManagement() {
         return false;
       }
 
+      if (isMpesa) {
+        let phone = appt?.patient?.phone || appt?.patient?.user?.phone || "";
+        if (!(phone || "").trim()) {
+          try {
+            const fullAppt = await fetchJson(`${API.appointments}/${appt.id}`, { token });
+            const p = fullAppt?.data?.patient;
+            phone = p?.phone || p?.user?.phone || "";
+          } catch {
+            // ignore
+          }
+        }
+        const rawPhone = (phone || "").trim().replace(/^\++/, "");
+        if (!rawPhone) {
+          Swal.fire({
+            icon: "error",
+            title: "No phone number",
+            text: "Patient has no phone number. Add phone in patient record or use another payment method.",
+          });
+          return false;
+        }
+        await fetchJson(`${API.mpesa}/pay`, {
+          method: "POST",
+          token,
+          body: { phone: rawPhone, amount, bill_id: billId },
+        });
+        Swal.fire({
+          icon: "success",
+          title: "STK Push sent",
+          text: "Ask the patient to enter M-Pesa PIN on their phone. The bill will update automatically when they complete payment.",
+        });
+        if (appt?.id) {
+          loadAppointmentBilling(appt.id);
+          [3000, 6000, 10000].forEach((ms) =>
+            setTimeout(() => loadAppointmentBilling(appt.id), ms)
+          );
+        }
+        return false;
+      }
+
       await fetchJson(`${API.payments}/process`, {
         method: "POST",
         token,
@@ -915,6 +956,102 @@ export default function VisitsManagement() {
     } catch (e) {
       Swal.fire({ icon: "error", title: "Payment failed", text: e?.message ?? "Something went wrong." });
       return false;
+    }
+  };
+
+  const payWithMpesaForAppointment = async (appt) => {
+    if (!requireTokenGuard() || !appt?.id) return;
+    const patientId = appt?.patient?.id || appt?.patient_id;
+    if (!patientId) {
+      Swal.fire({ icon: "error", title: "Missing patient", text: "Cannot send M-Pesa without patient." });
+      return;
+    }
+    const defaultAmount = String(apptBilling?.balance ?? apptBilling?.total_amount ?? appt?.bill_amount ?? "0");
+    const ask = await Swal.fire({
+      icon: "question",
+      title: "Pay with M-Pesa",
+      html: `
+        <p style="text-align:left; margin-bottom:12px;">An M-Pesa prompt will be sent to the patient's phone. They must enter their PIN to complete payment.</p>
+        <label for="swal-mpesa-amount" style="display:block; text-align:left; margin-bottom:4px;">Amount (KES)</label>
+        <input id="swal-mpesa-amount" class="swal2-input" type="number" min="1" step="0.01" value="${defaultAmount}" style="margin-bottom:12px" />
+      `,
+      showCancelButton: true,
+      confirmButtonText: "Send M-Pesa prompt",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+      preConfirm: () => {
+        const raw = document.getElementById("swal-mpesa-amount")?.value;
+        const n = Number(raw);
+        if (!Number.isFinite(n) || n < 0) {
+          Swal.showValidationMessage("Enter a valid amount");
+          return undefined;
+        }
+        return n;
+      },
+    });
+    if (!ask.isConfirmed || ask.value == null) return;
+    const amount = ask.value;
+
+    try {
+      const qs = new URLSearchParams({ item_type: "appointment", reference_id: String(appt.id) });
+      const billingRes = await fetchJson(`${API.billing}/by-reference?${qs.toString()}`, { token });
+      let billId = billingRes?.data?.bill_id ?? null;
+      if (!billId) {
+        const billRes = await fetchJson(`${API.billing}/generate`, {
+          method: "POST",
+          token,
+          body: { patient_id: patientId },
+        });
+        billId = billRes?.data?.id;
+        if (billId) {
+          await fetchJson(`${API.billing}/${billId}/items`, {
+            method: "POST",
+            token,
+            body: { items: [{ item_type: "appointment", reference_id: appt.id, amount: amount || 0 }] },
+          });
+        }
+      }
+      if (!billId) {
+        Swal.fire({ icon: "error", title: "Failed", text: "Could not get or create bill." });
+        return;
+      }
+
+      let phone = appt?.patient?.phone || appt?.patient?.user?.phone || "";
+      if (!(phone || "").trim()) {
+        try {
+          const fullAppt = await fetchJson(`${API.appointments}/${appt.id}`, { token });
+          const p = fullAppt?.data?.patient;
+          phone = p?.phone || p?.user?.phone || "";
+        } catch {
+          // ignore
+        }
+      }
+      const rawPhone = (phone || "").trim().replace(/^\++/, "");
+      if (!rawPhone) {
+        Swal.fire({
+          icon: "error",
+          title: "No phone number",
+          text: "Patient has no phone number. Add phone in patient record.",
+        });
+        return;
+      }
+
+      await fetchJson(`${API.mpesa}/pay`, {
+        method: "POST",
+        token,
+        body: { phone: rawPhone, amount, bill_id: billId },
+      });
+      Swal.fire({
+        icon: "success",
+        title: "STK Push sent",
+        text: "Ask the patient to enter M-Pesa PIN on their phone. The bill will update automatically when they complete payment.",
+      });
+      if (appt?.id) {
+        loadAppointmentBilling(appt.id);
+        [3000, 6000, 10000].forEach((ms) => setTimeout(() => loadAppointmentBilling(appt.id), ms));
+      }
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "M-Pesa failed", text: e?.message ?? "Something went wrong." });
     }
   };
 
@@ -2251,21 +2388,33 @@ export default function VisitsManagement() {
                         </Stack>
                       )}
 
-                      {(apptBilling.status !== "paid" || Number(apptBilling.balance ?? 0) > 0) && (
-                        <Button
-                          variant="contained"
-                          startIcon={<PaymentIcon />}
-                          onClick={async () => {
-                            const paid = await payForAppointment(apptView);
-                            if (paid && apptView?.id) {
-                              await loadAppointments();
-                              setApptViewOpen(false);
-                            }
-                          }}
-                          sx={{ fontWeight: 800 }}
-                        >
-                          Record payment
-                        </Button>
+                      {apptBilling?.bill_id && (
+                        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ xs: "stretch", sm: "center" }} sx={{ flexWrap: "wrap", pt: 1, borderTop: "1px solid", borderColor: "divider" }}>
+                          <Typography variant="subtitle2" color="text.secondary" sx={{ width: "100%", fontWeight: 700 }}>Record payment</Typography>
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            startIcon={<PaymentIcon />}
+                            onClick={async () => {
+                              const paid = await payForAppointment(apptView);
+                              if (paid && apptView?.id) {
+                                await loadAppointments();
+                                setApptViewOpen(false);
+                              }
+                            }}
+                            sx={{ fontWeight: 800 }}
+                          >
+                            Record payment (cash/card)
+                          </Button>
+                          <Button
+                            variant="contained"
+                            sx={{ fontWeight: 800, bgcolor: "#00A651", "&:hover": { bgcolor: "#008C44" } }}
+                            startIcon={<PaymentIcon />}
+                            onClick={() => payWithMpesaForAppointment(apptView)}
+                          >
+                            Pay with M-Pesa
+                          </Button>
+                        </Stack>
                       )}
                     </>
                   )}
