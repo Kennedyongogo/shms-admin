@@ -173,7 +173,8 @@ const slugify = (value) =>
 export default function HospitalsManagement() {
   const theme = useTheme();
   const token = getToken();
-  const isAdmin = getRoleName() === "admin";
+  const roleName = getRoleName();
+  const isAdmin = roleName === "admin" || roleName === "Super Admin";
 
   const [tab, setTab] = useState(0); // 0 hospital, 1 departments, 2 staff, 3 services, 4 news/events
 
@@ -196,6 +197,7 @@ export default function HospitalsManagement() {
     email: "",
     phone: "",
     address: "",
+    subscription_package: "silver",
     logoFile: null,
     logoPreview: "",
   });
@@ -643,7 +645,7 @@ export default function HospitalsManagement() {
   const openCreateHospital = () => {
     setHospitalsSearchLocked(true);
     setStaffSearchLocked(true);
-    setHospitalForm({ name: "", email: "", phone: "", address: "", logoFile: null, logoPreview: "" });
+    setHospitalForm({ name: "", email: "", phone: "", address: "", subscription_package: "silver", logoFile: null, logoPreview: "" });
     setHospitalDialog({ open: true, mode: "create", id: null });
   };
   const openEditHospital = (h) => {
@@ -654,6 +656,7 @@ export default function HospitalsManagement() {
       email: h.email || "",
       phone: h.phone || "",
       address: h.address || "",
+      subscription_package: h.subscription_package || "silver",
       logoFile: null,
       logoPreview: buildImageUrl(h.logo_path),
     });
@@ -670,6 +673,7 @@ export default function HospitalsManagement() {
         email: hospitalForm.email.trim() || "",
         phone: hospitalForm.phone.trim() || "",
         address: hospitalForm.address.trim() || "",
+        subscription_package: hospitalForm.subscription_package || "silver",
       };
       if (hospitalDialog.mode === "create") {
         await fetchMultipart(API.hospitals, {
@@ -1544,7 +1548,18 @@ export default function HospitalsManagement() {
                             }}
                           >
                             <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1} sx={{ mb: 1.5 }}>
-                              <Typography sx={{ fontWeight: 900, fontSize: 18, lineHeight: 1.2, color: "text.primary" }}>{h.name || "—"}</Typography>
+                              <Stack direction="row" alignItems="center" spacing={1} sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography sx={{ fontWeight: 900, fontSize: 18, lineHeight: 1.2, color: "text.primary" }}>{h.name || "—"}</Typography>
+                                <Chip
+                                  size="small"
+                                  label={(h.subscription_package || "silver") === "gold" ? "Gold" : "Silver"}
+                                  sx={{
+                                    fontWeight: 700,
+                                    bgcolor: (h.subscription_package || "silver") === "gold" ? "warning.light" : "grey.300",
+                                    color: (h.subscription_package || "silver") === "gold" ? "warning.contrastText" : "grey.800",
+                                  }}
+                                />
+                              </Stack>
                               {isAdmin && (
                                 <Tooltip title="Edit">
                                   <IconButton onClick={() => openEditHospital(h)} size="small" sx={{ border: "1px solid", borderColor: "divider" }}>
@@ -2327,6 +2342,14 @@ export default function HospitalsManagement() {
               </Typography>
               <Typography sx={{ fontWeight: 700 }}>{hospitalView.hospital?.address || "—"}</Typography>
             </Box>
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="caption" color="text.secondary">
+                Subscription package
+              </Typography>
+              <Typography sx={{ fontWeight: 700 }}>
+                {(hospitalView.hospital?.subscription_package || "silver") === "gold" ? "Gold" : "Silver"}
+              </Typography>
+            </Box>
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -2371,6 +2394,17 @@ export default function HospitalsManagement() {
               <TextField label="Phone" fullWidth value={hospitalForm.phone} onChange={(e) => setHospitalForm((p) => ({ ...p, phone: e.target.value }))} />
             </Stack>
             <TextField label="Address" fullWidth multiline minRows={2} value={hospitalForm.address} onChange={(e) => setHospitalForm((p) => ({ ...p, address: e.target.value }))} />
+            <FormControl fullWidth>
+              <InputLabel>Subscription package</InputLabel>
+              <Select
+                value={hospitalForm.subscription_package || "silver"}
+                label="Subscription package"
+                onChange={(e) => setHospitalForm((p) => ({ ...p, subscription_package: e.target.value }))}
+              >
+                <MenuItem value="silver">Silver (clinic)</MenuItem>
+                <MenuItem value="gold">Gold (full hospital)</MenuItem>
+              </Select>
+            </FormControl>
             {!isAdmin && (
               <Alert severity="info">
                 You can view hospitals, but only admins can create/edit/delete.

@@ -88,9 +88,15 @@ const normalizeRoleName = (name) =>
   String(name || "")
     .trim()
     .toLowerCase();
+/** True for admin or Super Admin (full menu access, no per-role menu edit). */
+const isPrivilegedRole = (name) => {
+  const n = normalizeRoleName(name);
+  return n === "admin" || n === "super admin";
+};
 const displayRoleName = (name) => {
   const n = normalizeRoleName(name);
   if (n === "admin") return "Admin";
+  if (n === "super admin") return "Super Admin";
   if (
     n === "user" ||
     n === "regular_user" ||
@@ -199,7 +205,7 @@ export default function AdminUsersManagement() {
   const theme = useTheme();
   const token = getToken();
   const roleName = getRoleName();
-  const isAdmin = roleName === "admin";
+  const isAdmin = roleName === "admin" || roleName === "Super Admin";
   const usersReqId = useRef(0);
   const rolesReqId = useRef(0);
 
@@ -1356,9 +1362,9 @@ export default function AdminUsersManagement() {
                     Loading…
                   </Typography>
                 </Stack>
-              ) : normalizeRoleName(roleView.role?.name) === "admin" ? (
+              ) : isPrivilegedRole(roleView.role?.name) ? (
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                  Admin sees all sidebar items.
+                  {displayRoleName(roleView.role?.name)} sees all sidebar items for this organization.
                 </Typography>
               ) : roleViewMenuKeys.length === 0 ? (
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
@@ -1395,7 +1401,7 @@ export default function AdminUsersManagement() {
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2, pt: 0 }}>
-          {isAdmin && roleView.role && normalizeRoleName(roleView.role.name) !== "admin" && (
+          {isAdmin && roleView.role && !isPrivilegedRole(roleView.role.name) && (
             <Button
               startIcon={<ListIcon />}
               onClick={() => {
@@ -1436,9 +1442,9 @@ export default function AdminUsersManagement() {
               <CircularProgress size={20} />
               <Typography color="text.secondary">Loading…</Typography>
             </Stack>
-          ) : normalizeRoleName(menuItemsDialog.role?.name) === "admin" ? (
+          ) : isPrivilegedRole(menuItemsDialog.role?.name) ? (
             <Alert severity="info" sx={{ mt: 1 }}>
-              Admin always sees all navbar items. No need to configure.
+              {displayRoleName(menuItemsDialog.role?.name)} always sees all navbar items for this organization. No need to configure.
             </Alert>
           ) : (
             <>
@@ -1473,7 +1479,7 @@ export default function AdminUsersManagement() {
             disabled={
               menuItemsSaving ||
               menuItemsLoading ||
-              normalizeRoleName(menuItemsDialog.role?.name) === "admin"
+              isPrivilegedRole(menuItemsDialog.role?.name)
             }
             sx={{
               bgcolor: theme.palette.primary.main,
