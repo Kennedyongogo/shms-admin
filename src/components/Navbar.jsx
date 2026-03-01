@@ -16,7 +16,7 @@ import ListItem from "@mui/material/ListItem";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Tooltip from "@mui/material/Tooltip";
-import { Box } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import Header from "./Header/Header";
 
 const drawerWidth = 300;
@@ -44,12 +44,14 @@ const closedMixin = (theme) => ({
 
 const DrawerHeader = styled("div")(({ theme }) => ({
   display: "flex",
-  alignItems: "flex-start",
+  alignItems: "center",
   justifyContent: "space-between",
-  padding: theme.spacing(1, 0, 1, 1),
+  padding: theme.spacing(1, 1, 1, 1.5),
   backgroundColor: "#fff",
   color: theme.palette.primary.main,
-  ...theme.mixins.toolbar,
+  minHeight: theme.mixins.toolbar.minHeight ?? 64,
+  borderBottom: `1px solid ${theme.palette.divider}`,
+  boxSizing: "border-box",
 }));
 
 const AppBar = styled(MuiAppBar, {
@@ -229,8 +231,24 @@ const Navbar = (props) => {
       {isDesktop && (
         <Drawer variant="permanent" open={open}>
           <DrawerHeader>
-            <Box></Box>
-            <IconButton onClick={handleDrawerClose}>
+            <Box sx={{ minWidth: 0, flex: 1, pr: 0.5 }}>
+              {(() => {
+                try {
+                  const hospital = JSON.parse(localStorage.getItem("hospital") || "null");
+                  const hospitalName = hospital?.name || "—";
+                  return (
+                    <Box sx={{ overflow: "hidden" }}>
+                      <Typography variant="subtitle2" noWrap sx={{ fontWeight: 700, color: "primary.main", lineHeight: 1.2 }}>
+                        {hospitalName}
+                      </Typography>
+                    </Box>
+                  );
+                } catch {
+                  return null;
+                }
+              })()}
+            </Box>
+            <IconButton onClick={handleDrawerClose} size="small" sx={{ flexShrink: 0 }}>
               {theme.direction === "rtl" ? (
                 <ChevronRightIcon />
               ) : (

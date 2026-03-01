@@ -159,6 +159,10 @@ export default function Header(props) {
         if (Array.isArray(menuItems)) {
           localStorage.setItem("menuItems", JSON.stringify(menuItems));
         }
+        const hospital = meRes?.data?.hospital;
+        if (hospital) {
+          localStorage.setItem("hospital", JSON.stringify(hospital));
+        }
       } catch (e) {
         // If token expired/invalid, force login
         console.error("Header refresh error:", e);
@@ -170,9 +174,17 @@ export default function Header(props) {
     bootstrap();
   }, []);
 
-  // When Settings (or elsewhere) updates profile, refresh header user
+  // When Settings (or elsewhere) updates profile, refresh header user and image immediately
   useEffect(() => {
-    const onUserUpdated = async () => {
+    const onUserUpdated = async (event) => {
+      const passedUser = event?.detail?.user;
+      if (passedUser) {
+        setCurrentUser(passedUser);
+        props.setUser(passedUser);
+        try {
+          localStorage.setItem("user", JSON.stringify(passedUser));
+        } catch (_) {}
+      }
       try {
         const meRes = await fetchJson("/api/auth/me");
         const freshUser = meRes?.data?.user || null;
@@ -185,6 +197,8 @@ export default function Header(props) {
         }
         if (role) setCurrentRoleName(role.name || "");
         if (Array.isArray(menuItems)) localStorage.setItem("menuItems", JSON.stringify(menuItems));
+        const hospital = meRes?.data?.hospital;
+        if (hospital) localStorage.setItem("hospital", JSON.stringify(hospital));
       } catch (_) {}
     };
     window.addEventListener("user-updated", onUserUpdated);
@@ -242,11 +256,15 @@ export default function Header(props) {
             {currentUser?.full_name}
           </Typography>
 
-          {/* Profile Picture or Avatar */}
+          {/* Profile Picture or Avatar — cache-bust so new uploads show immediately */}
           <Box sx={{ mr: 1 }}>
             {currentUser?.profile_image_path ? (
               <Avatar
-                src={buildImageUrl(currentUser.profile_image_path)}
+                key={currentUser.updatedAt || currentUser.profile_image_path}
+                src={
+                  buildImageUrl(currentUser.profile_image_path) +
+                  (currentUser.updatedAt ? `?t=${new Date(currentUser.updatedAt).getTime()}` : "")
+                }
                 alt={currentUser?.full_name}
                 sx={{
                   width: 32,

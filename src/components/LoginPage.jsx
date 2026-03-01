@@ -296,7 +296,8 @@ export default function LoginPage() {
         <Typography
           sx={{
             fontSize: "clamp(1rem, 2vw + 0.5rem, 1.35rem)",
-            opacity: 0.95,
+            color: primaryTeal,
+            fontWeight: 600,
             mb: 4,
             textShadow: "0 1px 10px rgba(0,0,0,0.2)",
           }}
@@ -305,19 +306,18 @@ export default function LoginPage() {
         </Typography>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="stretch" justifyContent="center">
           <Button
-            variant="outlined"
+            variant="contained"
             startIcon={<InfoIcon />}
             onClick={() => navigate("/about")}
             sx={{
-              color: "white",
-              borderColor: "rgba(255,255,255,0.9)",
+              bgcolor: "white",
+              color: primaryTeal,
               fontWeight: 800,
               px: 3,
               py: 1.5,
               minWidth: 220,
               "&:hover": {
-                borderColor: "white",
-                bgcolor: "rgba(255,255,255,0.2)",
+                bgcolor: "rgba(255,255,255,0.9)",
               },
             }}
           >

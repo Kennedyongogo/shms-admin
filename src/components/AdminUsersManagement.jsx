@@ -83,6 +83,14 @@ const getRoleName = () => {
     return null;
   }
 };
+const getCurrentUserId = () => {
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    return user?.id || null;
+  } catch {
+    return null;
+  }
+};
 
 const normalizeRoleName = (name) =>
   String(name || "")
@@ -209,7 +217,7 @@ export default function AdminUsersManagement() {
   const usersReqId = useRef(0);
   const rolesReqId = useRef(0);
 
-  const [tab, setTab] = useState(0); // 0 users, 1 roles
+  const [tab, setTab] = useState(0); // 0 roles, 1 users
 
   const [toast, setToast] = useState({
     open: false,
@@ -234,9 +242,9 @@ export default function AdminUsersManagement() {
     return map;
   }, [roles]);
 
+  // Show all roles in dropdown except Super Admin (so custom roles like receptionist are visible)
   const userAssignableRoles = useMemo(() => {
-    const allowed = new Set(["admin", "user", "regular_user", "regular"]);
-    return roles.filter((r) => allowed.has(normalizeRoleName(r.name)));
+    return roles.filter((r) => normalizeRoleName(r.name) !== "super admin");
   }, [roles]);
 
   const defaultRegularRoleId = useMemo(() => {
@@ -289,6 +297,7 @@ export default function AdminUsersManagement() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [phoneError, setPhoneError] = useState("");
   const [confirmTouched, setConfirmTouched] = useState(false);
+  const [userEditLoading, setUserEditLoading] = useState(false);
 
   const requireTokenGuard = () => {
     if (!token) {
@@ -389,15 +398,14 @@ export default function AdminUsersManagement() {
   const usersSearchDebounceSkipped = useRef(true);
   const rolesSearchDebounceSkipped = useRef(true);
 
-  // Load only the active tab's data (same pattern as Billing) to avoid double blink on mount
-  // When on Users tab, also load roles so Role column can resolve role_id -> name
+  // Load only the active tab's data — Roles tab first (0), Users tab (1)
   useEffect(() => {
-    if (tab === 1) loadRoles();
+    if (tab === 0) loadRoles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, rolesPage, rolesRowsPerPage]);
 
   useEffect(() => {
-    if (tab === 0) {
+    if (tab === 1) {
       loadUsers();
       loadRoles(); // roles needed for Role column in users table
     }
@@ -407,7 +415,7 @@ export default function AdminUsersManagement() {
   // Auto-search (debounced): skip first run so we don't double-load on mount
   useEffect(() => {
     const t = setTimeout(() => {
-      if (tab !== 0) return;
+      if (tab !== 1) return;
       if (usersSearchDebounceSkipped.current) {
         usersSearchDebounceSkipped.current = false;
         return;
@@ -421,7 +429,7 @@ export default function AdminUsersManagement() {
 
   useEffect(() => {
     const t = setTimeout(() => {
-      if (tab !== 1) return;
+      if (tab !== 0) return;
       if (rolesSearchDebounceSkipped.current) {
         rolesSearchDebounceSkipped.current = false;
         return;
@@ -591,7 +599,7 @@ export default function AdminUsersManagement() {
       profile_image_preview: buildImageUrl(user.profile_image_path),
       password: "",
       confirm_password: "",
-      role_id: user.role_id || "",
+      role_id: user.role_id ?? "",
       status: user.status || "active",
     });
     setShowPassword(false);
@@ -600,6 +608,36 @@ export default function AdminUsersManagement() {
     setConfirmTouched(false);
     setUserDialog({ open: true, mode: "edit", id: user.id });
   };
+
+  // When edit dialog is open, fetch user by ID so role_id and other DB fields are always correct
+  useEffect(() => {
+    if (!userDialog.open || userDialog.mode !== "edit" || !userDialog.id || !token) return;
+    let cancelled = false;
+    setUserEditLoading(true);
+    fetchJson(`${API.users}/${userDialog.id}`, { token })
+      .then((res) => {
+        if (cancelled) return;
+        const u = res?.data;
+        if (u) {
+          setUserForm((prev) => ({
+            ...prev,
+            full_name: u.full_name ?? prev.full_name,
+            email: u.email ?? prev.email,
+            phone: u.phone ?? prev.phone,
+            profile_image_preview: buildImageUrl(u.profile_image_path) || prev.profile_image_preview,
+            role_id: u.role_id ?? prev.role_id ?? "",
+            status: u.status ?? prev.status,
+          }));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) showToast("error", "Failed to load user details");
+      })
+      .finally(() => {
+        if (!cancelled) setUserEditLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [userDialog.open, userDialog.mode, userDialog.id, token]);
 
   const closeUserDialog = () => {
     setUserForm((p) => {
@@ -804,7 +842,7 @@ export default function AdminUsersManagement() {
                 <Button
                   variant="contained"
                   startIcon={<AddIcon />}
-                  onClick={tab === 0 ? openCreateUser : openCreateRole}
+                  onClick={tab === 0 ? openCreateRole : openCreateUser}
                   sx={{
                     bgcolor: "rgba(255,255,255,0.15)",
                     color: "white",
@@ -813,7 +851,7 @@ export default function AdminUsersManagement() {
                     "&:hover": { bgcolor: "rgba(255,255,255,0.22)" },
                   }}
                 >
-                  {tab === 0 ? "New User" : "New Role"}
+                  {tab === 0 ? "New Role" : "New User"}
                 </Button>
               )}
             </Stack>
@@ -830,8 +868,8 @@ export default function AdminUsersManagement() {
                 onChange={(e) => setTab(Number(e.target.value))}
                 sx={{ borderRadius: 1 }}
               >
-                <MenuItem value={0}>Users</MenuItem>
-                <MenuItem value={1}>Roles</MenuItem>
+                <MenuItem value={0}>Roles</MenuItem>
+                <MenuItem value={1}>Users</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -846,13 +884,13 @@ export default function AdminUsersManagement() {
               },
             }}
           >
-            <Tab icon={<PersonIcon />} iconPosition="start" label="Users" />
             <Tab icon={<ShieldIcon />} iconPosition="start" label="Roles" />
+            <Tab icon={<PersonIcon />} iconPosition="start" label="Users" />
           </Tabs>
           <Divider />
 
-          {/* USERS TAB */}
-          {tab === 0 && (
+          {/* USERS TAB (tab 1) */}
+          {tab === 1 && (
             <Box sx={{ p: 2 }}>
               {usersForbidden && !usersLoading && users.length === 0 && (
                 <Alert
@@ -1080,8 +1118,8 @@ export default function AdminUsersManagement() {
             </Box>
           )}
 
-          {/* ROLES TAB */}
-          {tab === 1 && (
+          {/* ROLES TAB (tab 0) */}
+          {tab === 0 && (
             <Box sx={{ p: 2 }}>
               {rolesForbidden && !rolesLoading && roles.length === 0 && (
                 <Alert
@@ -1500,6 +1538,9 @@ export default function AdminUsersManagement() {
       >
         <DialogTitle sx={{ fontWeight: 900 }}>
           {userDialog.mode === "create" ? "Create User" : "Edit User"}
+          {userDialog.mode === "edit" && userEditLoading && (
+            <CircularProgress size={20} sx={{ ml: 1, verticalAlign: "middle" }} />
+          )}
         </DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
@@ -1603,23 +1644,38 @@ export default function AdminUsersManagement() {
             />
             <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
               <FormControl fullWidth>
-                <InputLabel>Role</InputLabel>
-                <Select
-                  label="Role"
-                  value={userForm.role_id}
-                  onChange={(e) =>
-                    setUserForm((p) => ({ ...p, role_id: e.target.value }))
-                  }
-                >
-                  <MenuItem value="">
-                    <em>Default (Regular user)</em>
-                  </MenuItem>
-                  {userAssignableRoles.map((r) => (
-                    <MenuItem key={r.id} value={r.id}>
-                      {displayRoleName(r.name)}
-                    </MenuItem>
-                  ))}
-                </Select>
+                {userDialog.mode === "edit" &&
+                userDialog.id === getCurrentUserId() &&
+                isPrivilegedRole(getRoleName()) ? (
+                  <>
+                    <InputLabel shrink>Role</InputLabel>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      value={displayRoleName(rolesById.get(userForm.role_id)?.name || getRoleName())}
+                      InputProps={{ readOnly: true, sx: { mt: 1 } }}
+                      helperText="Your role cannot be changed."
+                      sx={{ "& .MuiInputBase-input": { cursor: "default" } }}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <InputLabel>Role</InputLabel>
+                    <Select
+                      label="Role"
+                      value={userForm.role_id}
+                      onChange={(e) =>
+                        setUserForm((p) => ({ ...p, role_id: e.target.value }))
+                      }
+                    >
+                      {userAssignableRoles.map((r) => (
+                        <MenuItem key={r.id} value={r.id}>
+                          {displayRoleName(r.name)}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </>
+                )}
               </FormControl>
               <FormControl fullWidth>
                 <InputLabel>Status</InputLabel>
@@ -1726,8 +1782,7 @@ export default function AdminUsersManagement() {
 
             {userDialog.open && userAssignableRoles.length === 0 && (
               <Alert severity="warning">
-                No assignable user roles found. Create a role named <b>user</b>{" "}
-                (Regular user) in the Roles tab.
+                No roles found. Create a role in the <b>Roles</b> tab first, then assign it here.
               </Alert>
             )}
           </Stack>

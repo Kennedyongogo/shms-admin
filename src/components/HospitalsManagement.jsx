@@ -338,10 +338,10 @@ export default function HospitalsManagement() {
   };
 
   const heroGradient = useMemo(() => {
-    const navy = theme.palette.secondary.main;
-    const teal = theme.palette.primary.main;
-    return `linear-gradient(135deg, ${navy} 0%, ${teal} 100%)`;
-  }, [theme.palette.secondary.main, theme.palette.primary.main]);
+    const dark = theme.palette.primary.dark || "#00695C";
+    const main = theme.palette.primary.main;
+    return `linear-gradient(135deg, ${dark} 0%, ${main} 100%)`;
+  }, [theme.palette.primary.dark, theme.palette.primary.main]);
 
   const loadHospitals = async () => {
     if (!requireTokenGuard()) return;

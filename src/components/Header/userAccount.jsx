@@ -107,7 +107,12 @@ export default function UserAccount({ open, onClose, currentUser, roleName }) {
             sx={{ flexWrap: "wrap", gap: 1.5 }}
           >
             <Avatar
-              src={buildImageUrl(currentUser?.profile_image_path)}
+              src={
+                buildImageUrl(currentUser?.profile_image_path) +
+                (currentUser?.profile_image_path && currentUser?.updatedAt
+                  ? `?t=${new Date(currentUser.updatedAt).getTime()}`
+                  : "")
+              }
               alt={currentUser?.full_name}
               sx={{
                 width: 46,

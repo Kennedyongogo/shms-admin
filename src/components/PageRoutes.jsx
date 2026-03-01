@@ -35,11 +35,23 @@ function PageRoutes() {
     setLoading(false);
   }, []);
 
-  // Same pattern as mk-admin: show one spinner until ready, then Routes stay mounted (no blink on nav)
+  // Outer: full viewport height, no body scroll. Main: starts below header, fixed height, scrollbar only in content area.
+  const headerHeight = 64; // match MUI Toolbar default
   return (
-    <Box sx={{ display: "flex" }}>
+    <Box sx={{ display: "flex", height: "100vh", overflow: "hidden" }}>
       <Navbar user={user} setUser={setUser} />
-      <Box component="main" sx={{ flexGrow: 1, p: 3, mt: 9, minHeight: "100vh", bgcolor: "grey.50" }}>
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          p: 3,
+          mt: `${headerHeight}px`,
+          height: `calc(100vh - ${headerHeight}px)`,
+          minHeight: 0,
+          bgcolor: "grey.50",
+          overflow: "auto",
+        }}
+      >
         {loading ? (
           <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
             <CircularProgress />

@@ -21,13 +21,15 @@ import {
   CircularProgress,
   useTheme,
 } from "@mui/material";
-import { Check, Close, Visibility, VisibilityOff, Settings as SettingsIcon, PhotoCamera } from "@mui/icons-material";
+import { Check, Close, Visibility, VisibilityOff, Settings as SettingsIcon, PhotoCamera, Palette as PaletteIcon } from "@mui/icons-material";
 import Avatar from "@mui/material/Avatar";
 import Swal from "sweetalert2";
 
 const API_ME = "/api/auth/me";
 const API_CHANGE_PASSWORD = "/api/auth/change-password";
 const API_ME_PROFILE_IMAGE = "/api/auth/me/profile-image";
+const API_HOSPITALS = "/api/hospitals";
+const DEFAULT_PRIMARY_COLOR = "#00897B";
 
 const getToken = () => localStorage.getItem("token");
 
@@ -101,6 +103,9 @@ export default function SettingsPage() {
     digit: false,
     special: false,
   });
+  const [portalColor, setPortalColor] = useState(DEFAULT_PRIMARY_COLOR);
+  const [portalColorSaving, setPortalColorSaving] = useState(false);
+  const [hospitalId, setHospitalId] = useState(null);
 
   const checkPasswordCriteria = (password) => {
     setPasswordCriteria({
@@ -131,6 +136,19 @@ export default function SettingsPage() {
             profile_image_path: u.profile_image_path || "",
           });
         }
+        const hospital = data?.data?.hospital;
+        if (hospital?.id) {
+          setHospitalId(hospital.id);
+          setPortalColor(hospital.primary_color || DEFAULT_PRIMARY_COLOR);
+        } else {
+          try {
+            const stored = JSON.parse(localStorage.getItem("hospital") || "null");
+            if (stored?.id) {
+              setHospitalId(stored.id);
+              setPortalColor(stored.primary_color || DEFAULT_PRIMARY_COLOR);
+            }
+          } catch (_) {}
+        }
       } catch {
         Swal.fire({ icon: "error", title: "Error", text: "Failed to load profile." });
       } finally {
@@ -158,7 +176,7 @@ export default function SettingsPage() {
         setUserData((prev) => ({ ...prev, profile_image_path: u.profile_image_path || "" }));
         try {
           localStorage.setItem("user", JSON.stringify(u));
-          window.dispatchEvent(new CustomEvent("user-updated"));
+          window.dispatchEvent(new CustomEvent("user-updated", { detail: { user: u } }));
         } catch (_) {}
       }
       if (profileImagePreview) URL.revokeObjectURL(profileImagePreview);
@@ -194,7 +212,7 @@ export default function SettingsPage() {
         });
         try {
           localStorage.setItem("user", JSON.stringify(u));
-          window.dispatchEvent(new CustomEvent("user-updated"));
+          window.dispatchEvent(new CustomEvent("user-updated", { detail: { user: u } }));
         } catch (_) {}
       }
       Swal.fire({ icon: "success", title: "Success", text: data?.message || "Profile updated successfully." });
@@ -240,6 +258,36 @@ export default function SettingsPage() {
       Swal.fire({ icon: "error", title: "Update failed", text: err?.message || "Failed to update password." });
     } finally {
       setPLoading(false);
+    }
+  };
+
+  const handlePortalColorSave = async () => {
+    if (!hospitalId || !token) {
+      Swal.fire({ icon: "warning", title: "Not available", text: "Portal theme can be set only when your account is linked to a hospital." });
+      return;
+    }
+    const hex = portalColor.startsWith("#") ? portalColor : `#${portalColor}`;
+    if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+      Swal.fire({ icon: "warning", title: "Invalid color", text: "Use a valid hex color (e.g. #00897B)." });
+      return;
+    }
+    setPortalColorSaving(true);
+    try {
+      await fetchJson(`${API_HOSPITALS}/${hospitalId}`, {
+        method: "PUT",
+        token,
+        body: { primary_color: hex },
+      });
+      try {
+        const hospital = JSON.parse(localStorage.getItem("hospital") || "{}");
+        localStorage.setItem("hospital", JSON.stringify({ ...hospital, primary_color: hex }));
+      } catch (_) {}
+      window.dispatchEvent(new CustomEvent("theme-updated", { detail: { primary_color: hex } }));
+      Swal.fire({ icon: "success", title: "Saved", text: "Portal theme color updated. The admin portal will use this color." });
+    } catch (err) {
+      Swal.fire({ icon: "error", title: "Update failed", text: err?.message || "Could not save theme color." });
+    } finally {
+      setPortalColorSaving(false);
     }
   };
 
@@ -365,6 +413,56 @@ export default function SettingsPage() {
             </Button>
           </CardActions>
         </Card>
+
+        {hospitalId && (
+          <Card elevation={0} sx={cardSx}>
+            <CardHeader
+              avatar={<PaletteIcon sx={{ color: teal }} />}
+              title="Portal theme color"
+              subheader="Set the accent color for the entire admin portal (header, sidebar, dialogs, buttons). Change to grey or any color; all components update to match."
+              titleTypographyProps={{ fontWeight: 700, color: "text.primary" }}
+              subheaderTypographyProps={{ color: "text.secondary", variant: "body2" }}
+              sx={{ pb: 0 }}
+            />
+            <Divider sx={{ borderColor: "divider" }} />
+            <CardContent>
+              <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap">
+                <Box
+                  component="input"
+                  type="color"
+                  value={portalColor}
+                  onChange={(e) => setPortalColor(e.target.value)}
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    border: "2px solid",
+                    borderColor: "divider",
+                    borderRadius: 1,
+                    cursor: "pointer",
+                    p: 0,
+                  }}
+                />
+                <FormControl sx={{ minWidth: 120, ...inputSx }}>
+                  <InputLabel>Hex</InputLabel>
+                  <OutlinedInput
+                    label="Hex"
+                    value={portalColor}
+                    onChange={(e) => setPortalColor(e.target.value)}
+                    placeholder="#00897B"
+                  />
+                </FormControl>
+                <Button
+                  variant="contained"
+                  onClick={handlePortalColorSave}
+                  disabled={portalColorSaving}
+                  sx={{ bgcolor: teal, "&:hover": { bgcolor: tealDark } }}
+                >
+                  {portalColorSaving ? "Saving…" : "Apply to portal"}
+                </Button>
+              </Stack>
+            </CardContent>
+          </Card>
+        )}
 
         <form onSubmit={handlePasswordUpdate}>
           <Card elevation={0} sx={cardSx}>

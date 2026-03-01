@@ -1,11 +1,7 @@
 import { createTheme } from "@mui/material/styles";
 
-// Teal + Navy + Soft Gray — professional hospital management palette
-const TEAL = {
-  main: "#00897B",
-  light: "#4DB6AC",
-  dark: "#00695C",
-};
+// Default teal — can be overridden per hospital via Settings
+const DEFAULT_PRIMARY = "#00897B";
 const NAVY = {
   main: "#1a237e",
   light: "#534bae",
@@ -19,13 +15,27 @@ const SOFT_GRAY = {
   textDark: "#616161",
 };
 
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: TEAL.main,
-      light: TEAL.light,
-      dark: TEAL.dark,
-    },
+/** Lighten or darken a hex color by a factor (0–1). */
+function adjustHex(hex, factor) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.min(255, Math.round(((n >> 16) & 0xff) * (1 + factor)));
+  const g = Math.min(255, Math.round(((n >> 8) & 0xff) * (1 + factor)));
+  const b = Math.min(255, Math.round((n & 0xff) * (1 + factor)));
+  return `#${(r << 16 | g << 8 | b).toString(16).padStart(6, "0")}`;
+}
+
+/** Build theme with custom primary (portal brand color). Headers, dialogs, buttons, and all admin components use this. */
+export function createAppTheme(primaryHex = DEFAULT_PRIMARY) {
+  const main = typeof primaryHex === "string" && /^#[0-9A-Fa-f]{6}$/.test(primaryHex) ? primaryHex : DEFAULT_PRIMARY;
+  const light = adjustHex(main, 0.15);
+  const dark = adjustHex(main, -0.12);
+  return createTheme({
+    palette: {
+      primary: {
+        main,
+        light,
+        dark,
+      },
     secondary: {
       main: NAVY.main,
       light: NAVY.light,
@@ -46,9 +56,9 @@ const theme = createTheme({
       secondary: SOFT_GRAY.text,
     },
     success: {
-      main: TEAL.main,
-      light: TEAL.light,
-      dark: TEAL.dark,
+      main,
+      light,
+      dark,
     },
     divider: SOFT_GRAY.border,
   },
@@ -64,6 +74,8 @@ const theme = createTheme({
       textTransform: "none",
     },
   },
-});
+  });
+}
 
+const theme = createAppTheme(DEFAULT_PRIMARY);
 export default theme;
