@@ -4,14 +4,11 @@ import {
   Button,
   Card,
   CardContent,
-  Grid,
   Typography,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
   ArrowForward as ArrowForwardIcon,
-  Person as PersonIcon,
-  Science as ScienceIcon,
   Badge as BadgeIcon,
   CalendarMonth as CalendarMonthIcon,
   Biotech as BiotechIcon,
@@ -190,14 +187,14 @@ export default function AboutPage() {
         Back to home
       </Button>
 
-      {/* Section 1: Hero */}
+      {/* Section 1: Hero — full-width, no cards */}
       <Box
         component="section"
         sx={{
           position: "relative",
           minHeight: "90vh",
           display: "flex",
-          alignItems: "center",
+          alignItems: "flex-start",
           overflow: "hidden",
           ...gradientMeshSx,
         }}
@@ -205,412 +202,132 @@ export default function AboutPage() {
         <Box
           sx={{
             width: "100%",
-            maxWidth: 1400,
-            mx: 0,
-            pl: { xs: 2, sm: 3, lg: 4 },
-            pr: { xs: 2, sm: 4, lg: 6 },
-            py: 8,
+            px: { xs: 2, sm: 3, lg: 4 },
+            pt: 8,
+            pb: 4,
           }}
         >
-          <Grid
-            container
-            spacing={4}
-            alignItems="center"
-            justifyContent="space-between"
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 3,
+              width: "100%",
+            }}
           >
-            <Grid item xs={12} lg={6}>
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 3,
-                  maxWidth: 560,
-                }}
-              >
-                <Box
-                  sx={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 1,
-                    px: 1.5,
-                    py: 0.5,
-                    borderRadius: "9999px",
-                    bgcolor: "rgba(15, 184, 176, 0.1)",
-                    border: "1px solid rgba(15, 184, 176, 0.2)",
-                    width: "fit-content",
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      bgcolor: primary,
-                      animation: "pulse 2s ease-in-out infinite",
-                      "@keyframes pulse": {
-                        "0%, 100%": { opacity: 1 },
-                        "50%": { opacity: 0.5 },
-                      },
-                    }}
-                  />
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.1em",
-                      color: primary,
-                    }}
-                  >
-                    Next-Gen Healthcare SaaS
-                  </Typography>
-                </Box>
-
-                <Typography
-                  component="h1"
-                  variant="h3"
-                  sx={{
-                    fontSize: { xs: "2.5rem", lg: "4rem" },
-                    fontWeight: 800,
-                    lineHeight: 1.1,
-                    letterSpacing: "-0.02em",
-                    color: "text.primary",
-                  }}
-                >
-                  Carlvyne Smart Hospital{" "}
-                  <Box component="span" sx={{ color: primary }}>
-                    Management System
-                  </Box>
-                </Typography>
-
-                <Typography
-                  sx={{
-                    fontSize: "1.25rem",
-                    color: "text.secondary",
-                    lineHeight: 1.7,
-                    maxWidth: 540,
-                  }}
-                >
-                  Our digital integration platform prioritizes patient care
-                  through seamless hospital management. We empower medical
-                  institutions with smart, integrated solutions for modern
-                  healthcare operations, ensuring every touchpoint is
-                  data-driven and patient-centric.
-                </Typography>
-
-                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
-                  <Button
-                    variant="contained"
-                    onClick={() => navigate("/")}
-                    endIcon={<ArrowForwardIcon sx={{ fontSize: 18 }} />}
-                    sx={{
-                      px: 3,
-                      py: 1.5,
-                      bgcolor: primary,
-                      color: "white",
-                      fontWeight: 700,
-                      borderRadius: 2,
-                      boxShadow: `0 10px 15px -3px rgba(15, 184, 176, 0.2)`,
-                      "&:hover": {
-                        bgcolor: "rgba(15, 184, 176, 0.9)",
-                      },
-                    }}
-                  >
-                    Get Started
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    sx={{
-                      px: 3,
-                      py: 1.5,
-                      borderColor: "divider",
-                      color: "text.primary",
-                      fontWeight: 700,
-                      borderRadius: 2,
-                      "&:hover": {
-                        borderColor: primary,
-                        bgcolor: "rgba(15, 184, 176, 0.04)",
-                      },
-                    }}
-                  >
-                    View Demo
-                  </Button>
-                </Box>
-              </Box>
-            </Grid>
-
-            {/* Three mockup cards in diagonal overlapping stack (bottom-left → top-right) - visible on lg+ */}
-            <Grid
-              item
-              xs={12}
-              lg={6}
+            <Box
               sx={{
-                display: { xs: "none", lg: "flex" },
-                justifyContent: "flex-end",
+                display: "inline-flex",
                 alignItems: "center",
+                gap: 1,
+                px: 1.5,
+                py: 0.5,
+                borderRadius: "9999px",
+                bgcolor: "rgba(15, 184, 176, 0.1)",
+                border: "1px solid rgba(15, 184, 176, 0.2)",
+                width: "fit-content",
               }}
             >
               <Box
                 sx={{
-                  position: "relative",
-                  width: 320,
-                  height: 340,
-                  flexShrink: 0,
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  bgcolor: primary,
+                  animation: "pulse 2s ease-in-out infinite",
+                  "@keyframes pulse": {
+                    "0%, 100%": { opacity: 1 },
+                    "50%": { opacity: 0.5 },
+                  },
                 }}
-                aria-hidden
+              />
+              <Typography
+                variant="caption"
+                sx={{
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  color: primary,
+                }}
               >
-                {/* Card 1 (back): REVENUE FLOW - bottom-left */}
-                <Card
-                  sx={{
-                    position: "absolute",
-                    left: 0,
-                    bottom: 0,
-                    zIndex: 1,
-                    width: 240,
-                    borderRadius: 2,
-                    borderTop: "4px solid",
-                    borderTopColor: secondary,
-                    ...glassCardSx,
-                    boxShadow:
-                      "0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.06)",
-                    "&:hover": { transform: "translateY(-4px)" },
-                    transition: "transform 0.2s ease",
-                  }}
-                >
-                  <CardContent sx={{ p: 2.5 }}>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        fontWeight: 700,
-                        color: "text.secondary",
-                        letterSpacing: "0.1em",
-                      }}
-                    >
-                      REVENUE FLOW
-                    </Typography>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "flex-end",
-                        gap: 0.5,
-                        height: 128,
-                        mt: 1,
-                      }}
-                    >
-                      {[40, 70, 100, 50, 85].map((h, i) => (
-                        <Box
-                          key={i}
-                          sx={{
-                            flex: 1,
-                            height: `${h}%`,
-                            bgcolor:
-                              i === 4
-                                ? "rgba(30, 58, 138, 0.4)"
-                                : `rgba(15, 184, 176, ${0.3 + i * 0.15})`,
-                            borderTopLeftRadius: 4,
-                            borderTopRightRadius: 4,
-                          }}
-                        />
-                      ))}
-                    </Box>
-                  </CardContent>
-                </Card>
+                Next-Gen Healthcare SaaS
+              </Typography>
+            </Box>
 
-                {/* Card 2 (middle): Lab Analysis */}
-                <Card
-                  sx={{
-                    position: "absolute",
-                    left: 64,
-                    bottom: 70,
-                    zIndex: 2,
-                    width: 240,
-                    borderRadius: 2,
-                    borderTop: "4px solid",
-                    borderTopColor: primary,
-                    ...glassCardSx,
-                    boxShadow:
-                      "0 10px 25px -5px rgba(0,0,0,0.12), 0 8px 10px -6px rgba(0,0,0,0.08)",
-                    "&:hover": { transform: "translateY(-4px)" },
-                    transition: "transform 0.2s ease",
-                  }}
-                >
-                  <CardContent sx={{ p: 2.5 }}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1.5,
-                        mb: 1.5,
-                      }}
-                    >
-                      <ScienceIcon sx={{ color: primary }} />
-                      <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                        Lab Analysis
-                      </Typography>
-                    </Box>
-                    <Box sx={{ "& > *": { mb: 1.5 } }}>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        <Typography variant="caption" color="text.secondary">
-                          Hemoglobin
-                        </Typography>
-                        <Typography variant="caption" fontWeight={700}>
-                          14.2 g/dL
-                        </Typography>
-                      </Box>
-                      <Box
-                        sx={{
-                          width: "100%",
-                          height: 6,
-                          bgcolor: "action.hover",
-                          borderRadius: 1,
-                          overflow: "hidden",
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            width: "80%",
-                            height: "100%",
-                            bgcolor: primary,
-                          }}
-                        />
-                      </Box>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        <Typography variant="caption" color="text.secondary">
-                          WBC Count
-                        </Typography>
-                        <Typography variant="caption" fontWeight={700}>
-                          7,500/µL
-                        </Typography>
-                      </Box>
-                      <Box
-                        sx={{
-                          width: "100%",
-                          height: 6,
-                          bgcolor: "action.hover",
-                          borderRadius: 1,
-                          overflow: "hidden",
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            width: "66%",
-                            height: "100%",
-                            bgcolor: secondary,
-                          }}
-                        />
-                      </Box>
-                    </Box>
-                  </CardContent>
-                </Card>
-
-                {/* Card 3 (front): Patient / ACTIVE - top-right */}
-                <Card
-                  sx={{
-                    position: "absolute",
-                    left: 120,
-                    bottom: 150,
-                    zIndex: 3,
-                    width: 240,
-                    borderRadius: 2,
-                    borderTop: "4px solid",
-                    borderTopColor: primary,
-                    ...glassCardSx,
-                    boxShadow:
-                      "0 14px 28px -5px rgba(0,0,0,0.14), 0 10px 12px -6px rgba(0,0,0,0.08)",
-                    "&:hover": { transform: "translateY(-4px)" },
-                    transition: "transform 0.2s ease",
-                  }}
-                >
-                  <CardContent sx={{ p: 2.5 }}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        mb: 1.5,
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: "50%",
-                          bgcolor: "rgba(15, 184, 176, 0.2)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <PersonIcon sx={{ color: primary, fontSize: 22 }} />
-                      </Box>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          fontWeight: 700,
-                          color: primary,
-                          px: 1,
-                          py: 0.25,
-                          bgcolor: "rgba(15, 184, 176, 0.1)",
-                          borderRadius: 0.5,
-                        }}
-                      >
-                        ACTIVE
-                      </Typography>
-                    </Box>
-                    <Box sx={{ "& > *": { mb: 0.5 } }}>
-                      <Box
-                        sx={{
-                          height: 6,
-                          width: "75%",
-                          bgcolor: "action.hover",
-                          borderRadius: 1,
-                        }}
-                      />
-                      <Box
-                        sx={{
-                          height: 6,
-                          width: "50%",
-                          bgcolor: "action.hover",
-                          borderRadius: 1,
-                          opacity: 0.6,
-                        }}
-                      />
-                    </Box>
-                    <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
-                      <Box
-                        sx={{
-                          flex: 1,
-                          height: 32,
-                          bgcolor: "rgba(15, 184, 176, 0.1)",
-                          borderRadius: 1,
-                        }}
-                      />
-                      <Box
-                        sx={{
-                          flex: 1,
-                          height: 32,
-                          bgcolor: "rgba(15, 184, 176, 0.1)",
-                          borderRadius: 1,
-                        }}
-                      />
-                    </Box>
-                  </CardContent>
-                </Card>
+            {/* Title in one row */}
+            <Typography
+              component="h1"
+              variant="h3"
+              sx={{
+                fontSize: { xs: "1.75rem", lg: "2.5rem" },
+                fontWeight: 800,
+                lineHeight: 1.1,
+                letterSpacing: "-0.02em",
+                color: "text.primary",
+              }}
+            >
+              Carlvyne Smart Hospital{" "}
+              <Box component="span" sx={{ color: primary }}>
+                Management System
               </Box>
-            </Grid>
-          </Grid>
+            </Typography>
+
+            {/* Full-width content below */}
+            <Typography
+              sx={{
+                fontSize: "1.25rem",
+                color: "text.secondary",
+                lineHeight: 1.7,
+                width: "100%",
+                maxWidth: "100%",
+              }}
+            >
+              Our digital integration platform prioritizes patient care
+              through seamless hospital management. We empower medical
+              institutions with smart, integrated solutions for modern
+              healthcare operations, ensuring every touchpoint is
+              data-driven and patient-centric.
+            </Typography>
+
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+              <Button
+                variant="contained"
+                onClick={() => navigate("/")}
+                endIcon={<ArrowForwardIcon sx={{ fontSize: 18 }} />}
+                sx={{
+                  px: 3,
+                  py: 1.5,
+                  bgcolor: primary,
+                  color: "white",
+                  fontWeight: 700,
+                  borderRadius: 2,
+                  boxShadow: `0 10px 15px -3px rgba(15, 184, 176, 0.2)`,
+                  "&:hover": {
+                    bgcolor: "rgba(15, 184, 176, 0.9)",
+                  },
+                }}
+              >
+                Get Started
+              </Button>
+              <Button
+                variant="outlined"
+                sx={{
+                  px: 3,
+                  py: 1.5,
+                  borderColor: "divider",
+                  color: "text.primary",
+                  fontWeight: 700,
+                  borderRadius: 2,
+                  "&:hover": {
+                    borderColor: primary,
+                    bgcolor: "rgba(15, 184, 176, 0.04)",
+                  },
+                }}
+              >
+                View Demo
+              </Button>
+            </Box>
+          </Box>
         </Box>
       </Box>
 
