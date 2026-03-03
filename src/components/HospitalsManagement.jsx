@@ -174,7 +174,7 @@ export default function HospitalsManagement() {
   const theme = useTheme();
   const token = getToken();
   const roleName = getRoleName();
-  const isAdmin = roleName === "admin" || roleName === "Super Admin";
+  const isSuperAdmin = roleName === "Super Admin";
 
   const [tab, setTab] = useState(0); // 0 hospital, 1 departments, 2 staff, 3 services, 4 news/events
 
@@ -421,18 +421,19 @@ export default function HospitalsManagement() {
 
   const loadServicesList = async () => {
     if (!requireTokenGuard()) return;
+    const defaultHospitalId = hospitals?.[0]?.id || "";
+    if (!defaultHospitalId) return;
     const reqId = ++svcReqId.current;
     setSvcLoading(true);
     try {
       const page = svcPage + 1;
       const limit = svcRowsPerPage;
       const search = svcSearch.trim();
-      const defaultHospitalId = hospitals?.[0]?.id || "";
       const qs = new URLSearchParams({
         page: String(page),
         limit: String(limit),
+        hospital_id: defaultHospitalId,
         ...(search ? { search } : {}),
-        ...(defaultHospitalId ? { hospital_id: defaultHospitalId } : {}),
       });
       const data = await fetchJson(`${API.services}?${qs.toString()}`, { token });
       if (reqId !== svcReqId.current) return;
@@ -532,6 +533,11 @@ export default function HospitalsManagement() {
 
   useEffect(() => {
     if (tab !== 3) return;
+    if (!hospitals?.length || !hospitals[0]?.id) {
+      setServices([]);
+      setSvcTotal(0);
+      return;
+    }
     loadServicesList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, svcPage, svcRowsPerPage, hospitals?.[0]?.id]);
@@ -900,6 +906,7 @@ export default function HospitalsManagement() {
       Swal.fire({ icon: "success", title: "Added", text: "Schedule slot added." });
       await loadStaffSchedules(scheduleDialog.staff.id);
       setScheduleForm({ day_of_week: scheduleForm.day_of_week, start_time: "09:00", end_time: "17:00" });
+      await loadStaff();
     } catch (e) {
       Swal.fire({ icon: "error", title: "Failed", text: e.message });
     }
@@ -921,12 +928,13 @@ export default function HospitalsManagement() {
       Swal.fire({ icon: "success", title: "Removed", text: "Schedule slot removed." });
       if (scheduleDialog.staff?.id) await loadStaffSchedules(scheduleDialog.staff.id);
       setEditScheduleSlot(null);
+      await loadStaff();
     } catch (e) {
       Swal.fire({ icon: "error", title: "Failed", text: e.message });
     }
   };
 
-  const canEditSchedules = isAdmin || (Boolean(currentStaffId) && scheduleDialog.staff?.id === currentStaffId);
+  const canEditSchedules = isSuperAdmin || (Boolean(currentStaffId) && scheduleDialog.staff?.id === currentStaffId);
 
   const startEditSchedule = (slot) => {
     setEditScheduleSlot(slot);
@@ -957,6 +965,7 @@ export default function HospitalsManagement() {
       Swal.fire({ icon: "success", title: "Updated", text: "Schedule slot updated." });
       if (scheduleDialog.staff?.id) await loadStaffSchedules(scheduleDialog.staff.id);
       setEditScheduleSlot(null);
+      await loadStaff();
     } catch (e) {
       Swal.fire({ icon: "error", title: "Failed", text: e.message });
     }
@@ -982,7 +991,7 @@ export default function HospitalsManagement() {
 
   const saveDept = async () => {
     if (!requireTokenGuard()) return;
-    if (!isAdmin) return;
+    if (!isSuperAdmin) return;
     if (!deptForm.hospital?.id) return Swal.fire({ icon: "warning", title: "Missing hospital", text: "Select a hospital." });
     if (!deptForm.name.trim()) return Swal.fire({ icon: "warning", title: "Missing name", text: "Department name is required." });
 
@@ -1009,7 +1018,7 @@ export default function HospitalsManagement() {
 
   const deleteDept = async (d) => {
     if (!requireTokenGuard()) return;
-    if (!isAdmin) return;
+    if (!isSuperAdmin) return;
     const result = await Swal.fire({
       icon: "warning",
       title: "Delete department?",
@@ -1075,7 +1084,7 @@ export default function HospitalsManagement() {
 
   const saveService = async () => {
     if (!requireTokenGuard()) return;
-    if (!isAdmin) return;
+    if (!isSuperAdmin) return;
     if (!svcForm.hospital?.id) return Swal.fire({ icon: "warning", title: "Missing hospital", text: "Select a hospital." });
     if (!svcForm.department?.id) return Swal.fire({ icon: "warning", title: "Missing department", text: "Select a department." });
     if (!svcForm.name.trim()) return Swal.fire({ icon: "warning", title: "Missing name", text: "Service name is required." });
@@ -1107,7 +1116,7 @@ export default function HospitalsManagement() {
 
   const deleteService = async (s) => {
     if (!requireTokenGuard()) return;
-    if (!isAdmin) return;
+    if (!isSuperAdmin) return;
     const result = await Swal.fire({
       icon: "warning",
       title: "Delete service?",
@@ -1165,7 +1174,7 @@ export default function HospitalsManagement() {
 
   const saveNews = async () => {
     if (!requireTokenGuard()) return;
-    if (!isAdmin) return;
+    if (!isSuperAdmin) return;
     if (!newsForm.hospital?.id) return Swal.fire({ icon: "warning", title: "Missing hospital", text: "Select a hospital." });
     if (!newsForm.title.trim() || !newsForm.slug.trim() || !newsForm.content.trim()) {
       return Swal.fire({ icon: "warning", title: "Missing fields", text: "Title, slug, and content are required." });
@@ -1207,7 +1216,7 @@ export default function HospitalsManagement() {
 
   const deleteNews = async (n) => {
     if (!requireTokenGuard()) return;
-    if (!isAdmin) return;
+    if (!isSuperAdmin) return;
     const result = await Swal.fire({
       icon: "warning",
       title: "Delete news?",
@@ -1274,7 +1283,7 @@ export default function HospitalsManagement() {
 
   const saveEvent = async () => {
     if (!requireTokenGuard()) return;
-    if (!isAdmin) return;
+    if (!isSuperAdmin) return;
     if (!eventForm.hospital?.id) return Swal.fire({ icon: "warning", title: "Missing hospital", text: "Select a hospital." });
     if (!eventForm.title.trim() || !eventForm.slug.trim() || !eventForm.event_date || !eventForm.start_time || !eventForm.end_time) {
       return Swal.fire({ icon: "warning", title: "Missing fields", text: "Title, slug, date, start time and end time are required." });
@@ -1321,7 +1330,7 @@ export default function HospitalsManagement() {
 
   const deleteEvent = async (e) => {
     if (!requireTokenGuard()) return;
-    if (!isAdmin) return;
+    if (!isSuperAdmin) return;
     const result = await Swal.fire({
       icon: "warning",
       title: "Delete event?",
@@ -1358,7 +1367,7 @@ export default function HospitalsManagement() {
               <Typography sx={{ opacity: 0.92, mt: 0.5 }}>Manage your hospital profile, departments, staff, and updates.</Typography>
             </Box>
             <Stack direction="row" spacing={1}>
-              {isAdmin && tab === 0 && !hospitalsLoading && hospitals.length === 0 && (
+              {isSuperAdmin && tab === 0 && !hospitalsLoading && hospitals.length === 0 && (
                 <Button
                   variant="contained"
                   startIcon={<AddIcon />}
@@ -1374,7 +1383,7 @@ export default function HospitalsManagement() {
                   New Hospital
                 </Button>
               )}
-              {isAdmin && tab === 1 && (
+              {isSuperAdmin && tab === 1 && (
                 <Button
                   variant="contained"
                   startIcon={<AddIcon />}
@@ -1390,7 +1399,7 @@ export default function HospitalsManagement() {
                   New Department
                 </Button>
               )}
-              {isAdmin && tab === 2 && (
+              {isSuperAdmin && tab === 2 && (
                 <Button
                   variant="contained"
                   startIcon={<AddIcon />}
@@ -1406,7 +1415,7 @@ export default function HospitalsManagement() {
                   New Staff
                 </Button>
               )}
-              {isAdmin && tab === 3 && (
+              {isSuperAdmin && tab === 3 && (
                 <Button
                   variant="contained"
                   startIcon={<AddIcon />}
@@ -1422,7 +1431,7 @@ export default function HospitalsManagement() {
                   New Service
                 </Button>
               )}
-              {isAdmin && tab === 4 && (
+              {isSuperAdmin && tab === 4 && (
                 <Button
                   variant="contained"
                   startIcon={<AddIcon />}
@@ -1491,7 +1500,7 @@ export default function HospitalsManagement() {
               ) : hospitals.length === 0 ? (
                 <Stack spacing={1.5} sx={{ py: 1 }}>
                   <Alert severity="info">No hospital has been created yet.</Alert>
-                  {!isAdmin && <Alert severity="warning">You can view hospital details, but only admins can create/edit.</Alert>}
+                  {!isSuperAdmin && <Alert severity="warning">You can view hospital details, but only Super Admin can create/edit.</Alert>}
                 </Stack>
               ) : (
                 <Stack spacing={2}>
@@ -1560,7 +1569,7 @@ export default function HospitalsManagement() {
                                   }}
                                 />
                               </Stack>
-                              {isAdmin && (
+                              {isSuperAdmin && (
                                 <Tooltip title="Edit">
                                   <IconButton onClick={() => openEditHospital(h)} size="small" sx={{ border: "1px solid", borderColor: "divider" }}>
                                     <EditIcon fontSize="inherit" />
@@ -1671,7 +1680,7 @@ export default function HospitalsManagement() {
                                   <VisibilityIcon fontSize="inherit" />
                                 </IconButton>
                               </Tooltip>
-                              {isAdmin && (
+                              {isSuperAdmin && (
                                 <>
                                   <Tooltip title="Edit">
                                     <IconButton onClick={(e) => { e.stopPropagation(); openEditDept(d); }} size="small">
@@ -1852,7 +1861,7 @@ export default function HospitalsManagement() {
                                   <VisibilityIcon fontSize="small" />
                                 </IconButton>
                               </Tooltip>
-                              {isAdmin && (
+                              {isSuperAdmin && (
                                 <>
                                   <Tooltip title="Edit">
                                     <IconButton onClick={() => openEditStaff(s)} size="small" color="primary">
@@ -1994,7 +2003,7 @@ export default function HospitalsManagement() {
                                   <VisibilityIcon fontSize="inherit" />
                                 </IconButton>
                               </Tooltip>
-                              {isAdmin && (
+                              {isSuperAdmin && (
                                 <>
                                   <Tooltip title="Edit">
                                     <IconButton onClick={(e) => { e.stopPropagation(); openEditService(s); }} size="small">
@@ -2132,7 +2141,7 @@ export default function HospitalsManagement() {
                                       <VisibilityIcon fontSize="inherit" />
                                     </IconButton>
                                   </Tooltip>
-                                  {isAdmin && (
+                                  {isSuperAdmin && (
                                     <>
                                       <Tooltip title="Edit">
                                         <IconButton onClick={() => openEditNews(n)} size="small">
@@ -2244,7 +2253,7 @@ export default function HospitalsManagement() {
                                       <VisibilityIcon fontSize="inherit" />
                                     </IconButton>
                                   </Tooltip>
-                                  {isAdmin && (
+                                  {isSuperAdmin && (
                                     <>
                                       <Tooltip title="Edit">
                                         <IconButton onClick={() => openEditEvent(ev)} size="small">
@@ -2405,16 +2414,16 @@ export default function HospitalsManagement() {
                 <MenuItem value="gold">Gold (full hospital)</MenuItem>
               </Select>
             </FormControl>
-            {!isAdmin && (
+            {!isSuperAdmin && (
               <Alert severity="info">
-                You can view hospitals, but only admins can create/edit/delete.
+                You can view hospitals, but only Super Admin can create/edit/delete.
               </Alert>
             )}
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setHospitalDialog({ open: false, mode: "create", id: null })}>Cancel</Button>
-          {isAdmin && (
+          {isSuperAdmin && (
             <Button variant="contained" onClick={saveHospital} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: "primary.dark" } }}>
               Save
             </Button>
@@ -2707,7 +2716,7 @@ export default function HospitalsManagement() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setStaffDialog({ open: false, mode: "create", id: null })}>Cancel</Button>
-          {isAdmin && (
+          {isSuperAdmin && (
             <Button variant="contained" onClick={saveStaff} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: "primary.dark" } }}>
               Save
             </Button>
@@ -2760,12 +2769,12 @@ export default function HospitalsManagement() {
               value={deptForm.description}
               onChange={(e) => setDeptForm((p) => ({ ...p, description: e.target.value }))}
             />
-            {!isAdmin && <Alert severity="info">You can view departments, but only admins can create/edit/delete.</Alert>}
+            {!isSuperAdmin && <Alert severity="info">You can view departments, but only Super Admin can create/edit/delete.</Alert>}
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeptDialog({ open: false, mode: "create", id: null })}>Cancel</Button>
-          {isAdmin && (
+          {isSuperAdmin && (
             <Button variant="contained" onClick={saveDept} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: "primary.dark" } }}>
               Save
             </Button>
@@ -2903,12 +2912,12 @@ export default function HospitalsManagement() {
               value={svcForm.description}
               onChange={(e) => setSvcForm((p) => ({ ...p, description: e.target.value }))}
             />
-            {!isAdmin && <Alert severity="info">You can view services, but only admins can create/edit/delete.</Alert>}
+            {!isSuperAdmin && <Alert severity="info">You can view services, but only Super Admin can create/edit/delete.</Alert>}
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSvcDialog({ open: false, mode: "create", id: null })}>Cancel</Button>
-          {isAdmin && (
+          {isSuperAdmin && (
             <Button variant="contained" onClick={saveService} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: "primary.dark" } }}>
               Save
             </Button>
@@ -3048,12 +3057,12 @@ export default function HospitalsManagement() {
               value={newsForm.content}
               onChange={(e) => setNewsForm((p) => ({ ...p, content: e.target.value }))}
             />
-            {!isAdmin && <Alert severity="info">You can view news, but only admins can create/edit/delete.</Alert>}
+            {!isSuperAdmin && <Alert severity="info">You can view news, but only Super Admin can create/edit/delete.</Alert>}
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setNewsDialog({ open: false, mode: "create", id: null })}>Cancel</Button>
-          {isAdmin && (
+          {isSuperAdmin && (
             <Button variant="contained" onClick={saveNews} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: "primary.dark" } }}>
               Save
             </Button>
@@ -3246,12 +3255,12 @@ export default function HospitalsManagement() {
               value={eventForm.description}
               onChange={(e) => setEventForm((p) => ({ ...p, description: e.target.value }))}
             />
-            {!isAdmin && <Alert severity="info">You can view events, but only admins can create/edit/delete.</Alert>}
+            {!isSuperAdmin && <Alert severity="info">You can view events, but only Super Admin can create/edit/delete.</Alert>}
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEventDialog({ open: false, mode: "create", id: null })}>Cancel</Button>
-          {isAdmin && (
+          {isSuperAdmin && (
             <Button variant="contained" onClick={saveEvent} sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: "primary.dark" } }}>
               Save
             </Button>

@@ -33,6 +33,7 @@ import {
   Tooltip,
 } from "@mui/material";
 import {
+  Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
@@ -102,7 +103,10 @@ export default function PharmacyManagement() {
   const theme = useTheme();
   const token = getToken();
   const navigate = useNavigate();
-  const isAdmin = getRoleName() === "admin";
+  const isSuperAdmin = () => {
+    const name = getRoleName() || "";
+    return name === "Super Admin" || String(name).trim().toLowerCase() === "superadmin";
+  };
 
   const [tab, setTab] = useState(0); // 0 meds, 1 prescriptions, 2 dispense, 3 billing, 4 payment
   const [toast, setToast] = useState({
@@ -390,6 +394,21 @@ export default function PharmacyManagement() {
     }
   };
 
+  const openCreateMed = () => {
+    setMedsSearchLocked(true);
+    setPresSearchLocked(true);
+    setDispSearchLocked(true);
+    setMedForm({
+      name: "",
+      dosage_form: "",
+      manufacturer: "",
+      unit_price: "",
+      inventory_item_id: "",
+    });
+    setMedDialog({ open: true, mode: "create", id: null });
+    if (inventoryItems.length === 0) loadInventoryItems();
+  };
+
   const openEditMed = (m) => {
     setMedsSearchLocked(true);
     setPresSearchLocked(true);
@@ -407,7 +426,7 @@ export default function PharmacyManagement() {
   const openViewMed = (m) => setMedView({ open: true, med: m });
 
   const saveMed = async () => {
-    if (!requireTokenGuard() || !medDialog.id) return;
+    if (!requireTokenGuard()) return;
     if (!medForm.name.trim())
       return showToast("error", "Medication name is required");
     const payload = {
@@ -417,13 +436,23 @@ export default function PharmacyManagement() {
       unit_price: medForm.unit_price === "" ? null : medForm.unit_price,
       inventory_item_id: medForm.inventory_item_id || null,
     };
+    const isCreate = medDialog.mode === "create" || !medDialog.id;
     try {
-      await fetchJson(`${API.medications}/${medDialog.id}`, {
-        method: "PUT",
-        token,
-        body: payload,
-      });
-      showToast("success", "Medication updated");
+      if (isCreate) {
+        await fetchJson(API.medications, {
+          method: "POST",
+          token,
+          body: payload,
+        });
+        showToast("success", "Medication added");
+      } else {
+        await fetchJson(`${API.medications}/${medDialog.id}`, {
+          method: "PUT",
+          token,
+          body: payload,
+        });
+        showToast("success", "Medication updated");
+      }
       setMedDialog({ open: false, mode: "edit", id: null });
       await loadMedications();
     } catch (e) {
@@ -1076,9 +1105,21 @@ export default function PharmacyManagement() {
             </Tabs>
           <Divider />
 
-          {/* MEDS */}
+          {/* MEDS / Medicine catalogue */}
           {tab === 0 && (
             <Box sx={{ p: 2 }}>
+              {isSuperAdmin() && (
+                <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={openCreateMed}
+                    sx={{ fontWeight: 700 }}
+                  >
+                    Add medication
+                  </Button>
+                </Stack>
+              )}
               <TextField
                 value={medsSearch}
                 onChange={(e) => setMedsSearch(e.target.value)}
@@ -1183,7 +1224,7 @@ export default function PharmacyManagement() {
                                   <VisibilityIcon fontSize="inherit" />
                                 </IconButton>
                               </Tooltip>
-                              {isAdmin && (
+                              {isSuperAdmin() && (
                                 <>
                                   <Tooltip title="Edit">
                                     <IconButton
@@ -1797,7 +1838,9 @@ export default function PharmacyManagement() {
         maxWidth="sm"
         PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
       >
-        <DialogTitle sx={{ fontWeight: 900 }}>Edit Medication</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 900 }}>
+          {medDialog.mode === "create" ? "Add medication" : "Edit medication"}
+        </DialogTitle>
         <DialogContent sx={{ overflowY: "auto" }}>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField

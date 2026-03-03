@@ -104,7 +104,7 @@ export default function LaboratoryManagement() {
   const token = getToken();
   const navigate = useNavigate();
   const roleName = getRoleName();
-  const isAdmin = roleName === "admin";
+  const isSuperAdmin = roleName === "Super Admin";
 
   const heroGradient = useMemo(() => {
     const main = theme.palette.primary.main;
@@ -413,7 +413,7 @@ export default function LaboratoryManagement() {
 
   const deleteOrder = async (o) => {
     if (!requireTokenGuard()) return;
-    if (!isAdmin) return;
+    if (!isSuperAdmin) return;
     const r = await Swal.fire({
       icon: "warning",
       title: "Delete lab order?",
@@ -447,7 +447,7 @@ export default function LaboratoryManagement() {
     const current = o.status;
     const paid = Boolean(orderBilling?.paid);
     const allowedNonAdmin = new Set(["in_progress", ...(paid ? ["completed"] : [])]);
-    if (!isAdmin) {
+    if (!isSuperAdmin) {
       if (!allowedNonAdmin.has(orderStatusDraft)) {
         Swal.fire({
           icon: "info",
@@ -799,7 +799,7 @@ export default function LaboratoryManagement() {
 
   const saveTest = async () => {
     if (!requireTokenGuard()) return;
-    if (!isAdmin) return;
+    if (!isSuperAdmin) return;
     if (!testForm.test_name.trim())
       return Swal.fire({
         icon: "warning",
@@ -849,7 +849,7 @@ export default function LaboratoryManagement() {
 
   const deleteTest = async (t) => {
     if (!requireTokenGuard()) return;
-    if (!isAdmin) return;
+    if (!isSuperAdmin) return;
     const r = await Swal.fire({
       icon: "warning",
       title: "Delete lab test?",
@@ -998,7 +998,7 @@ export default function LaboratoryManagement() {
               </Typography>
             </Box>
             <Stack direction="row" spacing={1}>
-              {isAdmin && tab === 0 && (
+              {isSuperAdmin && tab === 0 && (
                 <Button
                   variant="contained"
                   startIcon={<Add />}
@@ -1058,9 +1058,9 @@ export default function LaboratoryManagement() {
 
           {tab === 0 && (
             <Box sx={{ p: 2 }}>
-              {!isAdmin && (
+              {!isSuperAdmin && (
                 <Alert severity="info" sx={{ mb: 2 }}>
-                  You can view lab tests, but only admins can
+                  You can view lab tests, but only Super Admin can
                   create/edit/delete.
                 </Alert>
               )}
@@ -1153,7 +1153,7 @@ export default function LaboratoryManagement() {
                           <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{fmt(t.price)}</TableCell>
                           <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} data-actions-cell onClick={(e) => e.stopPropagation()}>
                             <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
-                              {isAdmin && (
+                              {isSuperAdmin && (
                                 <>
                                   <Tooltip title="Edit">
                                     <IconButton size="small" color="primary" onClick={() => openEditTest(t)} aria-label="Edit">
@@ -1362,7 +1362,7 @@ export default function LaboratoryManagement() {
                                 <Visibility fontSize="inherit" />
                               </IconButton>
                             </Tooltip>
-                            {isAdmin && (
+                            {isSuperAdmin && (
                               <Tooltip title="Delete">
                                 <IconButton
                                   onClick={() => deleteOrder(o)}
@@ -1965,7 +1965,7 @@ export default function LaboratoryManagement() {
                 {(() => {
                   const current = orderView.order?.status;
                   const paid = Boolean(orderBilling?.paid);
-                  const base = isAdmin
+                  const base = isSuperAdmin
                     ? ["pending", "in_progress", "completed", "cancelled"]
                     : ["in_progress", ...(paid ? ["completed"] : [])];
                   const opts = Array.from(new Set([current, ...base].filter(Boolean)));
@@ -2039,7 +2039,7 @@ export default function LaboratoryManagement() {
           >
             Close
           </Button>
-          {isAdmin && (
+          {isSuperAdmin && (
             <Button
               variant="outlined"
               color="error"
@@ -2099,9 +2099,9 @@ export default function LaboratoryManagement() {
                 setTestForm((p) => ({ ...p, price: e.target.value }))
               }
             />
-            {!isAdmin && (
+            {!isSuperAdmin && (
               <Alert severity="info">
-                Only admins can create/edit lab tests.
+                Only Super Admin can create/edit lab tests.
               </Alert>
             )}
           </Stack>
@@ -2114,7 +2114,7 @@ export default function LaboratoryManagement() {
           >
             Cancel
           </Button>
-          {isAdmin && (
+          {isSuperAdmin && (
             <Button
               variant="contained"
               onClick={saveTest}

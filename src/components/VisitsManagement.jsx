@@ -136,7 +136,7 @@ export default function VisitsManagement() {
   const token = getToken();
   const currentUser = getUser();
   const roleName = getRoleName();
-  const isAdmin = roleName === "admin";
+  const isSuperAdmin = roleName === "Super Admin";
 
   const isAssignedDoctor = (apptLike) => {
     const doctorUserId =
@@ -219,6 +219,7 @@ export default function VisitsManagement() {
   const [apptBillItemAmount, setApptBillItemAmount] = useState("");
   const [apptBillItemNote, setApptBillItemNote] = useState("");
   const [apptBillItemSaving, setApptBillItemSaving] = useState(false);
+  const [apptCashSaving, setApptCashSaving] = useState(false);
 
   // Consultation view + actions
   const [consViewOpen, setConsViewOpen] = useState(false);
@@ -487,9 +488,11 @@ export default function VisitsManagement() {
     if (!requireTokenGuard()) return;
     setServiceLoading(true);
     try {
+      const hospitalId = currentUser?.hospital_id;
       const qs = new URLSearchParams({
         page: "1",
         limit: "20",
+        ...(hospitalId ? { hospital_id: hospitalId } : {}),
         ...(q ? { search: q } : {}),
       });
       const data = await fetchJson(`${API.services}?${qs.toString()}`, {
@@ -618,7 +621,7 @@ export default function VisitsManagement() {
 
   const deleteAppointment = async (appt) => {
     if (!requireTokenGuard()) return;
-    if (!isAdmin) return;
+    if (!isSuperAdmin) return;
     const result = await Swal.fire({
       icon: "warning",
       title: "Delete appointment?",
@@ -653,14 +656,16 @@ export default function VisitsManagement() {
     }
   };
 
+  const canManageConsultation = (apptLike) => isSuperAdmin || isAssignedDoctor(apptLike);
+
   const openRecordConsultation = async (appt) => {
     if (!requireTokenGuard()) return;
     if (!appt?.id) return;
-    if (!isAssignedDoctor(appt)) {
+    if (!canManageConsultation(appt)) {
       Swal.fire({
         icon: "warning",
         title: "Not allowed",
-        text: "Only the doctor assigned to this appointment can record a consultation.",
+        text: "Only the assigned doctor or Super Admin can record a consultation.",
       });
       return;
     }
@@ -731,10 +736,59 @@ export default function VisitsManagement() {
     }
   };
 
+  const recordCashForAppointment = async () => {
+    if (!requireTokenGuard() || !apptView?.id) return;
+    const patientId = apptView?.patient?.id || apptView?.patient_id;
+    if (!patientId) {
+      Swal.fire({ icon: "error", title: "Missing patient", text: "Cannot record payment without patient." });
+      return;
+    }
+    const amount = Number(apptBilling?.balance ?? apptBilling?.total_amount ?? 0);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      Swal.fire({ icon: "warning", title: "Nothing to pay", text: "No balance due for this bill." });
+      return;
+    }
+    setApptCashSaving(true);
+    try {
+      const qs = new URLSearchParams({ item_type: "appointment", reference_id: String(apptView.id) });
+      const billingRes = await fetchJson(`${API.billing}/by-reference?${qs.toString()}`, { token });
+      let billId = billingRes?.data?.bill_id ?? null;
+      if (!billId) {
+        const billRes = await fetchJson(`${API.billing}/generate`, { method: "POST", token, body: { patient_id: patientId } });
+        billId = billRes?.data?.id;
+        if (billId) {
+          await fetchJson(`${API.billing}/${billId}/items`, {
+            method: "POST",
+            token,
+            body: { items: [{ item_type: "appointment", reference_id: apptView.id, amount }] },
+          });
+        }
+      }
+      if (!billId) {
+        Swal.fire({ icon: "error", title: "Failed", text: "Could not get or create bill." });
+        return;
+      }
+      await fetchJson(`${API.payments}/process`, {
+        method: "POST",
+        token,
+        body: { bill_id: billId, amount_paid: amount, payment_method: "cash", payment_date: new Date().toISOString() },
+      });
+      Swal.fire({ icon: "success", title: "Payment recorded", text: "Cash payment recorded. Appointment will be confirmed when the bill is fully paid." });
+      if (apptView?.id) {
+        await loadAppointmentBilling(apptView.id);
+        await loadAppointments();
+      }
+      setApptViewOpen(false);
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Payment failed", text: e?.message ?? "Something went wrong." });
+    } finally {
+      setApptCashSaving(false);
+    }
+  };
+
   const openViewAppointment = async (appt) => {
     if (!requireTokenGuard()) return;
     setApptViewOpen(true);
-    setApptViewInnerTab(0);
     setApptViewLoading(true);
     setApptView(null);
     setApptStatusDraft("");
@@ -746,7 +800,12 @@ export default function VisitsManagement() {
       const full = data?.data || null;
       setApptView(full);
       setApptStatusDraft(full?.status || "");
-      if (full?.id) loadAppointmentBilling(full.id);
+      if (full?.id) {
+        loadAppointmentBilling(full.id);
+        setApptViewInnerTab(full?.is_walk_in ? 1 : 0);
+      } else {
+        setApptViewInnerTab(0);
+      }
     } catch (e) {
       Swal.fire({ icon: "error", title: "Failed", text: e.message });
       setApptViewOpen(false);
@@ -766,11 +825,11 @@ export default function VisitsManagement() {
   const saveAppointmentStatus = async () => {
     if (!requireTokenGuard()) return;
     if (!apptView?.id) return;
-    if (!isAdmin && !isAssignedDoctor(apptView)) {
+    if (!isSuperAdmin && !isAssignedDoctor(apptView)) {
       return Swal.fire({
         icon: "warning",
         title: "Not allowed",
-        text: "Only the assigned doctor (or admin) can update this appointment status.",
+        text: "Only the assigned doctor (or Super Admin) can update this appointment status.",
       });
     }
     const current = apptView.status;
@@ -1152,11 +1211,11 @@ export default function VisitsManagement() {
 
   const openEditConsultation = () => {
     if (!consView?.id) return;
-    if (!isAssignedDoctor(consView)) {
+    if (!canManageConsultation(consView)) {
       return Swal.fire({
         icon: "warning",
         title: "Not allowed",
-        text: "Only the doctor assigned to this appointment can update this consultation.",
+        text: "Only the assigned doctor or Super Admin can update this consultation.",
       });
     }
     setConsEditForm({
@@ -1234,11 +1293,11 @@ export default function VisitsManagement() {
   };
 
   const openLabDialog = async () => {
-    if (!isAssignedDoctor(consView)) {
+    if (!canManageConsultation(consView)) {
       Swal.fire({
         icon: "warning",
         title: "Not allowed",
-        text: "Only the doctor assigned to this appointment can initiate lab tests for this consultation.",
+        text: "Only the assigned doctor or Super Admin can initiate lab tests for this consultation.",
       });
       return;
     }
@@ -1291,11 +1350,11 @@ export default function VisitsManagement() {
   };
 
   const openRxDialog = async () => {
-    if (!isAssignedDoctor(consView)) {
+    if (!canManageConsultation(consView)) {
       Swal.fire({
         icon: "warning",
         title: "Not allowed",
-        text: "Only the doctor assigned to this appointment can prescribe for this consultation.",
+        text: "Only the assigned doctor or Super Admin can prescribe for this consultation.",
       });
       return;
     }
@@ -1643,7 +1702,7 @@ export default function VisitsManagement() {
                                     onClick={() => openRecordConsultation(a)}
                                     size="small"
                                     disabled={
-                                      !isAssignedDoctor(a) ||
+                                      !canManageConsultation(a) ||
                                       (a.status !== "confirmed" && a.status !== "completed")
                                     }
                                   >
@@ -1651,7 +1710,7 @@ export default function VisitsManagement() {
                                   </IconButton>
                                 </span>
                               </Tooltip>
-                              {isAdmin && (
+                              {isSuperAdmin && (
                                 <Tooltip title="Delete">
                                   <IconButton
                                     onClick={() => deleteAppointment(a)}
@@ -2241,9 +2300,9 @@ export default function VisitsManagement() {
 
               {apptViewInnerTab === 0 && (
                 <Stack spacing={2} sx={{ mt: 1 }}>
-                  {!isAdmin && !isAssignedDoctor(apptView) && (
+                  {!isSuperAdmin && !isAssignedDoctor(apptView) && (
                     <Alert severity="info">
-                      You can view this appointment, but only the assigned doctor (or admin) can update its status.
+                      You can view this appointment, but only the assigned doctor (or Super Admin) can update its status.
                     </Alert>
                   )}
                   <Typography sx={{ fontWeight: 900 }}>
@@ -2259,7 +2318,7 @@ export default function VisitsManagement() {
                   <FormControl
                     fullWidth
                     size="small"
-                    disabled={["completed", "cancelled"].includes(apptView.status) || (!isAdmin && !isAssignedDoctor(apptView))}
+                    disabled={["completed", "cancelled"].includes(apptView.status) || (!isSuperAdmin && !isAssignedDoctor(apptView))}
                   >
                     <InputLabel>Status</InputLabel>
                     <Select
@@ -2293,18 +2352,36 @@ export default function VisitsManagement() {
                     </Stack>
                   ) : !apptBilling?.bill_id ? (
                     <Stack spacing={1.5}>
-                      <Alert severity="info">
-                        No bill for this appointment yet. Walk-in appointments get a bill when created; otherwise create one below.
-                      </Alert>
-                      <Button
-                        variant="contained"
-                        onClick={createBillForAppointment}
-                        disabled={!(apptView?.patient?.id || apptView?.patient_id)}
-                        startIcon={<ReceiptIcon />}
-                        sx={{ fontWeight: 800 }}
-                      >
-                        Create bill for this appointment
-                      </Button>
+                      {apptView?.is_walk_in ? (
+                        <>
+                          <Alert severity="info">
+                            Walk-in appointments get a bill automatically when you book. The bill and payment section will show it here—use Refresh if it hasn&apos;t appeared yet, then record payment.
+                          </Alert>
+                          <Button
+                            variant="contained"
+                            onClick={() => loadAppointmentBilling(apptView?.id)}
+                            disabled={!apptView?.id}
+                            sx={{ fontWeight: 800 }}
+                          >
+                            Refresh billing
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Alert severity="info">
+                            No bill for this appointment yet. Create one below to add charges and record payment.
+                          </Alert>
+                          <Button
+                            variant="contained"
+                            onClick={createBillForAppointment}
+                            disabled={!(apptView?.patient?.id || apptView?.patient_id)}
+                            startIcon={<ReceiptIcon />}
+                            sx={{ fontWeight: 800 }}
+                          >
+                            Create bill for this appointment
+                          </Button>
+                        </>
+                      )}
                     </Stack>
                   ) : (
                     <>
@@ -2388,23 +2465,26 @@ export default function VisitsManagement() {
                         </Stack>
                       )}
 
-                      {apptBilling?.bill_id && (
+                      {apptBilling?.bill_id && apptBilling.status !== "paid" && Number(apptBilling.balance ?? 0) > 0 && (
                         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ xs: "stretch", sm: "center" }} sx={{ flexWrap: "wrap", pt: 1, borderTop: "1px solid", borderColor: "divider" }}>
                           <Typography variant="subtitle2" color="text.secondary" sx={{ width: "100%", fontWeight: 700 }}>Record payment</Typography>
+                          <TextField
+                            size="small"
+                            label="Amount due"
+                            type="number"
+                            value={String(apptBilling?.balance ?? apptBilling?.total_amount ?? 0)}
+                            InputProps={{ readOnly: true }}
+                            sx={{ width: { xs: "100%", sm: 130 } }}
+                          />
                           <Button
                             variant="contained"
                             color="primary"
                             startIcon={<PaymentIcon />}
-                            onClick={async () => {
-                              const paid = await payForAppointment(apptView);
-                              if (paid && apptView?.id) {
-                                await loadAppointments();
-                                setApptViewOpen(false);
-                              }
-                            }}
+                            onClick={recordCashForAppointment}
+                            disabled={apptCashSaving}
                             sx={{ fontWeight: 800 }}
                           >
-                            Record payment (cash/card)
+                            {apptCashSaving ? "Recording…" : "Record cash"}
                           </Button>
                           <Button
                             variant="contained"
@@ -2435,7 +2515,7 @@ export default function VisitsManagement() {
               !apptView ||
               apptStatusSaving ||
               ["completed", "cancelled"].includes(apptView?.status) ||
-              (!isAdmin && !isAssignedDoctor(apptView))
+              (!isSuperAdmin && !isAssignedDoctor(apptView))
             }
             sx={{ fontWeight: 900 }}
           >
@@ -2468,7 +2548,7 @@ export default function VisitsManagement() {
             <Typography color="text.secondary">No data.</Typography>
           ) : (
             <Stack spacing={2}>
-              {!isAssignedDoctor(consView) && (
+              {!canManageConsultation(consView) && (
                 <Alert severity="info">
                   You can view this consultation, but only the doctor assigned to this appointment
                   can update it, prescribe, initiate lab tests, or admit patient.
@@ -2526,7 +2606,7 @@ export default function VisitsManagement() {
                   startIcon={<EditIcon />}
                   variant="outlined"
                   onClick={openEditConsultation}
-                  disabled={!isAssignedDoctor(consView)}
+                  disabled={!canManageConsultation(consView)}
                 >
                   Update consultation
                 </Button>
@@ -2534,7 +2614,7 @@ export default function VisitsManagement() {
                   startIcon={<ScienceIcon />}
                   variant="outlined"
                   onClick={openLabDialog}
-                  disabled={!isAssignedDoctor(consView)}
+                  disabled={!canManageConsultation(consView)}
                 >
                   Initiate lab test
                 </Button>
@@ -2542,7 +2622,7 @@ export default function VisitsManagement() {
                   startIcon={<PharmacyIcon />}
                   variant="outlined"
                   onClick={openRxDialog}
-                  disabled={!isAssignedDoctor(consView)}
+                  disabled={!canManageConsultation(consView)}
                 >
                   Prescribe
                 </Button>
@@ -2550,7 +2630,7 @@ export default function VisitsManagement() {
                   startIcon={<AdmitIcon />}
                   variant="outlined"
                   onClick={openAdmitDialog}
-                  disabled={!isAssignedDoctor(consView) || consViewHasAdmission}
+                  disabled={!canManageConsultation(consView) || consViewHasAdmission}
                 >
                   {consViewHasAdmission ? "Already admitted" : "Admit patient"}
                 </Button>

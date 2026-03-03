@@ -108,7 +108,7 @@ export default function PatientsManagement() {
   const navigate = useNavigate();
   const token = getToken();
   const roleName = getRoleName();
-  const isAdmin = roleName === "admin";
+  const isSuperAdmin = roleName === "Super Admin";
 
   const heroGradient = useMemo(() => {
     const main = theme.palette.primary.main;
@@ -263,7 +263,7 @@ export default function PatientsManagement() {
 
   const saveCreate = async () => {
     if (!requireTokenGuard()) return;
-    if (!isAdmin) return;
+    if (!isSuperAdmin) return;
     if (!createForm.hospital_id) return Swal.fire({ icon: "warning", title: "Missing hospital", text: "Select a hospital." });
     if (!createForm.full_name.trim()) return Swal.fire({ icon: "warning", title: "Missing name", text: "Full name is required." });
     const normalizedPhone = normalizeKenyanPhone(createForm.phone);
@@ -299,7 +299,8 @@ export default function PatientsManagement() {
     try {
       await fetchJson(API.patients, { method: "POST", token, body: payload });
       setCreateOpen(false);
-      await loadPatients();
+      setPage(0);
+      await loadPatients({ pageOverride: 0 });
       Swal.fire({
         icon: "success",
         title: "Walk-in patient created",
@@ -330,7 +331,7 @@ export default function PatientsManagement() {
 
   const saveEdit = async () => {
     if (!requireTokenGuard()) return;
-    if (!isAdmin) return;
+    if (!isSuperAdmin) return;
     if (!editForm?.id) return;
     if (!editForm.full_name.trim()) return Swal.fire({ icon: "warning", title: "Missing name", text: "Full name is required." });
     if (!editForm.hospital_id) return Swal.fire({ icon: "warning", title: "Missing hospital", text: "Select a hospital." });
@@ -366,7 +367,7 @@ export default function PatientsManagement() {
 
   const deletePatient = async (p) => {
     if (!requireTokenGuard()) return;
-    if (!isAdmin) return;
+    if (!isSuperAdmin) return;
     const r = await Swal.fire({
       icon: "warning",
       title: "Delete patient?",
@@ -401,7 +402,7 @@ export default function PatientsManagement() {
               <Typography sx={{ opacity: 0.9, mt: 0.5 }}>List, edit, and delete patient records.</Typography>
             </Box>
             <Stack direction="row" spacing={1}>
-              {isAdmin && (
+              {isSuperAdmin && (
                 <Button
                   variant="outlined"
                   startIcon={<Add />}
@@ -416,9 +417,9 @@ export default function PatientsManagement() {
         </Box>
 
         <CardContent>
-          {!isAdmin && (
+          {!isSuperAdmin && (
             <Alert severity="info" sx={{ mb: 2 }}>
-              You can view patients, but only admins can edit or delete.
+              You can view patients, but only Super Admin can edit or delete.
             </Alert>
           )}
 
@@ -510,16 +511,16 @@ export default function PatientsManagement() {
                               <Visibility fontSize="inherit" />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title={isAdmin ? "Edit" : "Admin only"}>
+                          <Tooltip title={isSuperAdmin ? "Edit" : "Super Admin only"}>
                             <span>
-                              <IconButton size="small" onClick={() => openEdit(p)} disabled={!isAdmin}>
+                              <IconButton size="small" onClick={() => openEdit(p)} disabled={!isSuperAdmin}>
                                 <Edit fontSize="inherit" />
                               </IconButton>
                             </span>
                           </Tooltip>
-                          <Tooltip title={isAdmin ? "Delete" : "Admin only"}>
+                          <Tooltip title={isSuperAdmin ? "Delete" : "Super Admin only"}>
                             <span>
-                              <IconButton size="small" onClick={() => deletePatient(p)} disabled={!isAdmin}>
+                              <IconButton size="small" onClick={() => deletePatient(p)} disabled={!isSuperAdmin}>
                                 <Delete fontSize="inherit" />
                               </IconButton>
                             </span>
@@ -736,7 +737,20 @@ export default function PatientsManagement() {
                   value={editForm.date_of_birth || ""}
                   onChange={(e) => setEditForm((p) => ({ ...p, date_of_birth: e.target.value }))}
                 />
-                <TextField label="Gender (optional)" fullWidth value={editForm.gender} onChange={(e) => setEditForm((p) => ({ ...p, gender: e.target.value }))} />
+                <FormControl fullWidth>
+                  <InputLabel id="edit-patient-gender">Gender (optional)</InputLabel>
+                  <Select
+                    labelId="edit-patient-gender"
+                    label="Gender (optional)"
+                    value={editForm.gender || ""}
+                    onChange={(e) => setEditForm((p) => ({ ...p, gender: e.target.value || null }))}
+                  >
+                    <MenuItem value="">—</MenuItem>
+                    <MenuItem value="Male">Male</MenuItem>
+                    <MenuItem value="Female">Female</MenuItem>
+                    <MenuItem value="Other">Other</MenuItem>
+                  </Select>
+                </FormControl>
               </Stack>
 
               <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
@@ -784,7 +798,7 @@ export default function PatientsManagement() {
           <Button
             variant="contained"
             onClick={saveEdit}
-            disabled={!isAdmin || editSaving || !editForm}
+            disabled={!isSuperAdmin || editSaving || !editForm}
             sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: theme.palette.primary.dark }, fontWeight: 900 }}
           >
             {editSaving ? "Saving…" : "Save"}
@@ -841,7 +855,20 @@ export default function PatientsManagement() {
               </Stack>
               <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
                 <TextField label="Date of birth (optional)" type="date" fullWidth InputLabelProps={{ shrink: true }} value={createForm.date_of_birth} onChange={(e) => setCreateForm((p) => ({ ...p, date_of_birth: e.target.value }))} />
-                <TextField label="Gender (optional)" fullWidth value={createForm.gender} onChange={(e) => setCreateForm((p) => ({ ...p, gender: e.target.value }))} />
+                <FormControl fullWidth>
+                  <InputLabel id="create-patient-gender">Gender (optional)</InputLabel>
+                  <Select
+                    labelId="create-patient-gender"
+                    label="Gender (optional)"
+                    value={createForm.gender || ""}
+                    onChange={(e) => setCreateForm((p) => ({ ...p, gender: e.target.value || "" }))}
+                  >
+                    <MenuItem value="">—</MenuItem>
+                    <MenuItem value="Male">Male</MenuItem>
+                    <MenuItem value="Female">Female</MenuItem>
+                    <MenuItem value="Other">Other</MenuItem>
+                  </Select>
+                </FormControl>
               </Stack>
               <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
                 <TextField label="Blood group (optional)" fullWidth value={createForm.blood_group} onChange={(e) => setCreateForm((p) => ({ ...p, blood_group: e.target.value }))} />
@@ -861,7 +888,7 @@ export default function PatientsManagement() {
         </DialogContent>
         <DialogActions>
           <Button variant="outlined" onClick={() => setCreateOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={saveCreate} disabled={!isAdmin || createSaving} sx={{ fontWeight: 900 }}>
+          <Button variant="contained" onClick={saveCreate} disabled={!isSuperAdmin || createSaving} sx={{ fontWeight: 900 }}>
             {createSaving ? "Creating…" : "Create"}
           </Button>
         </DialogActions>

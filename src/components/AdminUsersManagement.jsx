@@ -96,21 +96,21 @@ const normalizeRoleName = (name) =>
   String(name || "")
     .trim()
     .toLowerCase();
-/** True for admin or Super Admin (full menu access, no per-role menu edit). */
+/** True for Super Admin (full menu access, no per-role menu edit). */
 const isPrivilegedRole = (name) => {
-  const n = normalizeRoleName(name);
-  return n === "admin" || n === "super admin";
+  const n = String(name || "").trim();
+  return n === "Super Admin" || n.toLowerCase() === "superadmin";
 };
 const displayRoleName = (name) => {
-  const n = normalizeRoleName(name);
-  if (n === "admin") return "Admin";
-  if (n === "super admin") return "Super Admin";
+  const n = String(name || "").trim();
+  const lower = n.toLowerCase();
+  if (n === "Super Admin" || lower === "superadmin") return "Super Admin";
   if (
-    n === "user" ||
-    n === "regular_user" ||
-    n === "regular" ||
-    n === "patient" ||
-    n === "helper"
+    lower === "user" ||
+    lower === "regular_user" ||
+    lower === "regular" ||
+    lower === "patient" ||
+    lower === "helper"
   )
     return "Regular user";
   return name || "—";
@@ -213,7 +213,7 @@ export default function AdminUsersManagement() {
   const theme = useTheme();
   const token = getToken();
   const roleName = getRoleName();
-  const isAdmin = roleName === "admin" || roleName === "Super Admin";
+  const isSuperAdmin = roleName === "Super Admin";
   const usersReqId = useRef(0);
   const rolesReqId = useRef(0);
 
@@ -244,7 +244,7 @@ export default function AdminUsersManagement() {
 
   // Show all roles in dropdown except Super Admin (so custom roles like receptionist are visible)
   const userAssignableRoles = useMemo(() => {
-    return roles.filter((r) => normalizeRoleName(r.name) !== "super admin");
+    return roles.filter((r) => normalizeRoleName(r.name) !== "Super Admin");
   }, [roles]);
 
   const defaultRegularRoleId = useMemo(() => {
@@ -387,7 +387,7 @@ export default function AdminUsersManagement() {
         method: "POST",
         token,
       });
-      showToast("success", "Promoted to admin. Reloading…");
+      showToast("success", "Promoted to Super Admin. Reloading…");
       setTimeout(() => window.location.reload(), 600);
     } catch (e) {
       showToast("error", e.message);
@@ -838,7 +838,7 @@ export default function AdminUsersManagement() {
               </Typography>
             </Box>
             <Stack direction="row" spacing={1}>
-              {isAdmin && (
+              {isSuperAdmin && (
                 <Button
                   variant="contained"
                   startIcon={<AddIcon />}
@@ -906,8 +906,8 @@ export default function AdminUsersManagement() {
                     </Button>
                   }
                 >
-                  Your account is not an <b>admin</b>, so the API blocks access
-                  to Users/Roles. If this is a fresh system with no admin yet,
+                  Your account is not <b>Super Admin</b>, so the API blocks access
+                  to Users/Roles. If this is a fresh system with no Super Admin yet,
                   use “Bootstrap promote me” once.
                 </Alert>
               )}
@@ -1047,7 +1047,7 @@ export default function AdminUsersManagement() {
                           </TableCell>
                           <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} data-actions-cell onClick={(e) => e.stopPropagation()}>
                             <Box sx={{ display: "flex", flexDirection: "row", flexWrap: "wrap", gap: 0.5, justifyContent: "flex-end", maxWidth: "100%" }}>
-                              {isAdmin && (
+                              {isSuperAdmin && (
                                 <>
                                   <Tooltip title="Edit">
                                     <IconButton
@@ -1135,8 +1135,8 @@ export default function AdminUsersManagement() {
                     </Button>
                   }
                 >
-                  Your account is not an <b>admin</b>, so the API blocks access
-                  to Users/Roles. If this is a fresh system with no admin yet,
+                  Your account is not <b>Super Admin</b>, so the API blocks access
+                  to Users/Roles. If this is a fresh system with no Super Admin yet,
                   use “Bootstrap promote me” once.
                 </Alert>
               )}
@@ -1237,7 +1237,7 @@ export default function AdminUsersManagement() {
                                   <VisibilityIcon fontSize="inherit" />
                                 </IconButton>
                               </Tooltip>
-                              {isAdmin && (
+                              {isSuperAdmin && (
                                 <>
                                   <Tooltip title="Navbar menu items">
                                     <IconButton
@@ -1331,7 +1331,7 @@ export default function AdminUsersManagement() {
             }
           />
           <Typography variant="caption" color="text.secondary">
-            For system users, recommended roles are: admin, user
+            For system users, recommended roles are: Super Admin, user
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -1439,7 +1439,7 @@ export default function AdminUsersManagement() {
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2, pt: 0 }}>
-          {isAdmin && roleView.role && !isPrivilegedRole(roleView.role.name) && (
+          {isSuperAdmin && roleView.role && !isPrivilegedRole(roleView.role.name) && (
             <Button
               startIcon={<ListIcon />}
               onClick={() => {
@@ -1909,7 +1909,7 @@ export default function AdminUsersManagement() {
           <Button onClick={() => setUserView({ open: false, user: null })}>
             Close
           </Button>
-          {isAdmin && (
+          {isSuperAdmin && (
             <Button
               variant="contained"
               onClick={() => {

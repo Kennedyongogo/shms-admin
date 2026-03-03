@@ -135,14 +135,15 @@ const Navbar = (props) => {
       return null;
     }
   })();
-  const isAdmin = role?.name === "admin";
+  const isSuperAdmin = role?.name === "Super Admin";
+  // Use package-filtered menu from API (login/me) for everyone including Super Admin (silver vs gold).
   const visibleItems = !user
     ? []
-    : isAdmin
-      ? adminItems
-      : allowedMenuKeys === null || allowedMenuKeys === undefined
+    : allowedMenuKeys != null && Array.isArray(allowedMenuKeys)
+      ? adminItems.filter((item) => allowedMenuKeys.includes(item.key))
+      : isSuperAdmin
         ? adminItems
-        : adminItems.filter((item) => allowedMenuKeys.includes(item.key));
+        : [];
   const menuItems = visibleItems;
 
   const handleDrawerOpen = () => {

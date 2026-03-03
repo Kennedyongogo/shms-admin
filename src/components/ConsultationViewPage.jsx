@@ -171,10 +171,10 @@ export default function ConsultationViewPage() {
   const [reportPdfPreviewUrl, setReportPdfPreviewUrl] = useState(null);
   const reportPdfObjectUrlRef = useRef(null);
 
-  const isAdmin = useMemo(() => {
+  const isSuperAdmin = useMemo(() => {
     try {
       const role = JSON.parse(localStorage.getItem("role") || "null");
-      return role?.name === "admin";
+      return role?.name === "Super Admin";
     } catch {
       return false;
     }
@@ -185,7 +185,7 @@ export default function ConsultationViewPage() {
     return Boolean(doctorUserId && currentUser?.id && String(doctorUserId) === String(currentUser.id));
   };
 
-  const canEdit = consultation && isAssignedDoctor(consultation);
+  const canEdit = consultation && (isSuperAdmin || isAssignedDoctor(consultation));
   const appointmentIsComplete = consultation?.appointment?.status === "completed";
   const actionsDisabled = !canEdit || appointmentIsComplete;
 

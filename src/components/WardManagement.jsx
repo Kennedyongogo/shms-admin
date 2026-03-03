@@ -119,7 +119,7 @@ export default function WardManagement() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const token = getToken();
-  const isAdmin = getRoleName() === "admin";
+  const isSuperAdmin = getRoleName() === "Super Admin";
 
   const [tab, setTab] = useState(0);
 
@@ -882,14 +882,14 @@ export default function WardManagement() {
           <Box sx={{ p: 2 }}>
             <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems={{ md: "center" }} sx={{ mb: 2 }}>
               <TextField size="small" fullWidth label="Search (name, type)" value={wardsSearch} onChange={(e) => { setWardsSearch(e.target.value); setWardsPage(0); }} />
-              {isAdmin && (
+              {isSuperAdmin && (
                 <Button variant="contained" startIcon={<AddIcon />} onClick={openWardCreate} sx={{ fontWeight: 900, minWidth: { xs: "100%", md: 140 } }}>
                   Add Ward
                 </Button>
               )}
             </Stack>
-            {!isAdmin && (
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>View only. Only admins can create, edit, or delete wards.</Typography>
+            {!isSuperAdmin && (
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>View only. Only Super Admin can create, edit, or delete wards.</Typography>
             )}
             <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
               <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
@@ -900,13 +900,13 @@ export default function WardManagement() {
                     <TableCell sx={{ fontWeight: 900, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 90 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Type</TableCell>
                     <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 140 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Department</TableCell>
                     <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 100 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Daily rate</TableCell>
-                    {isAdmin && <TableCell align="right" sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Actions</TableCell>}
+                    {isSuperAdmin && <TableCell align="right" sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Actions</TableCell>}
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {wardsLoading ? (
                     <TableRow>
-                      <TableCell colSpan={isAdmin ? 6 : 5} sx={{ py: 4 }}>
+                      <TableCell colSpan={isSuperAdmin ? 6 : 5} sx={{ py: 4 }}>
                         <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
                           <CircularProgress size={18} />
                           <Typography color="text.secondary">Loading…</Typography>
@@ -929,7 +929,7 @@ export default function WardManagement() {
                         <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{w.type || "—"}</TableCell>
                         <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{departmentOptions.find((d) => d.id === w.department_id)?.name ?? w.department?.name ?? "—"}</TableCell>
                         <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{w.daily_rate != null ? Number(w.daily_rate).toLocaleString() : "—"}</TableCell>
-                        {isAdmin && (
+                        {isSuperAdmin && (
                           <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} data-actions-cell onClick={(e) => e.stopPropagation()}>
                             <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
                               <Tooltip title="Edit">
@@ -945,7 +945,7 @@ export default function WardManagement() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={isAdmin ? 6 : 5} sx={{ py: 3 }}>
+                      <TableCell colSpan={isSuperAdmin ? 6 : 5} sx={{ py: 3 }}>
                         <Typography color="text.secondary">No wards found.</Typography>
                       </TableCell>
                     </TableRow>
@@ -962,14 +962,14 @@ export default function WardManagement() {
           <Box sx={{ p: 2 }}>
             <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems={{ md: "center" }} sx={{ mb: 2, width: "100%" }}>
               <TextField size="small" label="Search (bed number, status)" value={bedsSearch} onChange={(e) => { setBedsSearch(e.target.value); setBedsPage(0); }} sx={{ flex: 1, minWidth: 0 }} />
-              {isAdmin && (
+              {isSuperAdmin && (
                 <Button variant="contained" startIcon={<AddIcon />} onClick={openBedCreate} sx={{ fontWeight: 900, flexShrink: 0, minWidth: { xs: "100%", md: 120 } }}>
                   Add Bed
                 </Button>
               )}
             </Stack>
-            {!isAdmin && (
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>View only. Only admins can create, edit, delete beds, or change status.</Typography>
+            {!isSuperAdmin && (
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>View only. Only Super Admin can create, edit, delete beds, or change status.</Typography>
             )}
             <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
               <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
@@ -979,13 +979,13 @@ export default function WardManagement() {
                     <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 120, md: 160 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Bed number</TableCell>
                     <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 140 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Ward</TableCell>
                     <TableCell sx={{ fontWeight: 900, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 100 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Status</TableCell>
-                    {isAdmin && <TableCell align="right" sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Actions</TableCell>}
+                    {isSuperAdmin && <TableCell align="right" sx={{ fontWeight: 900, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Actions</TableCell>}
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {bedsLoading ? (
                     <TableRow>
-                      <TableCell colSpan={isAdmin ? 5 : 4} sx={{ py: 4 }}>
+                      <TableCell colSpan={isSuperAdmin ? 5 : 4} sx={{ py: 4 }}>
                         <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
                           <CircularProgress size={18} />
                           <Typography color="text.secondary">Loading…</Typography>
@@ -1009,7 +1009,7 @@ export default function WardManagement() {
                         <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
                           <Chip size="small" label={b.status} color={b.status === "available" ? "success" : b.status === "maintenance" ? "warning" : "default"} variant="outlined" />
                         </TableCell>
-                        {isAdmin && (
+                        {isSuperAdmin && (
                           <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} data-actions-cell onClick={(e) => e.stopPropagation()}>
                             <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
                               <Tooltip title="Edit">
@@ -1032,7 +1032,7 @@ export default function WardManagement() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={isAdmin ? 5 : 4} sx={{ py: 3 }}>
+                      <TableCell colSpan={isSuperAdmin ? 5 : 4} sx={{ py: 3 }}>
                         <Typography color="text.secondary">No beds found.</Typography>
                       </TableCell>
                     </TableRow>
