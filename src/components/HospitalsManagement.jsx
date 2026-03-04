@@ -59,6 +59,7 @@ const API = {
   news: "/api/news",
   events: "/api/events",
   schedules: "/api/schedules",
+  mpesaSettings: "/api/mpesa-settings",
 };
 
 /** Time string "HH:mm" or "HH:mm:ss" to minutes since midnight. "00:00" as end = 1440 (midnight next day). */
@@ -176,7 +177,7 @@ export default function HospitalsManagement() {
   const roleName = getRoleName();
   const isSuperAdmin = roleName === "Super Admin";
 
-  const [tab, setTab] = useState(0); // 0 hospital, 1 departments, 2 staff, 3 services, 4 news/events
+  const [tab, setTab] = useState(0); // 0 hospital, 1 departments, 2 staff, 3 services, 4 news/events, 5 M-Pesa (Super Admin only)
 
   // Hospitals list
   const hospitalsReqId = useRef(0);
@@ -279,6 +280,36 @@ export default function HospitalsManagement() {
 
   // News & Events (tab 4)
   const [contentTab, setContentTab] = useState(0); // 0 news, 1 events
+
+  // M-Pesa settings (Super Admin only, current hospital)
+  const [mpesaSettings, setMpesaSettings] = useState(null);
+  const [mpesaSettingsLoading, setMpesaSettingsLoading] = useState(false);
+  const [mpesaSettingsSaving, setMpesaSettingsSaving] = useState(false);
+  const [mpesaSettingsTesting, setMpesaSettingsTesting] = useState(false);
+
+  const loadMpesaSettings = async () => {
+    if (!isSuperAdmin) return;
+    setMpesaSettingsLoading(true);
+    try {
+      const data = await fetchJson(API.mpesaSettings, { token });
+      setMpesaSettings(
+        data?.data || {
+          environment: "sandbox",
+          payment_type: "paybill",
+          shortcode: "",
+          callback_url: "",
+          is_active: true,
+          has_credentials: false,
+        }
+      );
+    } catch (error) {
+      console.error(error);
+      setMpesaSettings(null);
+      Swal.fire({ icon: "error", title: "M-Pesa settings", text: error.message || "Failed to load settings." });
+    } finally {
+      setMpesaSettingsLoading(false);
+    }
+  };
   const newsReqId = useRef(0);
   const [news, setNews] = useState([]);
   const [newsLoading, setNewsLoading] = useState(false);
@@ -541,6 +572,12 @@ export default function HospitalsManagement() {
     loadServicesList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, svcPage, svcRowsPerPage, hospitals?.[0]?.id]);
+
+  useEffect(() => {
+    if (!isSuperAdmin || tab !== 5) return;
+    loadMpesaSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
 
   // Debounced search — skip first run so tab-gated effect does the initial load only (avoids double blink)
   useEffect(() => {
@@ -1467,6 +1504,7 @@ export default function HospitalsManagement() {
                 <MenuItem value={2}>Staff</MenuItem>
                 <MenuItem value={3}>Services</MenuItem>
                 <MenuItem value={4}>News & Events</MenuItem>
+                {isSuperAdmin && <MenuItem value={5}>M-Pesa Settings</MenuItem>}
               </Select>
             </FormControl>
           </Box>
@@ -1486,6 +1524,7 @@ export default function HospitalsManagement() {
             <Tab icon={<PeopleAltIcon />} iconPosition="start" label="Staff" />
             <Tab icon={<MedicalServicesIcon />} iconPosition="start" label="Services" />
             <Tab icon={<CampaignIcon />} iconPosition="start" label="News & Events" />
+            {isSuperAdmin && <Tab icon={<LocalHospitalIcon />} iconPosition="start" label="M-Pesa Settings" />}
           </Tabs>
           <Divider />
 
@@ -2304,6 +2343,189 @@ export default function HospitalsManagement() {
                     }}
                   />
                 </>
+              )}
+            </Box>
+          )}
+
+          {/* M-Pesa Settings (Super Admin only) */}
+          {isSuperAdmin && tab === 5 && (
+            <Box sx={{ p: 2 }}>
+              <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" gutterBottom>
+                M-Pesa Integration Settings
+              </Typography>
+              {mpesaSettingsLoading ? (
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
+                  <CircularProgress size={18} />
+                  <Typography color="text.secondary">Loading M-Pesa settings…</Typography>
+                </Stack>
+              ) : (
+                <Box
+                  component="form"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    (async () => {
+                      if (!isSuperAdmin) return;
+                      setMpesaSettingsSaving(true);
+                      try {
+                        const payload = {
+                          shortcode: mpesaSettings?.shortcode || "",
+                          consumer_key: mpesaSettings?.consumer_key || "",
+                          consumer_secret: mpesaSettings?.consumer_secret || "",
+                          passkey: mpesaSettings?.passkey || "",
+                          environment: mpesaSettings?.environment || "sandbox",
+                          payment_type: mpesaSettings?.payment_type || "paybill",
+                          callback_url: mpesaSettings?.callback_url || "",
+                          is_active: mpesaSettings?.is_active !== false,
+                        };
+                        const data = await fetchJson(API.mpesaSettings, {
+                          method: "POST",
+                          token,
+                          body: payload,
+                        });
+                        setMpesaSettings((prev) => ({ ...(prev || {}), ...(data?.data || {}) }));
+                        Swal.fire({ icon: "success", title: "Saved", text: "M-Pesa settings saved successfully." });
+                      } catch (error) {
+                        console.error(error);
+                        Swal.fire({ icon: "error", title: "Save failed", text: error.message || "Could not save settings." });
+                      } finally {
+                        setMpesaSettingsSaving(false);
+                      }
+                    })();
+                  }}
+                  sx={{
+                    width: "100%",
+                    display: "grid",
+                    gridTemplateColumns: "1fr",
+                    gap: 2,
+                  }}
+                >
+                  <FormControl size="small" fullWidth>
+                    <InputLabel id="mpesa-environment-label">Environment</InputLabel>
+                    <Select
+                      labelId="mpesa-environment-label"
+                      label="Environment"
+                      value={mpesaSettings?.environment || "sandbox"}
+                      onChange={(e) =>
+                        setMpesaSettings((prev) => ({ ...(prev || {}), environment: e.target.value }))
+                      }
+                    >
+                      <MenuItem value="sandbox">Sandbox</MenuItem>
+                      <MenuItem value="production">Production</MenuItem>
+                    </Select>
+                  </FormControl>
+
+                  <FormControl size="small" fullWidth>
+                    <InputLabel id="mpesa-payment-type-label">Payment type</InputLabel>
+                    <Select
+                      labelId="mpesa-payment-type-label"
+                      label="Payment type"
+                      value={mpesaSettings?.payment_type || "paybill"}
+                      onChange={(e) =>
+                        setMpesaSettings((prev) => ({ ...(prev || {}), payment_type: e.target.value }))
+                      }
+                    >
+                      <MenuItem value="paybill">PayBill</MenuItem>
+                      <MenuItem value="till">Till</MenuItem>
+                    </Select>
+                  </FormControl>
+
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Shortcode"
+                    required
+                    value={mpesaSettings?.shortcode || ""}
+                    onChange={(e) =>
+                      setMpesaSettings((prev) => ({ ...(prev || {}), shortcode: e.target.value }))
+                    }
+                  />
+
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Consumer key"
+                    value={mpesaSettings?.consumer_key || ""}
+                    onChange={(e) =>
+                      setMpesaSettings((prev) => ({ ...(prev || {}), consumer_key: e.target.value }))
+                    }
+                  />
+
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Consumer secret"
+                    type="password"
+                    value={mpesaSettings?.has_credentials ? "" : mpesaSettings?.consumer_secret || ""}
+                    placeholder={mpesaSettings?.has_credentials ? "•••••• (saved)" : ""}
+                    onChange={(e) =>
+                      setMpesaSettings((prev) => ({ ...(prev || {}), consumer_secret: e.target.value }))
+                    }
+                  />
+
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Passkey"
+                    type="password"
+                    value={mpesaSettings?.has_credentials ? "" : mpesaSettings?.passkey || ""}
+                    placeholder={mpesaSettings?.has_credentials ? "•••••• (saved)" : ""}
+                    onChange={(e) =>
+                      setMpesaSettings((prev) => ({ ...(prev || {}), passkey: e.target.value }))
+                    }
+                  />
+
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Callback URL (optional)"
+                    placeholder="Leave blank to use default from backend"
+                    value={mpesaSettings?.callback_url || ""}
+                    onChange={(e) =>
+                      setMpesaSettings((prev) => ({ ...(prev || {}), callback_url: e.target.value }))
+                    }
+                  />
+
+                  <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={mpesaSettingsSaving || mpesaSettingsTesting}
+                    >
+                      {mpesaSettingsSaving ? "Saving…" : "Save settings"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outlined"
+                      disabled={mpesaSettingsSaving || mpesaSettingsTesting}
+                      onClick={async () => {
+                        if (!isSuperAdmin) return;
+                        setMpesaSettingsTesting(true);
+                        try {
+                          const data = await fetchJson(`${API.mpesaSettings}/test`, {
+                            method: "POST",
+                            token,
+                          });
+                          Swal.fire({
+                            icon: "success",
+                            title: "Connection OK",
+                            text: data?.message || "M-Pesa credentials are valid.",
+                          });
+                        } catch (error) {
+                          console.error(error);
+                          Swal.fire({
+                            icon: "error",
+                            title: "Connection failed",
+                            text: error.message || "Could not connect to M-Pesa with these credentials.",
+                          });
+                        } finally {
+                          setMpesaSettingsTesting(false);
+                        }
+                      }}
+                    >
+                      {mpesaSettingsTesting ? "Testing…" : "Test connection"}
+                    </Button>
+                  </Stack>
+                </Box>
               )}
             </Box>
           )}

@@ -124,6 +124,23 @@ export default function ConsultationViewPage() {
   const navigate = useNavigate();
   const token = getToken();
   const currentUser = getUser();
+  const allowedMenuKeys = React.useMemo(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("menuItems") || "null");
+      return Array.isArray(stored) ? stored : null;
+    } catch {
+      return null;
+    }
+  }, []);
+  const subscriptionPackage = React.useMemo(() => {
+    try {
+      const hospital = JSON.parse(localStorage.getItem("hospital") || "null");
+      return hospital?.subscription_package || "silver";
+    } catch {
+      return "silver";
+    }
+  }, []);
+  const hasWardModule = subscriptionPackage !== "silver" && allowedMenuKeys?.includes("ward");
 
   const [consultation, setConsultation] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -489,6 +506,22 @@ export default function ConsultationViewPage() {
   };
 
   const openAdmit = async () => {
+    if (!hasWardModule) {
+      Swal.fire({
+        icon: "error",
+        title: "Ward module not available",
+        text: "Your current subscription does not include Ward admissions.",
+      });
+      return;
+    }
+    if (!hasWardModule) {
+      Swal.fire({
+        icon: "error",
+        title: "Ward module not available",
+        text: "Your current subscription does not include Ward admissions.",
+      });
+      return;
+    }
     if (!consultation?.appointment) return;
     setAdmitOpen(true);
     setAdmitBedId("");
@@ -594,7 +627,7 @@ export default function ConsultationViewPage() {
       lines.push("", "Prescriptions:");
       consultationPrescriptions.forEach((rx) => {
         (rx.items || []).forEach((it) => {
-          lines.push(`  • ${it.medication?.name || "—"} × ${it.quantity ?? 1}${it.dosage ? `, ${it.dosage}` : ""}${it.frequency ? `, ${it.frequency}` : ""}`);
+          lines.push(`  • ${it.medication?.name || "—"} × ${it.quantity ?? 1}${it.dosage ? `, ${it.dosage}` : ""}${it.frequency ? `, ${it.frequency}` : ""}${it.duration ? `, ${it.duration}` : ""}`);
         });
       });
     }
@@ -787,8 +820,32 @@ export default function ConsultationViewPage() {
             <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 1.5, mt: 2 }}>
               <Button startIcon={<EditIcon />} variant="outlined" onClick={openEdit} disabled={actionsDisabled} sx={{ borderRadius: 2, fontWeight: 700, width: "100%", minHeight: 44 }}>Update consultation</Button>
               <Button startIcon={<ScienceIcon />} variant="outlined" onClick={openLab} disabled={actionsDisabled} sx={{ borderRadius: 2, fontWeight: 700, width: "100%", minHeight: 44 }}>Initiate lab test</Button>
-              <Button startIcon={<PharmacyIcon />} variant="outlined" onClick={openRx} disabled={actionsDisabled} sx={{ borderRadius: 2, fontWeight: 700, width: "100%", minHeight: 44 }}>Prescribe</Button>
-              <Button startIcon={<AdmitIcon />} variant="outlined" onClick={openAdmit} disabled={actionsDisabled || hasAdmission} sx={{ borderRadius: 2, fontWeight: 700, width: "100%", minHeight: 44 }}>{hasAdmission ? "Already admitted" : "Admit patient"}</Button>
+              <Button
+                startIcon={<PharmacyIcon />}
+                variant="outlined"
+                onClick={openRx}
+                disabled={actionsDisabled}
+                sx={{
+                  borderRadius: 2,
+                  fontWeight: 700,
+                  width: "100%",
+                  minHeight: 44,
+                  gridColumn: !hasWardModule ? { xs: "1", sm: "1 / -1" } : undefined,
+                }}
+              >
+                Prescribe
+              </Button>
+              {hasWardModule && (
+                <Button
+                  startIcon={<AdmitIcon />}
+                  variant="outlined"
+                  onClick={openAdmit}
+                  disabled={actionsDisabled || hasAdmission}
+                  sx={{ borderRadius: 2, fontWeight: 700, width: "100%", minHeight: 44 }}
+                >
+                  {hasAdmission ? "Already admitted" : "Admit patient"}
+                </Button>
+              )}
               <Button startIcon={<ReportIcon />} variant="outlined" onClick={openReportDialog} disabled={consultationHasReport} sx={{ borderRadius: 2, fontWeight: 700, width: "100%", minHeight: 44, gridColumn: { xs: "1", sm: "1 / -1" } }}>{consultationHasReport ? "Report generated" : "Generate report"}</Button>
             </Box>
 
@@ -871,6 +928,7 @@ export default function ConsultationViewPage() {
                               {it.medication?.name || "—"} × {it.quantity ?? 1}
                               {it.dosage ? ` • ${it.dosage}` : ""}
                               {it.frequency ? ` • ${it.frequency}` : ""}
+                              {it.duration ? ` • ${it.duration}` : ""}
                             </Typography>
                           ))
                         ) : (
@@ -883,50 +941,54 @@ export default function ConsultationViewPage() {
               </Stack>
             )}
 
-            <Divider sx={{ my: 2 }} />
-            <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Admission notes</Typography>
-            {consultationAdmissionsLoading ? (
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
-                <CircularProgress size={20} />
-                <Typography color="text.secondary">Loading admission notes...</Typography>
-              </Stack>
-            ) : (() => {
-              const notes = [];
-              consultationAdmissions.forEach((adm) => {
-                (adm.nursingNotes || []).forEach((n) => {
-                  notes.push({
-                    ...n,
-                    admissionDate: adm.admission_date,
-                    admissionStatus: adm.status,
-                    bedLabel: adm.bed ? `${adm.bed.bed_number}${adm.bed.ward?.name ? ` (${adm.bed.ward.name})` : ""}` : "—",
+            {hasWardModule && (
+              <>
+                <Divider sx={{ my: 2 }} />
+                <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Admission notes</Typography>
+                {consultationAdmissionsLoading ? (
+                  <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
+                    <CircularProgress size={20} />
+                    <Typography color="text.secondary">Loading admission notes...</Typography>
+                  </Stack>
+                ) : (() => {
+                  const notes = [];
+                  consultationAdmissions.forEach((adm) => {
+                    (adm.nursingNotes || []).forEach((n) => {
+                      notes.push({
+                        ...n,
+                        admissionDate: adm.admission_date,
+                        admissionStatus: adm.status,
+                        bedLabel: adm.bed ? `${adm.bed.bed_number}${adm.bed.ward?.name ? ` (${adm.bed.ward.name})` : ""}` : "—",
+                      });
+                    });
                   });
-                });
-              });
-              if (notes.length === 0) {
-                return <Typography color="text.secondary">No admission notes for this consultation yet.</Typography>;
-              }
-              return (
-                <Stack spacing={1.5}>
-                  {notes.map((n) => (
-                    <Card key={n.id} variant="outlined" sx={{ borderRadius: 2 }}>
-                      <CardContent sx={{ "&:last-child": { pb: 2 }, py: 1.5, px: 2 }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-                          {formatDateTime(n.date_time || n.recorded_at)} • Recorded by {n.nurse?.user?.full_name ?? "—"}
-                        </Typography>
-                        <Stack spacing={0.5} direction="row" flexWrap="wrap" sx={{ gap: 1.5 }}>
-                          {n.temperature != null && <Typography variant="body2"><strong>Temp:</strong> {n.temperature}°C</Typography>}
-                          {n.blood_pressure && <Typography variant="body2"><strong>BP:</strong> {n.blood_pressure}</Typography>}
-                          {n.pulse != null && <Typography variant="body2"><strong>Pulse:</strong> {n.pulse}</Typography>}
-                          {n.respiratory_rate != null && <Typography variant="body2"><strong>RR:</strong> {n.respiratory_rate}</Typography>}
-                          {n.pain_scale != null && <Typography variant="body2"><strong>Pain:</strong> {n.pain_scale}</Typography>}
-                        </Stack>
-                        {n.notes && <Typography variant="body2" sx={{ mt: 0.5 }}>{n.notes}</Typography>}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </Stack>
-              );
-            })()}
+                  if (notes.length === 0) {
+                    return <Typography color="text.secondary">No admission notes for this consultation yet.</Typography>;
+                  }
+                  return (
+                    <Stack spacing={1.5}>
+                      {notes.map((n) => (
+                        <Card key={n.id} variant="outlined" sx={{ borderRadius: 2 }}>
+                          <CardContent sx={{ "&:last-child": { pb: 2 }, py: 1.5, px: 2 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                              {formatDateTime(n.date_time || n.recorded_at)} • Recorded by {n.nurse?.user?.full_name ?? "—"}
+                            </Typography>
+                            <Stack spacing={0.5} direction="row" flexWrap="wrap" sx={{ gap: 1.5 }}>
+                              {n.temperature != null && <Typography variant="body2"><strong>Temp:</strong> {n.temperature}°C</Typography>}
+                              {n.blood_pressure && <Typography variant="body2"><strong>BP:</strong> {n.blood_pressure}</Typography>}
+                              {n.pulse != null && <Typography variant="body2"><strong>Pulse:</strong> {n.pulse}</Typography>}
+                              {n.respiratory_rate != null && <Typography variant="body2"><strong>RR:</strong> {n.respiratory_rate}</Typography>}
+                              {n.pain_scale != null && <Typography variant="body2"><strong>Pain:</strong> {n.pain_scale}</Typography>}
+                            </Stack>
+                            {n.notes && <Typography variant="body2" sx={{ mt: 0.5 }}>{n.notes}</Typography>}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </Stack>
+                  );
+                })()}
+              </>
+            )}
 
             {consultationHasReport && consultationReportId && (
               <>

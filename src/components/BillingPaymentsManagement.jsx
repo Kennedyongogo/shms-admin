@@ -285,6 +285,19 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, singleTab, paymentsPage, paymentsRowsPerPage, paymentsSearch, paymentsMethod]);
 
+  // Optional lightweight polling so Billing/Payments stay in sync after payments from other screens
+  useEffect(() => {
+    if (embedded) return;
+    const activeTab = singleTab != null ? singleTab : tab;
+    if (activeTab !== 0 && activeTab !== 1) return;
+    const interval = setInterval(() => {
+      if (activeTab === 0) loadBills();
+      if (activeTab === 1) loadPayments();
+    }, 10000); // refresh every 10 seconds
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, singleTab, embedded]);
+
   const openBillById = async (billId) => {
     if (!billId) return;
     setBillView({ open: true, loading: true, bill: null });

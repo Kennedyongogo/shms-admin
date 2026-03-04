@@ -183,6 +183,15 @@ export default function PharmacyManagement() {
   const [pharmPaymentsTotal, setPharmPaymentsTotal] = useState(0);
   const [receiptDialogPaymentId, setReceiptDialogPaymentId] = useState(null);
 
+  const [mpesaDialog, setMpesaDialog] = useState({
+    open: false,
+    phone: "",
+    amount: "",
+    billId: null,
+    prescriptionId: null,
+  });
+  const [mpesaSubmitting, setMpesaSubmitting] = useState(false);
+
   // Dispense records
   const dispReqId = useRef(0);
   const [dispenses, setDispenses] = useState([]);
@@ -873,54 +882,57 @@ export default function PharmacyManagement() {
         // ignore
       }
     }
-    const rawPhone = (phone || "").trim().replace(/^\++/, "");
-    if (!rawPhone) {
-      Swal.fire({
-        icon: "error",
-        title: "No phone number",
-        text: "Patient has no phone number. Add phone in patient record.",
-      });
+    const initialPhone = (phone || "").trim();
+    const defaultAmount = String(presBilling?.balance ?? presBilling?.total_amount ?? "0");
+    setMpesaDialog({
+      open: true,
+      phone: initialPhone,
+      amount: defaultAmount,
+      billId: presBilling.bill_id,
+      prescriptionId: prescription.id,
+    });
+  };
+
+  const handleMpesaDialogClose = () => {
+    if (mpesaSubmitting) return;
+    setMpesaDialog((prev) => ({ ...prev, open: false }));
+  };
+
+  const handleMpesaDialogSubmit = async () => {
+    if (!requireTokenGuard()) return;
+    const phoneInput = (mpesaDialog.phone || "").trim();
+    const amountNumber = Number(mpesaDialog.amount);
+    if (!phoneInput) {
+      showToast("error", "Enter a phone number before sending M-Pesa prompt.");
       return;
     }
-    const defaultAmount = String(presBilling?.balance ?? presBilling?.total_amount ?? "0");
-    const ask = await Swal.fire({
-      icon: "question",
-      title: "Pay with M-Pesa",
-      html: `
-        <p style="text-align:left; margin-bottom:12px;">An M-Pesa prompt will be sent to the patient's phone. They must enter their PIN to complete payment.</p>
-        <label for="swal-mpesa-amount" style="display:block; text-align:left; margin-bottom:4px;">Amount (KES)</label>
-        <input id="swal-mpesa-amount" class="swal2-input" type="number" min="1" step="0.01" value="${defaultAmount}" style="margin-bottom:12px" />
-      `,
-      showCancelButton: true,
-      confirmButtonText: "Send M-Pesa prompt",
-      cancelButtonText: "Cancel",
-      reverseButtons: true,
-      preConfirm: () => {
-        const raw = document.getElementById("swal-mpesa-amount")?.value;
-        const n = Number(raw);
-        if (!Number.isFinite(n) || n < 0) {
-          Swal.showValidationMessage("Enter a valid amount");
-          return undefined;
-        }
-        return n;
-      },
-    });
-    if (!ask.isConfirmed || ask.value == null) return;
-    const amount = ask.value;
+    if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
+      showToast("error", "Enter a valid positive amount.");
+      return;
+    }
+    if (!mpesaDialog.billId || !mpesaDialog.prescriptionId) {
+      showToast("error", "Missing bill or prescription id for this payment.");
+      return;
+    }
+    setMpesaSubmitting(true);
     try {
+      const rawPhone = phoneInput.replace(/^\++/, "");
       await fetchJson(`${API.mpesa}/pay`, {
         method: "POST",
         token,
-        body: { phone: rawPhone, amount, bill_id: presBilling.bill_id },
+        body: { phone: rawPhone, amount: amountNumber, bill_id: mpesaDialog.billId },
       });
       Swal.fire({
         icon: "success",
         title: "STK Push sent",
         text: "Ask the patient to enter M-Pesa PIN. The bill will update automatically when they pay.",
       });
-      pollForPaymentAndRefreshPres(prescription.id, { maxAttempts: 35, intervalMs: 2000 });
+      pollForPaymentAndRefreshPres(mpesaDialog.prescriptionId, { maxAttempts: 35, intervalMs: 2000 });
+      setMpesaDialog((prev) => ({ ...prev, open: false }));
     } catch (e) {
       Swal.fire({ icon: "error", title: "M-Pesa failed", text: e?.message ?? "Something went wrong." });
+    } finally {
+      setMpesaSubmitting(false);
     }
   };
 
@@ -1763,6 +1775,53 @@ export default function PharmacyManagement() {
         paymentId={receiptDialogPaymentId}
         getToken={getToken}
       />
+
+      {/* M-Pesa payment */}
+      <Dialog
+        open={mpesaDialog.open}
+        onClose={handleMpesaDialogClose}
+        fullWidth
+        maxWidth="xs"
+        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
+      >
+        <DialogTitle sx={{ fontWeight: 900 }}>Pay with M-Pesa</DialogTitle>
+        <DialogContent sx={{ overflowY: "auto" }}>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              An M-Pesa prompt will be sent to the patient's phone. They must enter their PIN to complete payment.
+            </Typography>
+            <TextField
+              label="Phone (2547XXXXXXXX or 07…)"
+              size="small"
+              fullWidth
+              value={mpesaDialog.phone}
+              onChange={(e) =>
+                setMpesaDialog((prev) => ({ ...prev, phone: e.target.value }))
+              }
+            />
+            <TextField
+              label="Amount (KES)"
+              size="small"
+              type="number"
+              fullWidth
+              value={mpesaDialog.amount}
+              InputProps={{ readOnly: true }}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleMpesaDialogClose} disabled={mpesaSubmitting}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleMpesaDialogSubmit}
+            variant="contained"
+            disabled={mpesaSubmitting}
+          >
+            {mpesaSubmitting ? "Sending…" : "Send M-Pesa prompt"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Medication view */}
       <Dialog

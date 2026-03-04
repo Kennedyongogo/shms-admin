@@ -171,28 +171,12 @@ export default function AboutPage() {
         overflowX: "hidden",
       }}
     >
-      <Button
-        startIcon={<ArrowBackIcon />}
-        onClick={() => navigate("/", { replace: true })}
-        sx={{
-          position: "fixed",
-          top: 16,
-          left: 16,
-          zIndex: 1100,
-          color: primary,
-          fontWeight: 700,
-          "&:hover": { bgcolor: "rgba(15, 184, 176, 0.08)" },
-        }}
-      >
-        Back to home
-      </Button>
-
       {/* Section 1: Hero — full-width, no cards */}
       <Box
         component="section"
         sx={{
           position: "relative",
-          minHeight: "90vh",
+          minHeight: "45vh",
           display: "flex",
           alignItems: "flex-start",
           overflow: "hidden",
@@ -203,10 +187,22 @@ export default function AboutPage() {
           sx={{
             width: "100%",
             px: { xs: 2, sm: 3, lg: 4 },
-            pt: 8,
+            pt: 1,
             pb: 4,
           }}
         >
+          <Button
+            startIcon={<ArrowBackIcon />}
+            onClick={() => navigate("/", { replace: true })}
+            sx={{
+              color: primary,
+              fontWeight: 700,
+              mb: 1,
+              "&:hover": { bgcolor: "rgba(15, 184, 176, 0.08)" },
+            }}
+          >
+            Back to home
+          </Button>
           <Box
             sx={{
               display: "flex",
@@ -226,6 +222,7 @@ export default function AboutPage() {
                 bgcolor: "rgba(15, 184, 176, 0.1)",
                 border: "1px solid rgba(15, 184, 176, 0.2)",
                 width: "fit-content",
+                mt: 2,
               }}
             >
               <Box
@@ -264,6 +261,7 @@ export default function AboutPage() {
                 lineHeight: 1.1,
                 letterSpacing: "-0.02em",
                 color: "text.primary",
+                mt: -1.5,
               }}
             >
               Carlvyne Smart Hospital{" "}
@@ -524,7 +522,7 @@ export default function AboutPage() {
           <Typography
             component="h2"
             sx={{
-              fontSize: { xs: "1.875rem", lg: "3rem" },
+              fontSize: { xs: "1.125rem", lg: "1.5rem" },
               fontWeight: 200,
               fontStyle: "italic",
               lineHeight: 1.4,

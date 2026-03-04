@@ -255,14 +255,15 @@ function BarChartCard({ title, data, dataKey = "count", emptyMessage, formatValu
   );
 }
 
+// menuKey must match backend ALL_MENU_KEYS; used to show only tabs the user's package/role allows
 const TAB_CONFIG = [
-  { id: "overview", label: "Overview" },
-  { id: "appointmentsConsultations", label: "Appointments & Consultations" },
-  { id: "laboratory", label: "Laboratory" },
-  { id: "pharmacy", label: "Pharmacy" },
-  { id: "billing", label: "Billing" },
-  { id: "wardsBedsAdmissions", label: "Wards, Beds & Admissions" },
-  { id: "inventory", label: "Inventory" },
+  { id: "overview", label: "Overview", menuKey: "dashboard" },
+  { id: "appointmentsConsultations", label: "Appointments & Consultations", menuKey: "appointments" },
+  { id: "laboratory", label: "Laboratory", menuKey: "laboratory" },
+  { id: "pharmacy", label: "Pharmacy", menuKey: "pharmacy" },
+  { id: "billing", label: "Billing", menuKey: "billing" },
+  { id: "wardsBedsAdmissions", label: "Wards, Beds & Admissions", menuKey: "ward" },
+  { id: "inventory", label: "Inventory", menuKey: "inventory" },
 ];
 
 const currentYear = new Date().getFullYear();
@@ -275,12 +276,41 @@ const MONTHS = [
   { value: 10, label: "October" }, { value: 11, label: "November" }, { value: 12, label: "December" },
 ];
 
+function getAllowedMenuKeys() {
+  try {
+    const stored = JSON.parse(localStorage.getItem("menuItems") || "null");
+    return Array.isArray(stored) ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
+function getSubscriptionPackage() {
+  try {
+    const hospital = JSON.parse(localStorage.getItem("hospital") || "null");
+    return hospital?.subscription_package || "silver";
+  } catch {
+    return "silver";
+  }
+}
+
 export default function DashboardPage() {
   const theme = useTheme();
+  const allowedMenuKeys = React.useMemo(getAllowedMenuKeys, []);
+  const subscriptionPackage = React.useMemo(getSubscriptionPackage, []);
+  const isSilver = subscriptionPackage === "silver";
+  const visibleTabs = React.useMemo(
+    () =>
+      allowedMenuKeys?.length
+        ? TAB_CONFIG.filter((t) => allowedMenuKeys.includes(t.menuKey))
+        : TAB_CONFIG,
+    [allowedMenuKeys]
+  );
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [tab, setTab] = useState(0);
+  const currentTabId = visibleTabs[tab]?.id;
   const [chartYear, setChartYear] = useState(currentYear);
   const [chartMonth, setChartMonth] = useState("");
   const [appointmentsChartData, setAppointmentsChartData] = useState([]);
@@ -297,6 +327,11 @@ export default function DashboardPage() {
   const [admissionsChartMonth, setAdmissionsChartMonth] = useState("");
   const [admissionsChartData, setAdmissionsChartData] = useState([]);
   const [admissionsChartLoading, setAdmissionsChartLoading] = useState(false);
+
+  // Clamp tab index when visible tabs change (e.g. package has fewer sections)
+  React.useEffect(() => {
+    if (visibleTabs.length && tab >= visibleTabs.length) setTab(0);
+  }, [visibleTabs.length, tab]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -315,7 +350,7 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    if (tab !== 1) return;
+    if (currentTabId !== "appointmentsConsultations") return;
     const token = localStorage.getItem("token");
     if (!token) return;
     setAppointmentsChartLoading(true);
@@ -328,10 +363,10 @@ export default function DashboardPage() {
       })
       .catch(() => setAppointmentsChartData([]))
       .finally(() => setAppointmentsChartLoading(false));
-  }, [tab, chartYear, chartMonth]);
+  }, [currentTabId, chartYear, chartMonth]);
 
   useEffect(() => {
-    if (tab !== 4) return;
+    if (currentTabId !== "billing") return;
     const token = localStorage.getItem("token");
     if (!token) return;
     setRevenueChartLoading(true);
@@ -344,10 +379,10 @@ export default function DashboardPage() {
       })
       .catch(() => setRevenueChartData([]))
       .finally(() => setRevenueChartLoading(false));
-  }, [tab, revenueChartYear, revenueChartMonth]);
+  }, [currentTabId, revenueChartYear, revenueChartMonth]);
 
   useEffect(() => {
-    if (tab !== 3) return;
+    if (currentTabId !== "pharmacy" || isSilver) return;
     const token = localStorage.getItem("token");
     if (!token) return;
     setPharmacyChartLoading(true);
@@ -369,10 +404,10 @@ export default function DashboardPage() {
         setPharmacyChartColumns([]);
       })
       .finally(() => setPharmacyChartLoading(false));
-  }, [tab]);
+  }, [currentTabId, isSilver]);
 
   useEffect(() => {
-    if (tab !== 5) return;
+    if (currentTabId !== "wardsBedsAdmissions") return;
     const token = localStorage.getItem("token");
     if (!token) return;
     setAdmissionsChartLoading(true);
@@ -385,7 +420,7 @@ export default function DashboardPage() {
       })
       .catch(() => setAdmissionsChartData([]))
       .finally(() => setAdmissionsChartLoading(false));
-  }, [tab, admissionsChartYear, admissionsChartMonth]);
+  }, [currentTabId, admissionsChartYear, admissionsChartMonth]);
 
   // On small screens (e.g. phone): use a dropdown so all 7 sections are easy to pick without horizontal scroll or cramped tabs
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -400,19 +435,19 @@ export default function DashboardPage() {
           <InputLabel id="dashboard-section-label">Section</InputLabel>
           <Select
             labelId="dashboard-section-label"
-            value={tab}
+            value={Math.min(tab, Math.max(0, visibleTabs.length - 1))}
             label="Section"
             onChange={(e) => setTab(Number(e.target.value))}
             sx={{ borderRadius: 1 }}
           >
-            {TAB_CONFIG.map((t, i) => (
+            {visibleTabs.map((t, i) => (
               <MenuItem key={t.id} value={i}>{t.label}</MenuItem>
             ))}
           </Select>
         </FormControl>
       ) : (
-        <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
-          {TAB_CONFIG.map((t, i) => (
+        <Tabs value={Math.min(tab, Math.max(0, visibleTabs.length - 1))} onChange={(_, v) => setTab(v)} sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+          {visibleTabs.map((t, i) => (
             <Tab key={t.id} label={t.label} id={`stats-tab-${i}`} aria-controls={`stats-tabpanel-${i}`} />
           ))}
         </Tabs>
@@ -426,11 +461,15 @@ export default function DashboardPage() {
         <Box sx={{ p: 2 }}>
           <Typography color="error">{error || "Failed to load statistics"}</Typography>
         </Box>
+      ) : visibleTabs.length === 0 ? (
+        <Box sx={{ p: 2 }}>
+          <Typography color="text.secondary">No dashboard sections available for your plan.</Typography>
+        </Box>
       ) : (
         <>
 
-      {/* Overview — 4 cards per row, equal size, full width (CSS Grid) + Staff/Users + Events & News */}
-      {tab === 0 && (
+      {/* Overview — 4 cards per row; ward/bed cards only when package includes ward (Gold) */}
+      {currentTabId === "overview" && (
         <Box role="tabpanel" id="stats-tabpanel-0" sx={{ width: "100%", maxWidth: "100%" }}>
           <Box
             sx={{
@@ -453,8 +492,12 @@ export default function DashboardPage() {
               { title: "Appointments", value: d.overview?.totalAppointments, icon: EventNote },
               { title: "Consultations", value: d.overview?.totalConsultations, icon: RecordVoiceOver },
               { title: "Total Revenue", value: d.overview?.totalRevenue, icon: ReceiptLong, subtitle: "All time" },
-              { title: "Active Admissions", value: d.overview?.activeAdmissions, icon: Hotel },
-              { title: "Total Beds", value: d.overview?.totalBeds, icon: Bed },
+              ...(d.wardsAndBeds != null || d.overview?.activeAdmissions != null || d.overview?.totalBeds != null
+                ? [
+                    { title: "Active Admissions", value: d.overview?.activeAdmissions, icon: Hotel },
+                    { title: "Total Beds", value: d.overview?.totalBeds, icon: Bed },
+                  ]
+                : []),
             ].map((item) => (
               <StatCard
                 key={item.title}
@@ -511,7 +554,7 @@ export default function DashboardPage() {
       )}
 
       {/* Appointments & Consultations */}
-      {tab === 1 && (
+      {currentTabId === "appointmentsConsultations" && (
         <Box role="tabpanel" id="stats-tabpanel-1" sx={{ width: "100%" }}>
           <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" gutterBottom>
             Appointments
@@ -599,7 +642,7 @@ export default function DashboardPage() {
       )}
 
       {/* Laboratory */}
-      {tab === 2 && (
+      {currentTabId === "laboratory" && (
         <Box role="tabpanel" id="stats-tabpanel-2" sx={{ width: "100%" }}>
           <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" gutterBottom>
             Laboratory
@@ -630,7 +673,7 @@ export default function DashboardPage() {
       )}
 
       {/* Pharmacy */}
-      {tab === 3 && (
+      {currentTabId === "pharmacy" && (
         <Box role="tabpanel" id="stats-tabpanel-3" sx={{ width: "100%" }}>
           <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" gutterBottom>
             Pharmacy
@@ -649,41 +692,45 @@ export default function DashboardPage() {
             <StatCard title="Dispensed" value={d.pharmacy?.totalDispensed} />
             <StatCard title="Medications" value={d.pharmacy?.totalMedications} />
           </Box>
-          <Typography variant="subtitle2" fontWeight="600" color="text.secondary" gutterBottom>
-            Medications by quantity
-          </Typography>
-          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "center", mb: 2 }}>
-            <FormControl size="small" sx={{ minWidth: 200 }}>
-              <InputLabel id="pharmacy-column-label">Show column</InputLabel>
-              <Select
-                labelId="pharmacy-column-label"
-                value={pharmacyChartColumnKey}
-                label="Show column"
-                onChange={(e) => setPharmacyChartColumnKey(e.target.value)}
-              >
-                {pharmacyChartColumns.map((col) => (
-                  <MenuItem key={col.key} value={col.key}>{col.label}</MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
-          {pharmacyChartLoading ? (
-            <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 220 }}>
-              <CircularProgress size={32} />
-            </Box>
-          ) : (
-            <BarChartCard
-              title={pharmacyChartColumns.find((c) => c.key === pharmacyChartColumnKey)?.label || "Quantity"}
-              data={pharmacyChartData}
-              dataKey={pharmacyChartColumnKey}
-              formatValue={(v) => (typeof v === "number" ? v.toLocaleString() : v)}
-            />
+          {!isSilver && (
+            <>
+              <Typography variant="subtitle2" fontWeight="600" color="text.secondary" gutterBottom>
+                Medications by quantity
+              </Typography>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, alignItems: "center", mb: 2 }}>
+                <FormControl size="small" sx={{ minWidth: 200 }}>
+                  <InputLabel id="pharmacy-column-label">Show column</InputLabel>
+                  <Select
+                    labelId="pharmacy-column-label"
+                    value={pharmacyChartColumnKey}
+                    label="Show column"
+                    onChange={(e) => setPharmacyChartColumnKey(e.target.value)}
+                  >
+                    {pharmacyChartColumns.map((col) => (
+                      <MenuItem key={col.key} value={col.key}>{col.label}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+              {pharmacyChartLoading ? (
+                <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: 220 }}>
+                  <CircularProgress size={32} />
+                </Box>
+              ) : (
+                <BarChartCard
+                  title={pharmacyChartColumns.find((c) => c.key === pharmacyChartColumnKey)?.label || "Quantity"}
+                  data={pharmacyChartData}
+                  dataKey={pharmacyChartColumnKey}
+                  formatValue={(v) => (typeof v === "number" ? v.toLocaleString() : v)}
+                />
+              )}
+            </>
           )}
         </Box>
       )}
 
       {/* Billing */}
-      {tab === 4 && (
+      {currentTabId === "billing" && (
         <Box role="tabpanel" id="stats-tabpanel-4" sx={{ width: "100%" }}>
           <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" gutterBottom>
             Billing
@@ -756,7 +803,7 @@ export default function DashboardPage() {
       )}
 
       {/* Wards, Beds & Admissions */}
-      {tab === 5 && (
+      {currentTabId === "wardsBedsAdmissions" && (
         <Box role="tabpanel" id="stats-tabpanel-5" sx={{ width: "100%" }}>
           <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" gutterBottom>
             Wards & Beds
@@ -847,7 +894,7 @@ export default function DashboardPage() {
       )}
 
       {/* Inventory */}
-      {tab === 6 && (
+      {currentTabId === "inventory" && (
         <Box role="tabpanel" id="stats-tabpanel-6" sx={{ width: "100%" }}>
           <Typography variant="subtitle1" fontWeight="bold" color="text.secondary" gutterBottom>
             Inventory

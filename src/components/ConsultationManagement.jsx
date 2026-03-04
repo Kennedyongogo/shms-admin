@@ -88,6 +88,24 @@ const getRoleName = () => {
   }
 };
 
+function getAllowedMenuKeys() {
+  try {
+    const stored = JSON.parse(localStorage.getItem("menuItems") || "null");
+    return Array.isArray(stored) ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
+function getSubscriptionPackage() {
+  try {
+    const hospital = JSON.parse(localStorage.getItem("hospital") || "null");
+    return hospital?.subscription_package || "silver";
+  } catch {
+    return "silver";
+  }
+}
+
 async function fetchJson(url, { method = "GET", body, token } = {}) {
   const res = await fetch(url, {
     method,
@@ -135,6 +153,9 @@ export default function ConsultationManagement() {
   const currentUser = getUser();
   const roleName = getRoleName();
   const isSuperAdmin = roleName === "Super Admin";
+  const allowedMenuKeys = useMemo(getAllowedMenuKeys, []);
+  const subscriptionPackage = useMemo(getSubscriptionPackage, []);
+  const hasWardModule = allowedMenuKeys?.includes("ward") && subscriptionPackage !== "silver";
 
   const isAssignedDoctor = (apptLike) => {
     const doctorUserId =
@@ -212,6 +233,14 @@ export default function ConsultationManagement() {
   const [apptBillItemNote, setApptBillItemNote] = useState("");
   const [apptBillItemSaving, setApptBillItemSaving] = useState(false);
   const [apptCashSaving, setApptCashSaving] = useState(false);
+  const [mpesaDialog, setMpesaDialog] = useState({
+    open: false,
+    phone: "",
+    amount: "",
+    billId: null,
+    apptId: null,
+  });
+  const [mpesaSubmitting, setMpesaSubmitting] = useState(false);
 
   const [consViewOpen, setConsViewOpen] = useState(false);
   const [consViewLoading, setConsViewLoading] = useState(false);
@@ -1058,30 +1087,17 @@ export default function ConsultationManagement() {
       return;
     }
     const defaultAmount = String(apptBilling?.balance ?? apptBilling?.total_amount ?? appt?.bill_amount ?? "0");
-    const ask = await Swal.fire({
-      icon: "question",
-      title: "Pay with M-Pesa",
-      html: `
-        <p style="text-align:left; margin-bottom:12px;">An M-Pesa prompt will be sent to the patient's phone. They must enter their PIN to complete payment.</p>
-        <label for="swal-mpesa-amount" style="display:block; text-align:left; margin-bottom:4px;">Amount (KES)</label>
-        <input id="swal-mpesa-amount" class="swal2-input" type="number" min="1" step="0.01" value="${defaultAmount}" style="margin-bottom:12px" />
-      `,
-      showCancelButton: true,
-      confirmButtonText: "Send M-Pesa prompt",
-      cancelButtonText: "Cancel",
-      reverseButtons: true,
-      preConfirm: () => {
-        const raw = document.getElementById("swal-mpesa-amount")?.value;
-        const n = Number(raw);
-        if (!Number.isFinite(n) || n < 0) {
-          Swal.showValidationMessage("Enter a valid amount");
-          return undefined;
-        }
-        return n;
-      },
-    });
-    if (!ask.isConfirmed || ask.value == null) return;
-    const amount = ask.value;
+    let phone = appt?.patient?.phone || appt?.patient?.user?.phone || "";
+    if (!(phone || "").trim()) {
+      try {
+        const fullAppt = await fetchJson(`${API.appointments}/${appt.id}`, { token });
+        const p = fullAppt?.data?.patient;
+        phone = p?.phone || p?.user?.phone || "";
+      } catch {
+        // ignore
+      }
+    }
+    const initialPhone = (phone || "").trim();
 
     try {
       const qs = new URLSearchParams({ item_type: "appointment", reference_id: String(appt.id) });
@@ -1095,10 +1111,11 @@ export default function ConsultationManagement() {
         });
         billId = billRes?.data?.id;
         if (billId) {
+          const amountNumber = Number(defaultAmount) || 0;
           await fetchJson(`${API.billing}/${billId}/items`, {
             method: "POST",
             token,
-            body: { items: [{ item_type: "appointment", reference_id: appt.id, amount: amount || 0 }] },
+            body: { items: [{ item_type: "appointment", reference_id: appt.id, amount: amountNumber }] },
           });
         }
       }
@@ -1107,42 +1124,61 @@ export default function ConsultationManagement() {
         return;
       }
 
-      let phone = appt?.patient?.phone || appt?.patient?.user?.phone || "";
-      if (!(phone || "").trim()) {
-        try {
-          const fullAppt = await fetchJson(`${API.appointments}/${appt.id}`, { token });
-          const p = fullAppt?.data?.patient;
-          phone = p?.phone || p?.user?.phone || "";
-        } catch {
-          // ignore
-        }
-      }
-      const rawPhone = (phone || "").trim().replace(/^\++/, "");
-      if (!rawPhone) {
-        Swal.fire({
-          icon: "error",
-          title: "No phone number",
-          text: "Patient has no phone number. Add phone in patient record.",
-        });
-        return;
-      }
+      setMpesaDialog({
+        open: true,
+        phone: initialPhone,
+        amount: defaultAmount,
+        billId,
+        apptId: appt.id,
+      });
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "M-Pesa failed", text: e?.message ?? "Something went wrong." });
+    }
+  };
 
+  const handleMpesaDialogClose = () => {
+    if (mpesaSubmitting) return;
+    setMpesaDialog((prev) => ({ ...prev, open: false }));
+  };
+
+  const handleMpesaDialogSubmit = async () => {
+    if (!requireTokenGuard()) return;
+    const phoneInput = (mpesaDialog.phone || "").trim();
+    const amountNumber = Number(mpesaDialog.amount);
+    if (!phoneInput) {
+      Swal.fire({ icon: "error", title: "Phone required", text: "Enter a phone number before sending M-Pesa prompt." });
+      return;
+    }
+    if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
+      Swal.fire({ icon: "error", title: "Invalid amount", text: "Enter a valid positive amount." });
+      return;
+    }
+    if (!mpesaDialog.billId) {
+      Swal.fire({ icon: "error", title: "Missing bill", text: "No bill is linked to this payment." });
+      return;
+    }
+    setMpesaSubmitting(true);
+    try {
+      const rawPhone = phoneInput.replace(/^\++/, "");
       await fetchJson(`${API.mpesa}/pay`, {
         method: "POST",
         token,
-        body: { phone: rawPhone, amount, bill_id: billId },
+        body: { phone: rawPhone, amount: amountNumber, bill_id: mpesaDialog.billId },
       });
       Swal.fire({
         icon: "success",
         title: "STK Push sent",
         text: "Ask the patient to enter M-Pesa PIN on their phone. The bill and appointment will update automatically when they pay.",
       });
-      if (appt?.id) {
-        loadAppointmentBilling(appt.id);
-        pollForPaymentAndRefresh(appt.id, { maxAttempts: 35, intervalMs: 2000 });
+      if (mpesaDialog.apptId) {
+        loadAppointmentBilling(mpesaDialog.apptId);
+        pollForPaymentAndRefresh(mpesaDialog.apptId, { maxAttempts: 35, intervalMs: 2000 });
       }
+      setMpesaDialog((prev) => ({ ...prev, open: false }));
     } catch (e) {
       Swal.fire({ icon: "error", title: "M-Pesa failed", text: e?.message ?? "Something went wrong." });
+    } finally {
+      setMpesaSubmitting(false);
     }
   };
 
@@ -1424,6 +1460,14 @@ export default function ConsultationManagement() {
   };
 
   const openAdmitDialog = async () => {
+    if (!hasWardModule) {
+      Swal.fire({
+        icon: "error",
+        title: "Ward module not available",
+        text: "Your current subscription does not include Ward admissions.",
+      });
+      return;
+    }
     if (!consView?.appointment) return;
     setAdmitOpen(true);
     setAdmitBedId("");
@@ -2388,6 +2432,53 @@ export default function ConsultationManagement() {
             sx={{ fontWeight: 900 }}
           >
             {apptStatusSaving ? "Saving…" : "Update status"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* M-Pesa payment */}
+      <Dialog
+        open={mpesaDialog.open}
+        onClose={handleMpesaDialogClose}
+        fullWidth
+        maxWidth="xs"
+        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
+      >
+        <DialogTitle sx={{ fontWeight: 900 }}>Pay with M-Pesa</DialogTitle>
+        <DialogContent sx={{ overflowY: "auto" }}>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              An M-Pesa prompt will be sent to the patient's phone. They must enter their PIN to complete payment.
+            </Typography>
+            <TextField
+              label="Phone (2547XXXXXXXX or 07…)"
+              size="small"
+              fullWidth
+              value={mpesaDialog.phone}
+              onChange={(e) =>
+                setMpesaDialog((prev) => ({ ...prev, phone: e.target.value }))
+              }
+            />
+            <TextField
+              label="Amount (KES)"
+              size="small"
+              type="number"
+              fullWidth
+              value={mpesaDialog.amount}
+              InputProps={{ readOnly: true }}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleMpesaDialogClose} disabled={mpesaSubmitting}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleMpesaDialogSubmit}
+            variant="contained"
+            disabled={mpesaSubmitting}
+          >
+            {mpesaSubmitting ? "Sending…" : "Send M-Pesa prompt"}
           </Button>
         </DialogActions>
       </Dialog>

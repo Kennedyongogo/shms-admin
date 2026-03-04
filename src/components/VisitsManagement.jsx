@@ -1026,11 +1026,24 @@ export default function VisitsManagement() {
       return;
     }
     const defaultAmount = String(apptBilling?.balance ?? apptBilling?.total_amount ?? appt?.bill_amount ?? "0");
+    let phone = appt?.patient?.phone || appt?.patient?.user?.phone || "";
+    if (!(phone || "").trim()) {
+      try {
+        const fullAppt = await fetchJson(`${API.appointments}/${appt.id}`, { token });
+        const p = fullAppt?.data?.patient;
+        phone = p?.phone || p?.user?.phone || "";
+      } catch {
+        // ignore
+      }
+    }
+    const initialPhone = (phone || "").trim();
     const ask = await Swal.fire({
       icon: "question",
       title: "Pay with M-Pesa",
       html: `
         <p style="text-align:left; margin-bottom:12px;">An M-Pesa prompt will be sent to the patient's phone. They must enter their PIN to complete payment.</p>
+        <label for="swal-mpesa-phone" style="display:block; text-align:left; margin-bottom:4px;">Phone (2547XXXXXXXX or 07…)</label>
+        <input id="swal-mpesa-phone" class="swal-mpesa-phone" type="tel" value="${initialPhone}" style="margin-bottom:12px; width:100%; padding:0.625em 0.75em; box-sizing:border-box;" />
         <label for="swal-mpesa-amount" style="display:block; text-align:left; margin-bottom:4px;">Amount (KES)</label>
         <input id="swal-mpesa-amount" class="swal2-input" type="number" min="1" step="0.01" value="${defaultAmount}" style="margin-bottom:12px" />
       `,
@@ -1039,17 +1052,22 @@ export default function VisitsManagement() {
       cancelButtonText: "Cancel",
       reverseButtons: true,
       preConfirm: () => {
+        const phoneInput = document.getElementById("swal-mpesa-phone")?.value?.trim() || "";
         const raw = document.getElementById("swal-mpesa-amount")?.value;
         const n = Number(raw);
+        if (!phoneInput) {
+          Swal.showValidationMessage("Enter a phone number");
+          return undefined;
+        }
         if (!Number.isFinite(n) || n < 0) {
           Swal.showValidationMessage("Enter a valid amount");
           return undefined;
         }
-        return n;
+        return { phone: phoneInput, amount: n };
       },
     });
     if (!ask.isConfirmed || ask.value == null) return;
-    const amount = ask.value;
+    const { phone: enteredPhone, amount } = ask.value;
 
     try {
       const qs = new URLSearchParams({ item_type: "appointment", reference_id: String(appt.id) });
@@ -1075,17 +1093,7 @@ export default function VisitsManagement() {
         return;
       }
 
-      let phone = appt?.patient?.phone || appt?.patient?.user?.phone || "";
-      if (!(phone || "").trim()) {
-        try {
-          const fullAppt = await fetchJson(`${API.appointments}/${appt.id}`, { token });
-          const p = fullAppt?.data?.patient;
-          phone = p?.phone || p?.user?.phone || "";
-        } catch {
-          // ignore
-        }
-      }
-      const rawPhone = (phone || "").trim().replace(/^\++/, "");
+      const rawPhone = (enteredPhone || "").trim().replace(/^\++/, "");
       if (!rawPhone) {
         Swal.fire({
           icon: "error",
