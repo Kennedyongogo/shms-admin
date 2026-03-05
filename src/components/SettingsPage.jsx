@@ -21,7 +21,15 @@ import {
   CircularProgress,
   useTheme,
 } from "@mui/material";
-import { Check, Close, Visibility, VisibilityOff, Settings as SettingsIcon, PhotoCamera, Palette as PaletteIcon } from "@mui/icons-material";
+import {
+  Check,
+  Close,
+  Visibility,
+  VisibilityOff,
+  Settings as SettingsIcon,
+  PhotoCamera,
+  Palette as PaletteIcon,
+} from "@mui/icons-material";
 import Avatar from "@mui/material/Avatar";
 import Swal from "sweetalert2";
 

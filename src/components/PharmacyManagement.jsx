@@ -58,6 +58,15 @@ const API = {
   inventory: "/api/inventory",
 };
 
+function getSubscriptionPackage() {
+  try {
+    const hospital = JSON.parse(localStorage.getItem("hospital") || "null");
+    return hospital?.subscription_package || "silver";
+  } catch {
+    return "silver";
+  }
+}
+
 const getToken = () => localStorage.getItem("token");
 const getRoleName = () => {
   try {
@@ -103,6 +112,8 @@ export default function PharmacyManagement() {
   const theme = useTheme();
   const token = getToken();
   const navigate = useNavigate();
+  const subscriptionPackage = useMemo(getSubscriptionPackage, []);
+  const isSilver = subscriptionPackage === "silver";
   const isSuperAdmin = () => {
     const name = getRoleName() || "";
     return name === "Super Admin" || String(name).trim().toLowerCase() === "superadmin";
@@ -138,6 +149,9 @@ export default function PharmacyManagement() {
     manufacturer: "",
     unit_price: "",
     inventory_item_id: "",
+    initial_quantity: "",
+    unit: "",
+    pack_size: "",
   });
   const [medView, setMedView] = useState({ open: false, med: null });
   const [inventoryItems, setInventoryItems] = useState([]);
@@ -413,6 +427,9 @@ export default function PharmacyManagement() {
       manufacturer: "",
       unit_price: "",
       inventory_item_id: "",
+      initial_quantity: "",
+      unit: "",
+      pack_size: "",
     });
     setMedDialog({ open: true, mode: "create", id: null });
     if (inventoryItems.length === 0) loadInventoryItems();
@@ -428,6 +445,9 @@ export default function PharmacyManagement() {
       manufacturer: m.manufacturer || "",
       unit_price: m.unit_price ?? "",
       inventory_item_id: m.inventory_item_id || "",
+      initial_quantity: m.initial_quantity != null ? String(m.initial_quantity) : "",
+      unit: m.unit || "",
+      pack_size: m.pack_size != null ? String(m.pack_size) : "",
     });
     setMedDialog({ open: true, mode: "edit", id: m.id });
     if (inventoryItems.length === 0) loadInventoryItems();
@@ -444,6 +464,11 @@ export default function PharmacyManagement() {
       manufacturer: medForm.manufacturer.trim() || null,
       unit_price: medForm.unit_price === "" ? null : medForm.unit_price,
       inventory_item_id: medForm.inventory_item_id || null,
+      initial_quantity:
+        medForm.initial_quantity === "" ? null : Number(medForm.initial_quantity),
+      unit: medForm.unit.trim() || null,
+      pack_size:
+        medForm.pack_size === "" ? null : Number(medForm.pack_size),
     };
     const isCreate = medDialog.mode === "create" || !medDialog.id;
     try {
@@ -1120,7 +1145,7 @@ export default function PharmacyManagement() {
           {/* MEDS / Medicine catalogue */}
           {tab === 0 && (
             <Box sx={{ p: 2 }}>
-              {isSuperAdmin() && (
+              {isSuperAdmin() && isSilver && (
                 <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
                   <Button
                     variant="contained"
@@ -1167,8 +1192,21 @@ export default function PharmacyManagement() {
                         Manufacturer
                       </TableCell>
                       <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 90 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Unit price</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 90 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Stock link</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 100 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>In pharmacy</TableCell>
+                      {isSilver ? (
+                        <>
+                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 80 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
+                            Init qty
+                          </TableCell>
+                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 80 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
+                            Curr qty
+                          </TableCell>
+                        </>
+                      ) : (
+                        <>
+                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 90 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Stock link</TableCell>
+                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, maxWidth: { sm: 100 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>In pharmacy</TableCell>
+                        </>
+                      )}
                       <TableCell align="right" sx={{ fontWeight: 800, maxWidth: { xs: "22vw", sm: 120 }, minWidth: 96, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
                         Actions
                       </TableCell>
@@ -1213,18 +1251,31 @@ export default function PharmacyManagement() {
                           <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{m.dosage_form || "—"}</TableCell>
                           <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{m.manufacturer || "—"}</TableCell>
                           <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{m.unit_price ?? "—"}</TableCell>
-                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
-                            {m.inventory_item_id ? (
-                              <Chip size="small" label="Linked" color="success" variant="outlined" />
-                            ) : (
-                              "—"
-                            )}
-                          </TableCell>
-                          <TableCell sx={{ fontWeight: 700, display: { xs: "none", sm: "table-cell" } }}>
-                            {m.inventory_item_id && m.inventoryItem != null
-                              ? (m.inventoryItem.quantity_in_pharmacy ?? 0)
-                              : "—"}
-                          </TableCell>
+                          {isSilver ? (
+                            <>
+                              <TableCell sx={{ fontWeight: 700, display: { xs: "none", sm: "table-cell" } }}>
+                                {m.initial_quantity ?? 0}
+                              </TableCell>
+                              <TableCell sx={{ fontWeight: 700, display: { xs: "none", sm: "table-cell" } }}>
+                                {m.current_quantity ?? 0}
+                              </TableCell>
+                            </>
+                          ) : (
+                            <>
+                              <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
+                                {m.inventory_item_id ? (
+                                  <Chip size="small" label="Linked" color="success" variant="outlined" />
+                                ) : (
+                                  "—"
+                                )}
+                              </TableCell>
+                              <TableCell sx={{ fontWeight: 700, display: { xs: "none", sm: "table-cell" } }}>
+                                {m.inventory_item_id && m.inventoryItem != null
+                                  ? (m.inventoryItem.quantity_in_pharmacy ?? 0)
+                                  : "—"}
+                              </TableCell>
+                            </>
+                          )}
                           <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} data-actions-cell onClick={(e) => e.stopPropagation()}>
                             <Box sx={{ display: "flex", flexDirection: "row", flexWrap: "wrap", gap: 0.5, justifyContent: "flex-end", maxWidth: "100%" }}>
                               <Tooltip title="View">
@@ -1861,6 +1912,40 @@ export default function PharmacyManagement() {
               </Typography>
               <Typography>{medView.med?.manufacturer || "—"}</Typography>
             </Box>
+            {isSilver && (
+              <Stack direction="row" spacing={2}>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="overline" color="text.secondary">
+                    Unit
+                  </Typography>
+                  <Typography>{medView.med?.unit || "—"}</Typography>
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="overline" color="text.secondary">
+                    Pack size
+                  </Typography>
+                  <Typography>
+                    {medView.med?.pack_size != null ? medView.med.pack_size : "—"}
+                  </Typography>
+                </Box>
+              </Stack>
+            )}
+            {isSilver && (
+              <Stack direction="row" spacing={2}>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="overline" color="text.secondary">
+                    Init qty
+                  </Typography>
+                  <Typography>{medView.med?.initial_quantity ?? 0}</Typography>
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="overline" color="text.secondary">
+                    Curr qty
+                  </Typography>
+                  <Typography>{medView.med?.current_quantity ?? 0}</Typography>
+                </Box>
+              </Stack>
+            )}
             {medView.med?.inventory_item_id != null && (
               <>
                 <Divider sx={{ my: 1 }} />
@@ -1936,32 +2021,82 @@ export default function PharmacyManagement() {
                 setMedForm((p) => ({ ...p, manufacturer: e.target.value }))
               }
             />
-            <FormControl fullWidth size="small">
-              <InputLabel>Link to stock (inventory)</InputLabel>
-              <Select
-                label="Link to stock (inventory)"
-                value={medForm.inventory_item_id || ""}
-                onChange={(e) =>
-                  setMedForm((p) => ({ ...p, inventory_item_id: e.target.value || "" }))
-                }
-              >
-                <MenuItem value="">None</MenuItem>
-                {inventoryItemsLoading ? (
-                  <MenuItem disabled>Loading…</MenuItem>
-                ) : (
-                  inventoryItems.map((inv) => (
-                    <MenuItem key={inv.id} value={inv.id}>
-                      {inv.name}
-                      {inv.unit ? ` (${inv.unit})` : ""}
-                      {inv.pack_size ? ` · ${inv.pack_size} per pack` : ""}
-                      {inv.category ? ` · ${inv.category}` : ""}
-                      {" — "}
-                      {inv.quantity_available ?? 0} available
-                    </MenuItem>
-                  ))
+            {isSilver && (
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                <TextField
+                  label="Unit (e.g. tablet, bottle)"
+                  fullWidth
+                  value={medForm.unit}
+                  onChange={(e) =>
+                    setMedForm((p) => ({ ...p, unit: e.target.value }))
+                  }
+                />
+                <TextField
+                  label="Pack size"
+                  fullWidth
+                  type="number"
+                  value={medForm.pack_size}
+                  onChange={(e) =>
+                    setMedForm((p) => ({ ...p, pack_size: e.target.value }))
+                  }
+                />
+              </Stack>
+            )}
+            {isSilver ? (
+              <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                <TextField
+                  label="Init qty (pharmacy stock)"
+                  fullWidth
+                  type="number"
+                  value={medForm.initial_quantity}
+                  onChange={(e) =>
+                    setMedForm((p) => ({ ...p, initial_quantity: e.target.value }))
+                  }
+                />
+                {medDialog.mode !== "create" && (
+                  <TextField
+                    label="Curr qty"
+                    fullWidth
+                    value={
+                      medView.med && medView.med.current_quantity != null
+                        ? String(medView.med.current_quantity)
+                        : "0"
+                    }
+                    InputProps={{ readOnly: true }}
+                  />
                 )}
-              </Select>
-            </FormControl>
+              </Stack>
+            ) : (
+              <FormControl fullWidth size="small">
+                <InputLabel>Link to stock (inventory)</InputLabel>
+                <Select
+                  label="Link to stock (inventory)"
+                  value={medForm.inventory_item_id || ""}
+                  onChange={(e) =>
+                    setMedForm((p) => ({
+                      ...p,
+                      inventory_item_id: e.target.value || "",
+                    }))
+                  }
+                >
+                  <MenuItem value="">None</MenuItem>
+                  {inventoryItemsLoading ? (
+                    <MenuItem disabled>Loading…</MenuItem>
+                  ) : (
+                    inventoryItems.map((inv) => (
+                      <MenuItem key={inv.id} value={inv.id}>
+                        {inv.name}
+                        {inv.unit ? ` (${inv.unit})` : ""}
+                        {inv.pack_size ? ` · ${inv.pack_size} per pack` : ""}
+                        {inv.category ? ` · ${inv.category}` : ""}
+                        {" — "}
+                        {inv.quantity_available ?? 0} available
+                      </MenuItem>
+                    ))
+                  )}
+                </Select>
+              </FormControl>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>

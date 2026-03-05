@@ -227,9 +227,9 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
     }
   };
 
-  const loadBills = async () => {
+  const loadBills = async ({ silent = false } = {}) => {
     const reqId = ++billsReqId.current;
-    setBillsLoading(true);
+    if (!silent) setBillsLoading(true);
     try {
       const qs = new URLSearchParams({
         page: String(billsPage + 1),
@@ -247,13 +247,13 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
       setBills([]);
       setBillsTotal(0);
     } finally {
-      if (reqId === billsReqId.current) setBillsLoading(false);
+      if (reqId === billsReqId.current && !silent) setBillsLoading(false);
     }
   };
 
-  const loadPayments = async () => {
+  const loadPayments = async ({ silent = false } = {}) => {
     const reqId = ++paysReqId.current;
-    setPaymentsLoading(true);
+    if (!silent) setPaymentsLoading(true);
     try {
       const qs = new URLSearchParams({
         page: String(paymentsPage + 1),
@@ -271,7 +271,7 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
       setPayments([]);
       setPaymentsTotal(0);
     } finally {
-      if (reqId === paysReqId.current) setPaymentsLoading(false);
+      if (reqId === paysReqId.current && !silent) setPaymentsLoading(false);
     }
   };
 
@@ -291,8 +291,8 @@ export default function BillingPaymentsManagement({ embedded = false, singleTab 
     const activeTab = singleTab != null ? singleTab : tab;
     if (activeTab !== 0 && activeTab !== 1) return;
     const interval = setInterval(() => {
-      if (activeTab === 0) loadBills();
-      if (activeTab === 1) loadPayments();
+      if (activeTab === 0) loadBills({ silent: true });
+      if (activeTab === 1) loadPayments({ silent: true });
     }, 10000); // refresh every 10 seconds
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps

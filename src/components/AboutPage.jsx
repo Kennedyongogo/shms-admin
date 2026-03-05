@@ -169,6 +169,7 @@ export default function AboutPage() {
         color: "text.primary",
         minHeight: "100vh",
         overflowX: "hidden",
+        p: "1px",
       }}
     >
       {/* Section 1: Hero — full-width, no cards */}
@@ -176,7 +177,7 @@ export default function AboutPage() {
         component="section"
         sx={{
           position: "relative",
-          minHeight: "45vh",
+          minHeight: "34vh",
           display: "flex",
           alignItems: "flex-start",
           overflow: "hidden",
@@ -309,6 +310,7 @@ export default function AboutPage() {
               </Button>
               <Button
                 variant="outlined"
+                onClick={() => navigate("/about/demo")}
                 sx={{
                   px: 3,
                   py: 1.5,
@@ -548,8 +550,9 @@ export default function AboutPage() {
           <Box
             sx={{
               display: "flex",
-              flexDirection: "column",
+              flexDirection: { xs: "column", sm: "row" },
               alignItems: "center",
+              justifyContent: "center",
               gap: 2,
             }}
           >
@@ -563,6 +566,7 @@ export default function AboutPage() {
             />
             <Button
               variant="contained"
+              onClick={() => navigate("/about/founders")}
               sx={{
                 px: 4,
                 py: 2,
@@ -572,12 +576,13 @@ export default function AboutPage() {
                 fontWeight: 700,
                 borderRadius: 2,
                 boxShadow: "0 20px 25px -5px rgba(15, 184, 176, 0.3)",
+                mb: 1,
                 "&:hover": {
                   bgcolor: "rgba(15, 184, 176, 0.9)",
                 },
               }}
             >
-              Connect With Our Specialists
+              Meet the Carlvyne SHMS Founders
             </Button>
           </Box>
         </Box>

@@ -16,7 +16,6 @@ import {
   AccountCircle as AccountCircleIcon,
   Logout as LogoutIcon,
 } from "@mui/icons-material";
-import UserAccount from "./userAccount";
 import { useNavigate } from "react-router-dom";
 
 const LoadingScreen = () => (
@@ -117,7 +116,6 @@ export default function Header(props) {
   const [currentUser, setCurrentUser] = useState("");
   const [currentRoleName, setCurrentRoleName] = useState("");
   const [anchorEl, setAnchorEl] = useState(null);
-  const [toggleAccount, setToggleAccount] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const theme = useTheme();
@@ -302,7 +300,13 @@ export default function Header(props) {
         >
           <MenuItem
             onClick={() => {
-              setToggleAccount(true);
+              try {
+                const currentPath = window.location.pathname + window.location.search;
+                if (!currentPath.includes("/account")) {
+                  sessionStorage.setItem("prevRouteBeforeAccount", currentPath);
+                }
+              } catch (_) {}
+              navigate("/account");
               handleClose();
             }}
           >
@@ -318,16 +322,6 @@ export default function Header(props) {
           </MenuItem>
         </Menu>
 
-        {currentUser && (
-          <UserAccount
-            onClose={() => {
-              setToggleAccount(false);
-            }}
-            open={toggleAccount}
-            currentUser={currentUser}
-            roleName={currentRoleName}
-          />
-        )}
       </Box>
     </>
   );

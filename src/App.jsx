@@ -4,6 +4,8 @@ import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import LoginPage from "./components/LoginPage";
 import RegisterPage from "./components/RegisterPage";
 import AboutPage from "./components/AboutPage";
+import CarlvyneOwners from "./components/CarlvyneOwners";
+import LiveDemoPage from "./components/LiveDemoPage";
 import { ThemeProvider } from "@mui/material";
 import { createAppTheme } from "./theme";
 import PageRoutes from "./components/PageRoutes";
@@ -37,6 +39,8 @@ function App() {
           <Route path="/" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/about/founders" element={<CarlvyneOwners />} />
+          <Route path="/about/demo" element={<LiveDemoPage />} />
           <Route path="/*" element={<PageRoutes />} />
         </Routes>
       </Router>
