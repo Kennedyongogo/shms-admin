@@ -15,7 +15,6 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  Stack,
   Tooltip,
   useMediaQuery,
   useTheme,
@@ -26,9 +25,8 @@ import {
   Email as EmailIcon,
   Lock,
   Login as LoginIcon,
-  Info as InfoIcon,
-  PersonAdd as RegisterIcon,
 } from "@mui/icons-material";
+import GuestNavbar from "./GuestNavbar";
 import Swal from "sweetalert2";
 
 const primaryTeal = "#00897B";
@@ -65,6 +63,12 @@ export default function LoginPage() {
       setBackgroundIndex((prev) => (prev + 1) % BACKGROUND_IMAGES.length);
     }, BACKGROUND_INTERVAL_MS);
     return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const onOpen = () => setOpenLoginDialog(true);
+    window.addEventListener("open-login-dialog", onOpen);
+    return () => window.removeEventListener("open-login-dialog", onOpen);
   }, []);
 
   const login = async (e) => {
@@ -218,53 +222,7 @@ export default function LoginPage() {
         ))}
       </Box>
 
-      {/* Register - icon + tooltip on small screen, full button on larger */}
-      <Box sx={{ position: "absolute", top: 24, right: 24, zIndex: 10 }}>
-        {isSmallScreen ? (
-          <Tooltip title="Register" placement="left">
-            <IconButton
-              onClick={() => navigate("/register")}
-              sx={{
-                color: primaryTeal,
-                border: "1px solid",
-                borderColor: primaryTeal,
-                bgcolor: "rgba(255,255,255,0.95)",
-                transition: "box-shadow 0.4s ease, transform 0.2s ease",
-                "&:hover": {
-                  borderColor: primaryTealDark,
-                  bgcolor: "white",
-                  color: primaryTealDark,
-                  boxShadow: "0 0 0 8px rgba(0,137,123,0.25)",
-                },
-                "& .MuiTouchRipple-root": { borderRadius: "50%" },
-              }}
-            >
-              <RegisterIcon />
-            </IconButton>
-          </Tooltip>
-        ) : (
-          <Button
-            variant="outlined"
-            startIcon={<RegisterIcon />}
-            onClick={() => navigate("/register")}
-            sx={{
-              color: primaryTeal,
-              borderColor: primaryTeal,
-              borderWidth: 2,
-              fontWeight: 700,
-              bgcolor: "rgba(255,255,255,0.95)",
-              "&:hover": {
-                borderColor: primaryTealDark,
-                borderWidth: 2,
-                bgcolor: "white",
-                color: primaryTealDark,
-              },
-            }}
-          >
-            Register
-          </Button>
-        )}
-      </Box>
+      <GuestNavbar />
 
       {/* Centered content on image */}
       <Box
@@ -298,50 +256,11 @@ export default function LoginPage() {
             fontSize: "clamp(1rem, 2vw + 0.5rem, 1.35rem)",
             color: primaryTeal,
             fontWeight: 600,
-            mb: 4,
             textShadow: "0 1px 10px rgba(0,0,0,0.2)",
           }}
         >
           Smart Care. Streamlined Operations.
         </Typography>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="stretch" justifyContent="center">
-          <Button
-            variant="contained"
-            startIcon={<InfoIcon />}
-            onClick={() => navigate("/about")}
-            sx={{
-              bgcolor: "white",
-              color: primaryTeal,
-              fontWeight: 800,
-              px: 3,
-              py: 1.5,
-              minWidth: 220,
-              "&:hover": {
-                bgcolor: "rgba(255,255,255,0.9)",
-              },
-            }}
-          >
-            About Carlvyne SHMS
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<LoginIcon />}
-            onClick={() => setOpenLoginDialog(true)}
-            sx={{
-              bgcolor: "white",
-              color: primaryTeal,
-              fontWeight: 800,
-              px: 3,
-              py: 1.5,
-              minWidth: 220,
-              "&:hover": {
-                bgcolor: "rgba(255,255,255,0.9)",
-              },
-            }}
-          >
-            Login
-          </Button>
-        </Stack>
       </Box>
 
       {/* Login dialog - white, clean UI */}

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -6,8 +7,8 @@ import {
   CardContent,
   Typography,
 } from "@mui/material";
+import GuestNavbar from "./GuestNavbar";
 import {
-  ArrowBack as ArrowBackIcon,
   ArrowForward as ArrowForwardIcon,
   Badge as BadgeIcon,
   CalendarMonth as CalendarMonthIcon,
@@ -160,6 +161,18 @@ const capabilityCards = [
 export default function AboutPage() {
   const navigate = useNavigate();
 
+  // Prevent viewport scroll so only the inner scroll container scrolls.
+  useEffect(() => {
+    const prevBody = document.body.style.overflow;
+    const prevHtml = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevBody;
+      document.documentElement.style.overflow = prevHtml;
+    };
+  }, []);
+
   return (
     <Box
       component="main"
@@ -167,12 +180,23 @@ export default function AboutPage() {
         fontFamily: "'Manrope', sans-serif",
         bgcolor: "background.default",
         color: "text.primary",
-        minHeight: "100vh",
-        overflowX: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        overflow: "hidden",
         p: "1px",
       }}
     >
-      {/* Section 1: Hero — full-width, no cards */}
+      <Box
+        sx={{
+          flexGrow: 1,
+          minHeight: 0,
+          overflowY: "auto",
+          overflowX: "hidden",
+        }}
+      >
+        <GuestNavbar />
+        {/* Section 1: Hero — full-width, no cards */}
       <Box
         component="section"
         sx={{
@@ -192,18 +216,6 @@ export default function AboutPage() {
             pb: 4,
           }}
         >
-          <Button
-            startIcon={<ArrowBackIcon />}
-            onClick={() => navigate("/", { replace: true })}
-            sx={{
-              color: primary,
-              fontWeight: 700,
-              mb: 1,
-              "&:hover": { bgcolor: "rgba(15, 184, 176, 0.08)" },
-            }}
-          >
-            Back to home
-          </Button>
           <Box
             sx={{
               display: "flex",
@@ -223,7 +235,6 @@ export default function AboutPage() {
                 bgcolor: "rgba(15, 184, 176, 0.1)",
                 border: "1px solid rgba(15, 184, 176, 0.2)",
                 width: "fit-content",
-                mt: 2,
               }}
             >
               <Box
@@ -586,6 +597,7 @@ export default function AboutPage() {
             </Button>
           </Box>
         </Box>
+      </Box>
       </Box>
     </Box>
   );
