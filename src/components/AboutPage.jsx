@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -8,6 +8,7 @@ import {
   Typography,
 } from "@mui/material";
 import GuestNavbar from "./GuestNavbar";
+import Footer from "./Footer";
 import {
   ArrowForward as ArrowForwardIcon,
   Badge as BadgeIcon,
@@ -161,6 +162,30 @@ const capabilityCards = [
 export default function AboutPage() {
   const navigate = useNavigate();
 
+  const [showNavbar, setShowNavbar] = useState(true);
+  const scrollContainerRef = useRef(null);
+  const heroSectionRef = useRef(null);
+
+  useEffect(() => {
+    const scrollEl = scrollContainerRef.current;
+    const heroEl = heroSectionRef.current;
+    if (!scrollEl || !heroEl) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowNavbar(entry.isIntersecting);
+      },
+      {
+        root: scrollEl,
+        threshold: 0.6,
+      }
+    );
+
+    observer.observe(heroEl);
+
+    return () => observer.disconnect();
+  }, []);
+
   // Prevent viewport scroll so only the inner scroll container scrolls.
   useEffect(() => {
     const prevBody = document.body.style.overflow;
@@ -194,11 +219,13 @@ export default function AboutPage() {
           overflowY: "auto",
           overflowX: "hidden",
         }}
+        ref={scrollContainerRef}
       >
-        <GuestNavbar />
+        {showNavbar && <GuestNavbar />}
         {/* Section 1: Hero — full-width, no cards */}
       <Box
         component="section"
+        ref={heroSectionRef}
         sx={{
           position: "relative",
           minHeight: "34vh",
@@ -489,7 +516,8 @@ export default function AboutPage() {
       <Box
         component="section"
         sx={{
-          py: 12,
+          pt: 12,
+          pb: 0,
           bgcolor: "rgba(15, 184, 176, 0.05)",
           position: "relative",
           overflow: "hidden",
@@ -583,11 +611,12 @@ export default function AboutPage() {
                 py: 2,
                 bgcolor: primary,
                 color: "white",
-                fontSize: "1.125rem",
+                fontSize: { xs: "0.8rem", sm: "1.125rem" },
                 fontWeight: 700,
                 borderRadius: 2,
                 boxShadow: "0 20px 25px -5px rgba(15, 184, 176, 0.3)",
-                mb: 1,
+                mb: "7px",
+                whiteSpace: "nowrap",
                 "&:hover": {
                   bgcolor: "rgba(15, 184, 176, 0.9)",
                 },
@@ -598,6 +627,7 @@ export default function AboutPage() {
           </Box>
         </Box>
       </Box>
+      <Footer />
       </Box>
     </Box>
   );

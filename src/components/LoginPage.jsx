@@ -27,6 +27,7 @@ import {
   Login as LoginIcon,
 } from "@mui/icons-material";
 import GuestNavbar from "./GuestNavbar";
+import Footer from "./Footer";
 import Swal from "sweetalert2";
 
 const primaryTeal = "#00897B";
@@ -172,19 +173,14 @@ export default function LoginPage() {
     <Box
       component="main"
       sx={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        width: "100%",
-        height: "100%",
-        minWidth: "100%",
-        minHeight: "100%",
-        overflow: "hidden",
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        overflowY: "auto",
         boxSizing: "border-box",
       }}
     >
+      <Box sx={{ position: "relative", height: "100vh", minHeight: "100vh", flexShrink: 0, display: "flex", flexDirection: "column" }}>
       {/* Rotating background images with crossfade */}
       <Box
         sx={{
@@ -229,7 +225,8 @@ export default function LoginPage() {
         sx={{
           position: "relative",
           zIndex: 2,
-          height: "100%",
+          flex: 1,
+          minHeight: 0,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -262,6 +259,9 @@ export default function LoginPage() {
           Smart Care. Streamlined Operations.
         </Typography>
       </Box>
+      </Box>
+
+      <Footer />
 
       {/* Login dialog - white, clean UI */}
       <Dialog

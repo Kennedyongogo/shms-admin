@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -25,6 +25,7 @@ import {
   VisibilityOff as VisibilityOffIcon,
 } from "@mui/icons-material";
 import Swal from "sweetalert2";
+import GuestNavbar from "./GuestNavbar";
 
 const primaryTeal = "#00897B";
 const primaryTealDark = "#00695C";
@@ -93,6 +94,26 @@ export default function RegisterPage() {
   const [hospitalLogoPreview, setHospitalLogoPreview] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showNavbar, setShowNavbar] = useState(true);
+  const scrollContainerRef = useRef(null);
+  const registerHeaderRef = useRef(null);
+
+  useEffect(() => {
+    if (step !== 1) {
+      setShowNavbar(true);
+      return;
+    }
+    const scrollEl = scrollContainerRef.current;
+    const headerEl = registerHeaderRef.current;
+    if (!scrollEl || !headerEl) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowNavbar(entry.isIntersecting),
+      { root: scrollEl, threshold: 0.5 }
+    );
+    observer.observe(headerEl);
+    return () => observer.disconnect();
+  }, [step]);
 
   useEffect(() => {
     if (!hospitalLogoFile) {
@@ -236,50 +257,46 @@ export default function RegisterPage() {
     <Box
       component="main"
       sx={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        width: "100%",
-        height: "100%",
-        minWidth: "100%",
-        minHeight: "100%",
-        overflow: step === 0 ? "hidden" : "auto",
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        overflow: "hidden",
         boxSizing: "border-box",
         bgcolor: "#fff",
+        p: "1px",
       }}
     >
-      <Button
-        startIcon={<ArrowBackIcon />}
-        onClick={() => (step === 0 ? navigate("/", { replace: true }) : setStep(0))}
-        sx={{
-          position: "absolute",
-          top: 16,
-          left: 16,
-          zIndex: 10,
-          color: primaryTealDark,
-          fontWeight: 700,
-          "&:hover": { bgcolor: "rgba(0,105,92,0.08)" },
-        }}
-      >
-        Back to home
-      </Button>
       <Box
+        ref={scrollContainerRef}
         sx={{
-          position: "relative",
-          zIndex: 1,
-          width: "100%",
-          height: step === 0 ? "100%" : undefined,
-          minHeight: step === 0 ? "100%" : "100%",
-          boxSizing: "border-box",
-          px: { xs: 2, sm: 3, md: 4 },
-          py: step === 0 ? { xs: 1.5, sm: 2 } : { xs: 7, sm: 8 },
-          pt: step === 0 ? { xs: 7, sm: 8 } : { xs: 8, sm: 9 },
+          flexGrow: 1,
+          minHeight: 0,
+          overflowY: step === 0 ? "hidden" : "auto",
+          overflowX: "hidden",
           display: step === 0 ? "flex" : "block",
           flexDirection: step === 0 ? "column" : undefined,
         }}
       >
+        {(step === 0 || showNavbar) && <GuestNavbar />}
+        <Box
+          sx={{
+            position: "relative",
+            zIndex: 1,
+            width: "100%",
+            ...(step === 0
+              ? { flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }
+              : {}
+            ),
+            boxSizing: "border-box",
+            mt: "1px",
+            px: { xs: 2, sm: 3, md: 4 },
+            ...(step === 0
+              ? { py: { xs: 1.5, sm: 2 }, pt: "1px" }
+              : { pt: "1px", pb: "5px" }
+            ),
+            ...(step === 1 ? { display: "block" } : {}),
+          }}
+        >
         {step === 0 && (
           <>
             <Typography variant="h5" sx={{ fontWeight: 800, mb: 0.5, color: "text.primary", flexShrink: 0, fontSize: { xs: "1.25rem", sm: "1.5rem" } }}>
@@ -541,12 +558,14 @@ export default function RegisterPage() {
 
         {step === 1 && (
           <>
-            <Typography variant="h5" sx={{ fontWeight: 800, mb: 0.5, color: "text.primary" }}>
-              Register your {packageSelected === "silver" ? "clinic" : "hospital"}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              You will be the Super Admin. Enter hospital and your account details.
-            </Typography>
+            <Box ref={registerHeaderRef}>
+              <Typography variant="h5" sx={{ fontWeight: 800, mb: 0.5, color: "text.primary" }}>
+                Register your {packageSelected === "silver" ? "clinic" : "hospital"}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                You will be the Super Admin. Enter hospital and your account details.
+              </Typography>
+            </Box>
             <form onSubmit={handleSubmit} style={{ width: "100%" }}>
               <Stack spacing={2.5} sx={{ width: "100%" }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "text.primary", mt: 1 }}>
@@ -788,6 +807,7 @@ export default function RegisterPage() {
             </form>
           </>
         )}
+        </Box>
       </Box>
     </Box>
   );

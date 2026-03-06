@@ -4,6 +4,9 @@ import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import LoginPage from "./components/LoginPage";
 import RegisterPage from "./components/RegisterPage";
 import AboutPage from "./components/AboutPage";
+import TermsOfServicePage from "./components/TermsOfServicePage";
+import PrivacyPolicyPage from "./components/PrivacyPolicyPage";
+import RefundCancellationPage from "./components/RefundCancellationPage";
 import CarlvyneOwners from "./components/CarlvyneOwners";
 import LiveDemoPage from "./components/LiveDemoPage";
 import { ThemeProvider } from "@mui/material";
@@ -39,6 +42,9 @@ function App() {
           <Route path="/" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/terms" element={<TermsOfServicePage />} />
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
+          <Route path="/refund-cancellation" element={<RefundCancellationPage />} />
           <Route path="/about/founders" element={<CarlvyneOwners />} />
           <Route path="/about/demo" element={<LiveDemoPage />} />
           <Route path="/*" element={<PageRoutes />} />
