@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useLayoutEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
@@ -32,9 +32,10 @@ const navLinkSx = (onWhitePage, active) => ({
       : "rgba(255,255,255,0.95)",
   fontWeight: active ? 700 : 600,
   minWidth: 0,
+  bgcolor: "transparent",
   ...(!onWhitePage && !active && { textShadow: "0 1px 4px rgba(0,0,0,0.3)" }),
   "&:hover": {
-    bgcolor: onWhitePage ? "rgba(0,137,123,0.08)" : "rgba(255,255,255,0.15)",
+    bgcolor: "transparent",
     color: onWhitePage ? primaryTealDark : "white",
   },
 });
@@ -66,6 +67,35 @@ export default function GuestNavbar() {
       navigate("/");
     }
   };
+
+  const handleOurServicesClick = () => {
+    if (isHome) {
+      document.getElementById("services")?.scrollIntoView({ behavior: "smooth" });
+    } else {
+      navigate("/#services");
+    }
+  };
+
+  const activeNavKey = isHome ? "home" : isTestimonials ? "testimonials" : isTerms ? "terms" : isPrivacy ? "privacy" : "home";
+  const [hoveredNavKey, setHoveredNavKey] = useState(null);
+  const navItemRefs = useRef({});
+  const [lineStyle, setLineStyle] = useState({ left: 0, width: 0 });
+  const currentLineTarget = hoveredNavKey ?? activeNavKey;
+
+  useLayoutEffect(() => {
+    const el = navItemRefs.current[currentLineTarget];
+    if (el) {
+      setLineStyle({ left: el.offsetLeft, width: el.offsetWidth });
+    }
+  }, [currentLineTarget, isHome]);
+
+  const navItems = [
+    { key: "home", label: "Home", onClick: () => navigate("/"), isActive: isHome },
+    { key: "our-services", label: "Our services", onClick: handleOurServicesClick, isActive: false },
+    { key: "testimonials", label: "Testimonials", onClick: () => navigate("/testimonials"), isActive: isTestimonials },
+    { key: "terms", label: "Terms of Service", onClick: () => navigate("/terms"), isActive: isTerms },
+    { key: "privacy", label: "Privacy Policy", onClick: () => navigate("/privacy"), isActive: isPrivacy },
+  ];
 
   // On About, Terms, Privacy, Refund, and Register use sticky so navbar stays inside scroll container and doesn't overlap scrollbar.
   const position =
@@ -148,41 +178,37 @@ export default function GuestNavbar() {
                     gap: 0.5,
                   }}
                 >
-                  <Button
-                    size="small"
-                    onClick={() => navigate("/")}
-                    sx={navLinkSx(onWhitePage, isHome)}
-                  >
-                    Home
-                  </Button>
-                  <Button
-                    size="small"
-                    onClick={() => navigate("/about")}
-                    sx={navLinkSx(onWhitePage, isAbout)}
-                  >
-                    About us
-                  </Button>
-                  <Button
-                    size="small"
-                    onClick={() => navigate("/testimonials")}
-                    sx={navLinkSx(onWhitePage, isTestimonials)}
-                  >
-                    Testimonials
-                  </Button>
-                  <Button
-                    size="small"
-                    onClick={() => navigate("/terms")}
-                    sx={navLinkSx(onWhitePage, isTerms)}
-                  >
-                    Terms of Service
-                  </Button>
-                  <Button
-                    size="small"
-                    onClick={() => navigate("/privacy")}
-                    sx={navLinkSx(onWhitePage, isPrivacy)}
-                  >
-                    Privacy Policy
-                  </Button>
+                  <Box sx={{ position: "relative", display: "flex", alignItems: "center", gap: 0.5 }}>
+                    {navItems.map(({ key, label, onClick, isActive }) => (
+                      <Box
+                        key={key}
+                        ref={(el) => (navItemRefs.current[key] = el)}
+                        onMouseEnter={() => setHoveredNavKey(key)}
+                        onMouseLeave={() => setHoveredNavKey(null)}
+                      >
+                        <Button
+                          size="small"
+                          onClick={onClick}
+                          sx={navLinkSx(onWhitePage, isActive)}
+                        >
+                          {label}
+                        </Button>
+                      </Box>
+                    ))}
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        bottom: 0,
+                        left: 0,
+                        height: 3,
+                        width: lineStyle.width,
+                        bgcolor: primaryTeal,
+                        borderRadius: "3px 3px 0 0",
+                        transform: `translateX(${lineStyle.left}px)`,
+                        transition: "transform 0.25s ease, width 0.25s ease",
+                      }}
+                    />
+                  </Box>
                 </Box>
                 <Box
                   sx={{
@@ -237,7 +263,7 @@ export default function GuestNavbar() {
                 </Box>
               </>
             ) : (
-              /* Register + About: Home + About us on the far right */
+              /* Register + About: nav on the far right with line */
               <Box
                 sx={{
                   flex: 1,
@@ -248,41 +274,37 @@ export default function GuestNavbar() {
                   minWidth: 0,
                 }}
               >
-                <Button
-                  size="small"
-                  onClick={() => navigate("/")}
-                  sx={navLinkSx(onWhitePage, isHome)}
-                >
-                  Home
-                </Button>
-                <Button
-                  size="small"
-                  onClick={() => navigate("/about")}
-                  sx={navLinkSx(onWhitePage, isAbout)}
-                >
-                  About us
-                </Button>
-                <Button
-                  size="small"
-                  onClick={() => navigate("/testimonials")}
-                  sx={navLinkSx(onWhitePage, isTestimonials)}
-                >
-                  Testimonials
-                </Button>
-                <Button
-                  size="small"
-                  onClick={() => navigate("/terms")}
-                  sx={navLinkSx(onWhitePage, isTerms)}
-                >
-                  Terms of Service
-                </Button>
-                <Button
-                  size="small"
-                  onClick={() => navigate("/privacy")}
-                  sx={navLinkSx(onWhitePage, isPrivacy)}
-                >
-                  Privacy Policy
-                </Button>
+                <Box sx={{ position: "relative", display: "flex", alignItems: "center", gap: 0.5 }}>
+                  {navItems.map(({ key, label, onClick, isActive }) => (
+                    <Box
+                      key={key}
+                      ref={(el) => (navItemRefs.current[key] = el)}
+                      onMouseEnter={() => setHoveredNavKey(key)}
+                      onMouseLeave={() => setHoveredNavKey(null)}
+                    >
+                      <Button
+                        size="small"
+                        onClick={onClick}
+                        sx={navLinkSx(onWhitePage, isActive)}
+                      >
+                        {label}
+                      </Button>
+                    </Box>
+                  ))}
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      bottom: 0,
+                      left: 0,
+                      height: 3,
+                      width: lineStyle.width,
+                      bgcolor: primaryTeal,
+                      borderRadius: "3px 3px 0 0",
+                      transform: `translateX(${lineStyle.left}px)`,
+                      transition: "transform 0.25s ease, width 0.25s ease",
+                    }}
+                  />
+                </Box>
               </Box>
             )}
           </>
@@ -356,11 +378,11 @@ export default function GuestNavbar() {
               </ListItemButton>
               <ListItemButton
                 onClick={() => {
-                  navigate("/about");
+                  handleOurServicesClick();
                   setMobileOpen(false);
                 }}
               >
-                <ListItemText primary="About us" />
+                <ListItemText primary="Our services" />
               </ListItemButton>
               <ListItemButton
                 onClick={() => {

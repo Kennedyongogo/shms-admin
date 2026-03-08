@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -28,6 +28,7 @@ import {
 } from "@mui/icons-material";
 import GuestNavbar from "./GuestNavbar";
 import Footer from "./Footer";
+import ServicesSection from "./ServicesSection";
 import Swal from "sweetalert2";
 
 const primaryTeal = "#00897B";
@@ -45,6 +46,7 @@ export default function LoginPage() {
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
   const navigate = useNavigate();
+  const location = useLocation();
   const rfEmail = useRef();
   const rfPassword = useRef();
   const rsEmail = useRef();
@@ -71,6 +73,13 @@ export default function LoginPage() {
     window.addEventListener("open-login-dialog", onOpen);
     return () => window.removeEventListener("open-login-dialog", onOpen);
   }, []);
+
+  useEffect(() => {
+    if (location.hash === "#services") {
+      const el = document.getElementById("services");
+      if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth" }), 100);
+    }
+  }, [location.hash]);
 
   const login = async (e) => {
     if (e) e.preventDefault();
@@ -261,6 +270,7 @@ export default function LoginPage() {
       </Box>
       </Box>
 
+      <ServicesSection />
       <Footer />
 
       {/* Login dialog - white, clean UI */}

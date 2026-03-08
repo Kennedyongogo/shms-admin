@@ -12,7 +12,8 @@ import {
 
 const quickLinks = [
   { label: "Home", to: "/" },
-  { label: "About us", to: "/about" },
+  { label: "Our services", to: "/#services" },
+  { label: "Testimonials", to: "/testimonials" },
 ];
 
 const Footer = () => {
@@ -59,13 +60,15 @@ const Footer = () => {
             </Typography>
           </Box>
 
-          {/* Center: Quick Links + Contact Us */}
+          {/* Center: Quick Links + Contact Us — stack on phone only, one line on tablet/desktop */}
           <Box
             sx={{
               flex: 1,
               display: "flex",
-              flexWrap: "wrap",
+              flexDirection: { xs: "column", sm: "row" },
+              flexWrap: "nowrap",
               justifyContent: "center",
+              alignItems: "flex-start",
               gap: 3,
               minWidth: 0,
             }}
