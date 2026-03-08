@@ -8,8 +8,6 @@ import {
   CircularProgress,
   InputAdornment,
   IconButton,
-  FormControlLabel,
-  Checkbox,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -55,7 +53,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [body, updateBody] = useState({ email: null });
   const [openResetDialog, setOpenResetDialog] = useState(false);
   const [openLoginDialog, setOpenLoginDialog] = useState(false);
@@ -294,9 +291,6 @@ export default function LoginPage() {
           Sign in
         </DialogTitle>
         <DialogContent sx={{ pt: 3, pb: 1, overflow: "visible", "& .MuiInputLabel-shrink": { overflow: "visible" } }}>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Use the same email and password you used when registering (your account email, not the hospital email).
-          </Typography>
           <form onSubmit={login}>
             <TextField
               inputRef={rfEmail}
@@ -344,11 +338,7 @@ export default function LoginPage() {
               }}
               sx={{ ...inputSx, mb: 1.5, "& .MuiOutlinedInput-root": { ...inputSx["& .MuiOutlinedInput-root"], borderRadius: 2, bgcolor: "grey.50" } }}
             />
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1, mb: 2 }}>
-              <FormControlLabel
-                control={<Checkbox checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} sx={{ color: "grey.600", "&.Mui-checked": { color: primaryTeal } }} />}
-                label={<Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>Remember this device</Typography>}
-              />
+            <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
               <Typography component="button" type="button" variant="body2" onClick={() => setOpenResetDialog(true)} sx={{ border: "none", background: "none", cursor: "pointer", color: primaryTeal, fontWeight: 600, "&:hover": { textDecoration: "underline", color: primaryTealDark } }}>
                 Forgot password?
               </Typography>
@@ -371,6 +361,17 @@ export default function LoginPage() {
             >
               {loading ? "Signing in…" : "Sign in"}
             </Button>
+            <Typography variant="body2" sx={{ textAlign: "center", mt: 2, color: "text.secondary" }}>
+              Don&apos;t have an account?{" "}
+              <Typography
+                component="span"
+                variant="body2"
+                onClick={() => { setOpenLoginDialog(false); navigate("/register"); }}
+                sx={{ color: primaryTeal, fontWeight: 600, cursor: "pointer", "&:hover": { textDecoration: "underline", color: primaryTealDark } }}
+              >
+                Register
+              </Typography>
+            </Typography>
           </form>
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2, borderTop: 1, borderColor: "divider", bgcolor: "grey.50" }}>

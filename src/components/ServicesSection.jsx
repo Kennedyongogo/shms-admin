@@ -151,6 +151,7 @@ export default function ServicesSection() {
               color: "white",
               boxShadow: "0 4px 14px rgba(15, 184, 176, 0.4)",
               textTransform: "none",
+              whiteSpace: "nowrap",
               "&:hover": {
                 bgcolor: "rgba(15, 184, 176, 0.9)",
                 boxShadow: "0 6px 20px rgba(15, 184, 176, 0.45)",
