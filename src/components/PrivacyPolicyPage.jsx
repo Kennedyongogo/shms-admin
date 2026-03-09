@@ -56,7 +56,7 @@ export default function PrivacyPolicyPage() {
     <Box
       component="main"
       sx={{
-        fontFamily: "'Manrope', sans-serif",
+        fontFamily: "'Inter', sans-serif",
         bgcolor: "background.default",
         color: "text.primary",
         display: "flex",
@@ -207,14 +207,36 @@ export default function PrivacyPolicyPage() {
             >
               1. Information We Collect
             </Typography>
-            <Typography
-              sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}
-            >
-              We collect information you provide when registering, using the
-              Service, or contacting us. This may include name, email, organization
-              details, and healthcare-related data necessary to operate the
-              platform. We also collect technical data such as IP address and
-              usage information to improve our services and security.
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}>
+              We collect information in several categories when you or your organization
+              use the Service:
+            </Typography>
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 2 }}>
+              <strong>Account and organization data.</strong> This includes hospital or
+              clinic details (name, address, contact information), and user account
+              information (such as full name, email, phone number, role, and, where
+              provided, profile image).
+            </Typography>
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 2 }}>
+              <strong>Patient and clinical data.</strong> This includes patient
+              demographics (for example, name, contact details, date of birth, gender),
+              as well as operational and clinical records captured through the modules
+              in the system (appointments, visits, consultations, lab and pharmacy
+              records, vitals, ward/bed information, diet, inventory usage, and similar
+              information you choose to store in the Service).
+            </Typography>
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 2 }}>
+              <strong>Billing and payment data.</strong> We collect subscription and
+              billing information related to your use of the Service, and payment
+              transaction references or statuses from payment providers (such as
+              M‑Pesa or other gateways). We do not store full card details if card
+              payments are used; those are handled by the payment provider.
+            </Typography>
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}>
+              <strong>Technical and usage data.</strong> We collect log and audit data
+              (for example, who performed which actions and when), as well as device,
+              browser, and connection information such as IP address and basic usage
+              analytics, to maintain, secure, and improve the Service.
             </Typography>
 
             <Typography
@@ -228,14 +250,29 @@ export default function PrivacyPolicyPage() {
             >
               2. How We Use Your Information
             </Typography>
-            <Typography
-              sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}
-            >
-              We use your information to provide, maintain, and improve the
-              Service; to process transactions; to communicate with you; and to
-              comply with legal and regulatory obligations. Healthcare data is
-              used only as necessary to deliver hospital management and
-              patient-care features in accordance with applicable law.
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}>
+              We use the information described above to:
+            </Typography>
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 2 }}>
+              <strong>Provide and operate the Service.</strong> This includes creating
+              and managing hospital/clinic accounts, enabling users and roles,
+              supporting day‑to‑day operations (such as patient registration, visits,
+              lab, pharmacy, and billing), and generating audit logs for traceability.
+            </Typography>
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 2 }}>
+              <strong>Maintain security and compliance.</strong> We use data to monitor
+              access, detect potential misuse, prevent fraud and security incidents,
+              and comply with legal, regulatory, and professional obligations, including
+              those related to health and data protection where applicable.
+            </Typography>
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 2 }}>
+              <strong>Billing and communication.</strong> We use information to manage
+              subscriptions, invoices, and payments and to send important notices
+              related to the Service, such as security alerts, service changes, and
+              updates to these terms or this Policy.
+            </Typography>
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}>
+              We do not use patient data for unrelated advertising.
             </Typography>
 
             <Typography
@@ -249,14 +286,13 @@ export default function PrivacyPolicyPage() {
             >
               3. Data Security
             </Typography>
-            <Typography
-              sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}
-            >
-              We implement appropriate technical and organizational measures to
-              protect your personal and health data against unauthorized access,
-              alteration, disclosure, or destruction. Access to sensitive data is
-              restricted and audited in line with industry standards and
-              applicable regulations.
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}>
+              We implement technical and organizational measures to help protect
+              personal and health information against unauthorized access, alteration,
+              disclosure, or destruction. These measures include role‑based access
+              controls in the admin portal, authentication for users, and audit logs of
+              key actions. While no system can be guaranteed completely secure, we work
+              continuously to maintain and improve our security controls.
             </Typography>
 
             <Typography
@@ -270,14 +306,16 @@ export default function PrivacyPolicyPage() {
             >
               4. Sharing and Disclosure
             </Typography>
-            <Typography
-              sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}
-            >
-              We do not sell your personal information. We may share data with
-              service providers who assist in operating the Service, subject to
-              confidentiality and data protection agreements. We may also
-              disclose information where required by law or to protect our
-              rights, users, or the public.
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}>
+              We do not sell your personal information. We may share data with:
+              service providers that help us operate the Service (such as hosting
+              providers, payment processors, email/SMS gateways, and monitoring
+              tools), subject to contractual obligations to protect the information and
+              use it only for the services they provide to us. We may also disclose
+              information where required by law, court order, or governmental request,
+              or where necessary to protect our rights, users, or the public, and in
+              connection with a merger, acquisition, or similar business transfer,
+              subject to appropriate safeguards.
             </Typography>
 
             <Typography
@@ -291,14 +329,16 @@ export default function PrivacyPolicyPage() {
             >
               5. Your Rights
             </Typography>
-            <Typography
-              sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}
-            >
-              Depending on applicable law, you may have the right to access,
-              correct, or delete your personal data, object to or restrict
-              processing, and request data portability. To exercise these rights
-              or ask questions about our practices, contact us using the details
-              below.
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}>
+              Depending on applicable law, individuals may have rights such as
+              accessing their personal data, requesting corrections, requesting
+              deletion or restriction of processing in certain cases, objecting to
+              certain types of processing, and requesting data portability. Requests
+              relating to patient or staff records stored for your hospital or clinic
+              should normally be directed to that hospital or clinic as the primary
+              data controller. You can also contact us using the details in the
+              Service or on our website and we will coordinate with the relevant
+              customer where appropriate.
             </Typography>
 
             <Typography
@@ -310,14 +350,53 @@ export default function PrivacyPolicyPage() {
                 mb: 2,
               }}
             >
-              6. Contact
+              6. Data Retention and Transfers
             </Typography>
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}>
+              We retain information for as long as reasonably necessary to provide the
+              Service to your organization, to comply with legal and regulatory
+              obligations, to resolve disputes, and to enforce our agreements.
+              Retention periods may differ by data type and jurisdiction. If data are
+              stored or accessed from outside your country, we will take steps to help
+              ensure that any international transfers are made in accordance with
+              applicable data‑protection laws, using appropriate safeguards where
+              required.
+            </Typography>
+
             <Typography
-              sx={{ color: "text.secondary", lineHeight: 1.7 }}
+              component="h2"
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: "text.primary",
+                mb: 2,
+              }}
             >
-              For questions about this Privacy Policy or our data practices,
-              please contact us using the contact details provided on our
-              website or within the Service.
+              7. Changes to This Policy
+            </Typography>
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}>
+              We may update this Privacy Policy from time to time. When we do, we will
+              post the updated version in the application and/or on our website and
+              update the &quot;Last updated&quot; date where appropriate. Your continued
+              use of the Service after the updated Policy becomes effective means you
+              accept those changes.
+            </Typography>
+
+            <Typography
+              component="h2"
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: "text.primary",
+                mb: 2,
+              }}
+            >
+              8. Contact
+            </Typography>
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7 }}>
+              For questions about this Privacy Policy or our data practices, please
+              contact us using the contact details provided on our website or within
+              the Service.
             </Typography>
           </Box>
         </Box>

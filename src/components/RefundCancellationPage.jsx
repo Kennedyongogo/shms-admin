@@ -191,7 +191,7 @@ export default function RefundCancellationPage() {
     <Box
       component="main"
       sx={{
-        fontFamily: "'Manrope', sans-serif",
+        fontFamily: "'Inter', sans-serif",
         bgcolor: "background.default",
         color: "text.primary",
         display: "flex",

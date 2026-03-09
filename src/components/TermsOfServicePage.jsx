@@ -61,7 +61,7 @@ export default function TermsOfServicePage() {
     <Box
       component="main"
       sx={{
-        fontFamily: "'Manrope', sans-serif",
+        fontFamily: "'Inter', sans-serif",
         bgcolor: "background.default",
         color: "text.primary",
         display: "flex",
@@ -212,13 +212,15 @@ export default function TermsOfServicePage() {
             >
               1. Acceptance of Terms
             </Typography>
-            <Typography
-              sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}
-            >
-              By accessing or using the Carlvyne Smart Hospital Management
-              System (“Service”), you agree to be bound by these Terms of
-              Service. If you do not agree to these terms, please do not use the
-              Service.
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}>
+              By accessing or using the Carlvyne Smart Hospital Management System (the
+              &quot;Service&quot;), including the admin portal, APIs, and operational modules
+              (patients, appointments, laboratory, pharmacy, billing, wards, inventory,
+              diet, users &amp; roles, audit logs), you agree to be bound by these Terms
+              of Service (&quot;Terms&quot;). If you do not agree to these Terms, you must not
+              use the Service. If you are accepting these Terms on behalf of a hospital,
+              clinic, or other organization, you represent that you have authority to
+              bind that organization, and &quot;you&quot; refers to that organization.
             </Typography>
 
             <Typography
@@ -232,13 +234,17 @@ export default function TermsOfServicePage() {
             >
               2. Use of the Service
             </Typography>
-            <Typography
-              sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}
-            >
-              You agree to use the Service only for lawful purposes and in
-              accordance with these terms. You must not use the Service in any
-              way that could damage, disable, or impair the Service or interfere
-              with any other party’s use of the Service.
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}>
+              The Service is intended to support lawful hospital and clinic operations.
+              You agree to use it only for legitimate healthcare and administrative
+              purposes and in accordance with these Terms and applicable laws. You are
+              responsible for keeping account credentials (particularly Super Admin and
+              staff logins) secure, assigning appropriate roles and permissions to your
+              users, and ensuring that data entered into the system is accurate and that
+              you have a lawful basis to process it. You must not attempt to interfere
+              with or disrupt the Service, reverse‑engineer it, bypass security
+              controls, or use it in a way that infringes the rights or privacy of
+              others.
             </Typography>
 
             <Typography
@@ -250,36 +256,18 @@ export default function TermsOfServicePage() {
                 mb: 2,
               }}
             >
-              3. Privacy and Data
+              3. Accounts, Roles, and Access
             </Typography>
-            <Typography
-              sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}
-            >
-              Your use of the Service is also governed by our Privacy Policy.
-              You consent to the collection, use, and disclosure of information
-              as described in that policy. Healthcare data is handled in
-              accordance with applicable laws and our security practices.
-            </Typography>
-
-            <Typography
-              component="h2"
-              variant="h5"
-              sx={{
-                fontWeight: 700,
-                color: "text.primary",
-                mb: 2,
-              }}
-            >
-              4. Modifications
-            </Typography>
-            <Typography
-              sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}
-            >
-              We may modify these Terms of Service from time to time. We will
-              notify you of material changes by posting the updated terms on
-              this page and updating the “Last updated” date. Your continued use
-              of the Service after such changes constitutes acceptance of the
-              updated terms.
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}>
+              The initial Super Admin account can configure hospitals or clinics, manage
+              users and roles, and access sensitive configuration and billing
+              information. You are responsible for protecting this account and for
+              promptly revoking access for users who should no longer have it. The
+              Service provides role‑based access (for example, admin, doctor, nurse,
+              lab, pharmacy, billing) and audit logs of key actions to support
+              traceability and accountability. You are responsible for any activity
+              occurring under your accounts and for configuring roles in a way that
+              aligns with your internal policies and legal obligations.
             </Typography>
 
             <Typography
@@ -291,14 +279,181 @@ export default function TermsOfServicePage() {
                 mb: 2,
               }}
             >
-              5. Contact
+              4. Subscriptions, Billing, and Refunds
             </Typography>
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}>
+              Access to certain features or environments may be provided on a
+              subscription or plan basis. Pricing, billing cycles, and specific
+              inclusions are described separately (for example, during registration or
+              in your commercial agreement). Payments may be processed by third‑party
+              providers (such as M‑Pesa or other gateways), and their terms also apply
+              to the payment process. Our approach to cancellations and refunds is
+              described in the Refund &amp; Cancellation policy within the Service; any
+              refunds, where available, are handled in line with that policy and your
+              agreed commercial terms.
+            </Typography>
+
             <Typography
-              sx={{ color: "text.secondary", lineHeight: 1.7 }}
+              component="h2"
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: "text.primary",
+                mb: 2,
+              }}
             >
-              For questions about these Terms of Service, please contact us
-              using the contact details provided on our website or within the
+              5. Privacy and Data Protection
+            </Typography>
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}>
+              Your use of the Service is also governed by our Privacy Policy, which
+              explains how we collect, use, and protect personal and health information.
+              By using the Service, you consent to the data practices described there.
+              We implement technical and organizational measures (such as role‑based
+              access and audit logging) to help protect data, but you remain responsible
+              for configuring user access, securing the devices and networks used to
+              access the Service, and ensuring that you have a lawful basis to process
+              patient and staff data.
+            </Typography>
+
+            <Typography
+              component="h2"
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: "text.primary",
+                mb: 2,
+              }}
+            >
+              6. Third‑Party Services
+            </Typography>
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}>
+              The Service may rely on or integrate with third‑party services such as
+              hosting providers, payment processors, email/SMS gateways, and
+              monitoring/logging tools. We aim to work only with reputable providers
+              under appropriate contractual protections, but those providers&apos; terms
+              and privacy policies also apply to their handling of data. We are not
+              responsible for issues caused solely by those third‑party services, but we
+              will make reasonable efforts to support you if an integration impacts the
               Service.
+            </Typography>
+
+            <Typography
+              component="h2"
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: "text.primary",
+                mb: 2,
+              }}
+            >
+              7. Service Availability and Changes
+            </Typography>
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}>
+              We strive to keep the Service reliable and available, but we do not
+              guarantee uninterrupted or error‑free operation. We may update, enhance,
+              or modify the Service from time to time (for example, new features, UI
+              improvements, or security updates) and may temporarily suspend or limit
+              access for maintenance, security, or legal reasons. We will seek to
+              minimize unnecessary disruption.
+            </Typography>
+
+            <Typography
+              component="h2"
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: "text.primary",
+                mb: 2,
+              }}
+            >
+              8. Intellectual Property
+            </Typography>
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}>
+              The Service, including its underlying software, user interface, design,
+              and content we provide, is owned by us or our licensors. We grant you a
+              limited, non‑exclusive, non‑transferable license to use the Service for
+              your internal hospital or clinic operations in accordance with these
+              Terms. You may not copy, resell, or commercially exploit the Service
+              beyond what is expressly permitted in your agreement with us.
+            </Typography>
+
+            <Typography
+              component="h2"
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: "text.primary",
+                mb: 2,
+              }}
+            >
+              9. Disclaimers and Limitation of Liability
+            </Typography>
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}>
+              The Service is provided &quot;as is&quot; and &quot;as available&quot;. To the maximum
+              extent permitted by law, we disclaim all warranties, whether express,
+              implied, or statutory, including any implied warranties of
+              merchantability, fitness for a particular purpose, and non‑infringement.
+              The Service is a support tool and does not replace clinical judgment or
+              professional obligations; you and your clinical staff remain fully
+              responsible for medical decisions and patient care. To the extent
+              permitted by law, our total aggregate liability arising out of or related
+              to your use of the Service is limited to the fees you have paid for the
+              Service in the twelve (12) months preceding the event giving rise to the
+              claim.
+            </Typography>
+
+            <Typography
+              component="h2"
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: "text.primary",
+                mb: 2,
+              }}
+            >
+              10. Termination
+            </Typography>
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}>
+              We may suspend or terminate your access to the Service if you materially
+              breach these Terms, fail to pay amounts due (where applicable), misuse
+              the Service, or if continued service would create a legal or security
+              risk. You may stop using the Service at any time; specific termination,
+              data‑export, and post‑termination provisions may be described in your
+              commercial agreement or in our Refund &amp; Cancellation policy.
+            </Typography>
+
+            <Typography
+              component="h2"
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: "text.primary",
+                mb: 2,
+              }}
+            >
+              11. Governing Law and Disputes
+            </Typography>
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7, mb: 3 }}>
+              These Terms are governed by the laws of Kenya, without regard to
+              conflict‑of‑law principles. Any disputes arising out of or relating to
+              the Service will be subject to the exclusive jurisdiction of the courts
+              of Nairobi, Kenya, unless otherwise required by applicable law.
+            </Typography>
+
+            <Typography
+              component="h2"
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+                color: "text.primary",
+                mb: 2,
+              }}
+            >
+              12. Contact
+            </Typography>
+            <Typography sx={{ color: "text.secondary", lineHeight: 1.7 }}>
+              For questions about these Terms of Service, please contact us using the
+              contact details provided on our website or within the Service.
             </Typography>
           </Box>
         </Box>
