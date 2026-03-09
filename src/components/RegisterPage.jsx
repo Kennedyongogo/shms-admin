@@ -280,17 +280,18 @@ export default function RegisterPage() {
         p: "1px",
       }}
     >
-      <Box
-        ref={scrollContainerRef}
-        sx={{
-          flexGrow: 1,
-          minHeight: 0,
-          overflowY: step === 0 ? "hidden" : "auto",
-          overflowX: "hidden",
-          display: step === 0 ? "flex" : "block",
-          flexDirection: step === 0 ? "column" : undefined,
-        }}
-      >
+        <Box
+          ref={scrollContainerRef}
+          sx={{
+            flexGrow: 1,
+            minHeight: 0,
+            // No scroll on desktop for the register step; allow scroll only on small screens.
+            overflowY: step === 0 ? "hidden" : { xs: "auto", md: "hidden" },
+            overflowX: "hidden",
+            display: step === 0 ? "flex" : "block",
+            flexDirection: step === 0 ? "column" : undefined,
+          }}
+        >
         {(step === 0 || showNavbar) && <GuestNavbar />}
         <Box
           sx={{
@@ -377,7 +378,7 @@ export default function RegisterPage() {
                     minHeight: 0,
                     display: "flex",
                     flexDirection: "column",
-                    py: { xs: 1, sm: 1.25 },
+                    py: { xs: 0.75, sm: 1 },
                     px: { xs: 1, sm: 2 },
                     overflow: "hidden",
                     "&:last-child": { pb: { xs: 1, sm: 1.25 } },
@@ -417,7 +418,7 @@ export default function RegisterPage() {
                       fontWeight: 600,
                       color: packageSelected === "silver" ? "#37474f" : "text.secondary",
                       lineHeight: { xs: 1.25, sm: 1.35 },
-                      mb: { xs: 0.35, sm: 0.5 },
+                      mb: { xs: 0.25, sm: 0.35 },
                       pl: { xs: 2.5, sm: 4.5 },
                       pr: { xs: 0.5, sm: 0 },
                       fontSize: { xs: "0.65rem", sm: "0.75rem" },
@@ -712,7 +713,7 @@ export default function RegisterPage() {
 
         {step === 1 && (
           <>
-            <Box ref={registerHeaderRef} sx={{ mb: 2 }}>
+            <Box ref={registerHeaderRef} sx={{ mb: { xs: 1.5, md: 1 } }}>
               <Button
                 startIcon={<ArrowBackIcon />}
                 onClick={() => setStep(0)}
@@ -731,9 +732,10 @@ export default function RegisterPage() {
             <form onSubmit={handleSubmit} style={{ width: "100%" }}>
               <Box
                 sx={{
-                  // On small screens, allow the form area itself to scroll while keeping the page stable.
-                  maxHeight: { xs: "calc(100vh - 220px)", md: "none" },
-                  overflowY: { xs: "auto", md: "visible" },
+                  // Clamp height so the register step fits the viewport,
+                  // but allow the form itself (not the whole page) to scroll when needed.
+                  maxHeight: { xs: "calc(100vh - 220px)", md: "calc(100vh - 260px)" },
+                  overflowY: "auto",
                   pr: { xs: 1, md: 0 },
                 }}
               >
@@ -750,12 +752,15 @@ export default function RegisterPage() {
                   elevation={0}
                   variant="outlined"
                   sx={{
-                    p: 2,
+                    px: 2,
+                    pt: 2,
+                    pb: 0,
                     borderRadius: 3,
                     border: "1px solid",
                     borderColor: "divider",
                     bgcolor: "#fff",
-                    height: "100%",
+                    // Let card shrink to its content so there is no flex gap under the button
+                    height: "auto",
                     display: "flex",
                     flexDirection: "column",
                   }}
@@ -763,7 +768,7 @@ export default function RegisterPage() {
                   <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "text.primary", mb: 1.5 }}>
                     Hospital / Clinic
                   </Typography>
-                  <Stack spacing={2} sx={{ flex: 1 }}>
+                  <Stack spacing={2}>
                     <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 2 }}>
                       <Button
                         variant="outlined"
@@ -882,7 +887,7 @@ export default function RegisterPage() {
                     border: "1px solid",
                     borderColor: "divider",
                     bgcolor: "#fff",
-                    height: "100%",
+                    height: "auto",
                     display: "flex",
                     flexDirection: "column",
                   }}
@@ -890,7 +895,7 @@ export default function RegisterPage() {
                   <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "text.primary", mb: 1.5 }}>
                     Super Admin account
                   </Typography>
-                  <Stack spacing={2} sx={{ flex: 1 }}>
+                  <Stack spacing={2}>
                     <TextField
                       label="Full name"
                       required
