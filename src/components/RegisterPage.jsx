@@ -731,13 +731,21 @@ export default function RegisterPage() {
             <form onSubmit={handleSubmit} style={{ width: "100%" }}>
               <Box
                 sx={{
-                  display: "grid",
-                  gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-                  gap: { xs: 3, md: 2 },
-                  alignItems: "stretch",
-                  mb: 2,
+                  // On small screens, allow the form area itself to scroll while keeping the page stable.
+                  maxHeight: { xs: "calc(100vh - 220px)", md: "none" },
+                  overflowY: { xs: "auto", md: "visible" },
+                  pr: { xs: 1, md: 0 },
                 }}
               >
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+                    gap: { xs: 3, md: 2 },
+                    alignItems: "stretch",
+                    mb: 2,
+                  }}
+                >
                 <Paper
                   elevation={0}
                   variant="outlined"
@@ -1026,6 +1034,7 @@ export default function RegisterPage() {
                     </Button>
                   </Stack>
                 </Paper>
+                </Box>
               </Box>
             </form>
           </>
