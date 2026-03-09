@@ -732,10 +732,10 @@ export default function RegisterPage() {
             <form onSubmit={handleSubmit} style={{ width: "100%" }}>
               <Box
                 sx={{
-                  // Clamp height so the register step fits the viewport,
-                  // but allow the form itself (not the whole page) to scroll when needed.
-                  maxHeight: { xs: "calc(100vh - 220px)", md: "calc(100vh - 260px)" },
-                  overflowY: "auto",
+                  // On small screens, keep the form within the viewport and allow it to scroll.
+                  // On larger screens, let it grow naturally with no internal scroll.
+                  maxHeight: { xs: "calc(100vh - 220px)", md: "none" },
+                  overflowY: { xs: "auto", md: "visible" },
                   pr: { xs: 1, md: 0 },
                 }}
               >
@@ -754,12 +754,11 @@ export default function RegisterPage() {
                   sx={{
                     px: 2,
                     pt: 2,
-                    pb: 0,
+                    pb: { xs: 1.5, sm: 2 }, // extra bottom padding on small screens so last input isn't clipped
                     borderRadius: 3,
                     border: "1px solid",
                     borderColor: "divider",
                     bgcolor: "#fff",
-                    // Let card shrink to its content so there is no flex gap under the button
                     height: "auto",
                     display: "flex",
                     flexDirection: "column",
@@ -873,7 +872,7 @@ export default function RegisterPage() {
                           </InputAdornment>
                         ),
                       }}
-                      sx={inputSx}
+                      sx={{ ...inputSx, mb: { xs: 1, sm: 0 } }}
                     />
                   </Stack>
                 </Paper>
@@ -921,7 +920,6 @@ export default function RegisterPage() {
                       value={form.email}
                       onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
                       placeholder="Used to sign in"
-                      helperText="Your login email"
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">
