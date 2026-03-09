@@ -299,8 +299,11 @@ export default function PatientsManagement() {
     try {
       await fetchJson(API.patients, { method: "POST", token, body: payload });
       setCreateOpen(false);
+      // Reset filters so the new patient is visible immediately, then reload first page.
+      setSearchInput("");
+      setSearch("");
       setPage(0);
-      await loadPatients({ pageOverride: 0 });
+      await loadPatients({ pageOverride: 0, searchOverride: "" });
       Swal.fire({
         icon: "success",
         title: "Walk-in patient created",
@@ -562,23 +565,84 @@ export default function PatientsManagement() {
         maxWidth="sm"
         fullWidth
         PaperProps={{
-          sx: { borderRadius: 2, boxShadow: "0 8px 32px rgba(0,0,0,0.12)" },
+          sx: {
+            borderRadius: 3,
+            maxHeight: "90vh",
+            overflow: "hidden",
+            boxShadow: (t) =>
+              t.palette.mode === "dark"
+                ? "0 24px 48px rgba(0,0,0,0.45)"
+                : "0 24px 48px rgba(0,137,123,0.18)",
+          },
         }}
       >
-        <DialogTitle
+        <Box
           sx={{
-            fontWeight: 900,
-            fontSize: "1.25rem",
-            pb: 0,
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
+            background: (t) =>
+              `linear-gradient(135deg, ${t.palette.primary.dark || "#00695C"} 0%, ${
+                t.palette.primary.main
+              } 100%)`,
+            color: "primary.contrastText",
+            px: 3,
+            pt: 3,
+            pb: 2,
           }}
         >
-          <Person color="primary" sx={{ fontSize: 28 }} />
-          Patient details
-        </DialogTitle>
-        <DialogContent dividers sx={{ pt: 2 }}>
+          <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+            <Avatar
+              sx={{
+                width: 56,
+                height: 56,
+                bgcolor: "rgba(255,255,255,0.2)",
+                color: "inherit",
+                fontSize: "1.6rem",
+                fontWeight: 800,
+              }}
+            >
+              {(viewPatient?.full_name || "?").slice(0, 1).toUpperCase()}
+            </Avatar>
+            <Box sx={{ minWidth: 0, flex: 1 }}>
+              <Typography
+                variant="overline"
+                sx={{ opacity: 0.9, letterSpacing: 1.2, fontWeight: 700 }}
+              >
+                Patient
+              </Typography>
+              <Typography
+                sx={{
+                  fontWeight: 900,
+                  fontSize: { xs: "1.35rem", sm: "1.5rem" },
+                  lineHeight: 1.2,
+                }}
+              >
+                {fmt(viewPatient?.full_name)}
+              </Typography>
+              {viewPatient && (
+                <Chip
+                  size="small"
+                  label={fmt(viewPatient.status)}
+                  color={
+                    viewPatient.status === "active"
+                      ? "success"
+                      : viewPatient.status === "suspended"
+                      ? "error"
+                      : "default"
+                  }
+                  sx={{
+                    mt: 1,
+                    fontWeight: 700,
+                    textTransform: "capitalize",
+                    bgcolor: "rgba(255,255,255,0.16)",
+                    color: "inherit",
+                    "& .MuiChip-label": { px: 1.25 },
+                  }}
+                />
+              )}
+            </Box>
+          </Stack>
+        </Box>
+
+        <DialogContent dividers sx={{ pt: 2.5, px: 3 }}>
           {viewLoading ? (
             <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" sx={{ py: 4 }}>
               <CircularProgress size={24} />
@@ -590,34 +654,15 @@ export default function PatientsManagement() {
             </Typography>
           ) : (
             <Stack spacing={2.5}>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Avatar
-                  sx={{
-                    width: 56,
-                    height: 56,
-                    bgcolor: theme.palette.primary.main,
-                    fontSize: "1.5rem",
-                    fontWeight: 800,
-                  }}
-                >
-                  {(viewPatient.full_name || "?").slice(0, 1).toUpperCase()}
-                </Avatar>
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography sx={{ fontWeight: 800, fontSize: "1.15rem" }}>
-                    {fmt(viewPatient.full_name)}
-                  </Typography>
-                  <Chip
-                    size="small"
-                    label={fmt(viewPatient.status)}
-                    color={viewPatient.status === "active" ? "success" : viewPatient.status === "suspended" ? "error" : "default"}
-                    sx={{ mt: 0.5, fontWeight: 600 }}
-                  />
-                </Box>
-              </Stack>
-
-              <Divider sx={{ borderColor: "divider" }} />
-
-              <Box>
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: (t) =>
+                    t.palette.mode === "dark" ? "rgba(255,255,255,0.04)" : "grey.50",
+                  border: (t) => `1px solid ${t.palette.divider}`,
+                }}
+              >
                 <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1, fontWeight: 600 }}>
                   Contact & location
                 </Typography>
@@ -630,9 +675,15 @@ export default function PatientsManagement() {
                 </Stack>
               </Box>
 
-              <Divider sx={{ borderColor: "divider" }} />
-
-              <Box>
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: (t) =>
+                    t.palette.mode === "dark" ? "rgba(255,255,255,0.04)" : "grey.50",
+                  border: (t) => `1px solid ${t.palette.divider}`,
+                }}
+              >
                 <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1, fontWeight: 600 }}>
                   Medical
                 </Typography>
@@ -642,13 +693,22 @@ export default function PatientsManagement() {
                   <DetailRow label="Blood group" value={fmt(viewPatient.blood_group)} />
                   <DetailRow label="Temperature (°C)" value={fmt(viewPatient.temperature_c)} />
                   <DetailRow label="Weight (kg)" value={fmt(viewPatient.weight_kg)} />
-                  <DetailRow label="Insurance provider" value={fmt(viewPatient.insurance_provider)} />
+                  <DetailRow
+                    label="Insurance provider"
+                    value={fmt(viewPatient.insurance_provider)}
+                  />
                 </Stack>
               </Box>
 
-              <Divider sx={{ borderColor: "divider" }} />
-
-              <Box>
+              <Box
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: (t) =>
+                    t.palette.mode === "dark" ? "rgba(255,255,255,0.04)" : "grey.50",
+                  border: (t) => `1px solid ${t.palette.divider}`,
+                }}
+              >
                 <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1, fontWeight: 600 }}>
                   Account
                 </Typography>

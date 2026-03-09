@@ -79,7 +79,7 @@ export default function ServicesSection() {
   const navigate = useNavigate();
   return (
     <Box id="services" component="section" sx={{ width: "100%", py: 5, px: { xs: 2, sm: 3 }, bgcolor: "background.paper", boxSizing: "border-box" }}>
-      <Box sx={{ maxWidth: 1200, mx: "auto" }}>
+      <Box sx={{ width: "100%", maxWidth: 1600, mx: "auto" }}>
         <Box sx={{ textAlign: "center", mb: 4 }}>
           <Typography component="h2" variant="h4" sx={{ fontSize: { xs: "1.75rem", lg: "2.25rem" }, fontWeight: 900, letterSpacing: "-0.02em", color: "text.primary", mb: 1 }}>
             Services we offer
@@ -95,14 +95,15 @@ export default function ServicesSection() {
             display: "grid",
             gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
             gap: 3,
-            "& > *": { minWidth: 0 },
+            width: "100%",
+            "& > *": { minWidth: 0, width: "100%" },
             "@media (max-width: 1200px)": { gridTemplateColumns: "repeat(3, minmax(0, 1fr))" },
             "@media (max-width: 768px)": { gridTemplateColumns: "repeat(2, minmax(0, 1fr))" },
             "@media (max-width: 500px)": { gridTemplateColumns: "1fr" },
           }}
         >
           {services.map(({ name, description }) => (
-            <Box key={name} sx={flipCardOuterSx}>
+            <Box key={name} sx={{ ...flipCardOuterSx, width: "100%", minWidth: 0 }}>
               <Box className="services-flip-inner" sx={flipCardInnerSx}>
                 <Box sx={flipCardFrontSx}>
                   <Typography

@@ -35,6 +35,7 @@ import {
 } from "@mui/material";
 import {
   Add as AddIcon,
+  Business as BusinessIcon,
   CloudUpload as CloudUploadIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
@@ -2654,84 +2655,183 @@ export default function HospitalsManagement() {
       </Dialog>
 
       {/* Staff view */}
-      <Dialog open={staffView.open} onClose={() => setStaffView({ open: false, staff: null })} fullWidth maxWidth="sm" PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
-        <DialogTitle sx={{ fontWeight: 900 }}>Staff Details</DialogTitle>
-        <DialogContent sx={{ overflowY: "auto" }}>
-          <Stack spacing={1.25} sx={{ mt: 0.5 }}>
-            <Stack direction="row" spacing={2} alignItems="center">
-              <Avatar
-                src={buildImageUrl(staffView.staff?.user?.profile_image_path)}
-                alt={staffView.staff?.user?.full_name}
-                sx={{
-                  width: 64,
-                  height: 64,
-                  bgcolor: "rgba(0, 137, 123, 0.12)",
-                  color: "primary.dark",
-                  fontWeight: 900,
-                }}
-              >
-                {(staffView.staff?.user?.full_name || "?").trim().charAt(0).toUpperCase()}
-              </Avatar>
-              <Box>
-                <Typography sx={{ fontWeight: 900, fontSize: 18 }}>{staffView.staff?.user?.full_name || "—"}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {staffView.staff?.user?.email || "—"}
-                </Typography>
-              </Box>
-            </Stack>
-            <Divider />
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="caption" color="text.secondary">
-                  Type
-                </Typography>
-                <Typography sx={{ fontWeight: 700 }}>{staffView.staff?.staff_type || "—"}</Typography>
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="caption" color="text.secondary">
-                  Phone
-                </Typography>
-                <Typography sx={{ fontWeight: 700 }}>{staffView.staff?.user?.phone || "—"}</Typography>
-              </Box>
-            </Stack>
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="caption" color="text.secondary">
-                  Hospital
-                </Typography>
-                <Typography sx={{ fontWeight: 700 }}>{staffView.staff?.hospital?.name || "—"}</Typography>
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="caption" color="text.secondary">
-                  Department
-                </Typography>
-                <Typography sx={{ fontWeight: 700 }}>{staffView.staff?.department?.name || "—"}</Typography>
-              </Box>
-            </Stack>
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="caption" color="text.secondary">
-                  Specialization
-                </Typography>
-                <Typography sx={{ fontWeight: 700 }}>{staffView.staff?.specialization || "—"}</Typography>
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="caption" color="text.secondary">
-                  License number
-                </Typography>
-                <Typography sx={{ fontWeight: 700 }}>{staffView.staff?.license_number || "—"}</Typography>
-              </Box>
-            </Stack>
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                Hire date
+      <Dialog
+        open={staffView.open}
+        onClose={() => setStaffView({ open: false, staff: null })}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{
+          sx: {
+            maxHeight: "90vh",
+            m: { xs: 1, sm: 2 },
+            borderRadius: 3,
+            overflow: "hidden",
+            boxShadow: (t) => (t.palette.mode === "dark" ? "0 24px 48px rgba(0,0,0,0.4)" : "0 24px 48px rgba(0, 137, 123, 0.12)"),
+          },
+        }}
+      >
+        <Box
+          sx={{
+            background: (t) => `linear-gradient(135deg, ${t.palette.primary.dark || "#00695C"} 0%, ${t.palette.primary.main} 100%)`,
+            color: "primary.contrastText",
+            px: 3,
+            pt: 3,
+            pb: 2,
+          }}
+        >
+          <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+            <Avatar
+              src={buildImageUrl(staffView.staff?.user?.profile_image_path)}
+              alt={staffView.staff?.user?.full_name}
+              sx={{
+                width: 56,
+                height: 56,
+                bgcolor: "rgba(255,255,255,0.2)",
+                color: "inherit",
+                fontWeight: 800,
+                fontSize: "1.5rem",
+              }}
+            >
+              {(staffView.staff?.user?.full_name || "?").trim().charAt(0).toUpperCase()}
+            </Avatar>
+            <Box sx={{ minWidth: 0, flex: 1 }}>
+              <Typography variant="overline" sx={{ opacity: 0.9, letterSpacing: 1.2, fontWeight: 700 }}>
+                Staff
               </Typography>
-              <Typography sx={{ fontWeight: 700 }}>{staffView.staff?.hire_date || "—"}</Typography>
+              <Typography sx={{ fontWeight: 900, fontSize: { xs: "1.25rem", sm: "1.5rem" }, lineHeight: 1.2, mt: 0.25 }}>
+                {staffView.staff?.user?.full_name || "—"}
+              </Typography>
+              <Stack direction="row" spacing={1} sx={{ mt: 1 }} flexWrap="wrap">
+                <Chip
+                  size="small"
+                  label={staffView.staff?.staff_type || "—"}
+                  sx={{
+                    bgcolor: "rgba(255,255,255,0.2)",
+                    color: "inherit",
+                    fontWeight: 700,
+                    textTransform: "capitalize",
+                  }}
+                />
+                {staffView.staff?.user?.email && (
+                  <Typography variant="caption" sx={{ alignSelf: "center", opacity: 0.9 }}>
+                    {staffView.staff.user.email}
+                  </Typography>
+                )}
+              </Stack>
             </Box>
           </Stack>
+        </Box>
+        <DialogContent sx={{ overflowY: "auto", px: 3, pt: 2.5, pb: 1 }}>
+          <Stack spacing={2.5}>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+              <Box
+                sx={{
+                  flex: 1,
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: (t) => (t.palette.mode === "dark" ? "rgba(255,255,255,0.04)" : "grey.50"),
+                  border: (t) => `1px solid ${t.palette.divider}`,
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>
+                  Phone
+                </Typography>
+                <Typography sx={{ mt: 0.5, fontWeight: 700 }}>{staffView.staff?.user?.phone || "—"}</Typography>
+              </Box>
+              <Box
+                sx={{
+                  flex: 1,
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: (t) => (t.palette.mode === "dark" ? "rgba(255,255,255,0.04)" : "grey.50"),
+                  border: (t) => `1px solid ${t.palette.divider}`,
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>
+                  Hire date
+                </Typography>
+                <Typography sx={{ mt: 0.5, fontWeight: 700 }}>{staffView.staff?.hire_date || "—"}</Typography>
+              </Box>
+            </Stack>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+              <Box
+                sx={{
+                  flex: 1,
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: (t) => (t.palette.mode === "dark" ? "rgba(255,255,255,0.04)" : "grey.50"),
+                  border: (t) => `1px solid ${t.palette.divider}`,
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>
+                  Hospital
+                </Typography>
+                <Typography sx={{ mt: 0.5, fontWeight: 700 }}>{staffView.staff?.hospital?.name || "—"}</Typography>
+              </Box>
+              <Box
+                sx={{
+                  flex: 1,
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: (t) => (t.palette.mode === "dark" ? "rgba(255,255,255,0.04)" : "grey.50"),
+                  border: (t) => `1px solid ${t.palette.divider}`,
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>
+                  Department
+                </Typography>
+                <Typography sx={{ mt: 0.5, fontWeight: 700 }}>{staffView.staff?.department?.name || "—"}</Typography>
+              </Box>
+            </Stack>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+              <Box
+                sx={{
+                  flex: 1,
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: (t) => (t.palette.mode === "dark" ? "rgba(255,255,255,0.04)" : "grey.50"),
+                  border: (t) => `1px solid ${t.palette.divider}`,
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>
+                  Specialization
+                </Typography>
+                <Typography sx={{ mt: 0.5, fontWeight: 700 }}>{staffView.staff?.specialization || "—"}</Typography>
+              </Box>
+              <Box
+                sx={{
+                  flex: 1,
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: (t) => (t.palette.mode === "dark" ? "rgba(255,255,255,0.04)" : "grey.50"),
+                  border: (t) => `1px solid ${t.palette.divider}`,
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>
+                  License number
+                </Typography>
+                <Typography sx={{ mt: 0.5, fontWeight: 700 }}>{staffView.staff?.license_number || "—"}</Typography>
+              </Box>
+            </Stack>
+          </Stack>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setStaffView({ open: false, staff: null })}>Close</Button>
+        <DialogActions sx={{ px: 3, py: 2, gap: 1, flexWrap: "wrap" }}>
+          {isSuperAdmin && (
+            <Button
+              variant="outlined"
+              startIcon={<EditIcon />}
+              onClick={() => {
+                setStaffView({ open: false, staff: null });
+                openEditStaff(staffView.staff);
+              }}
+              sx={{ borderColor: "primary.main", color: "primary.main" }}
+            >
+              Edit
+            </Button>
+          )}
+          <Button variant="contained" onClick={() => setStaffView({ open: false, staff: null })} sx={{ bgcolor: "primary.main", "&:hover": { bgcolor: "primary.dark" } }}>
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -2947,25 +3047,105 @@ export default function HospitalsManagement() {
       </Dialog>
 
       {/* Department view */}
-      <Dialog open={deptView.open} onClose={() => setDeptView({ open: false, department: null })} fullWidth maxWidth="sm" PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
-        <DialogTitle sx={{ fontWeight: 900 }}>Department Details</DialogTitle>
-        <DialogContent sx={{ overflowY: "auto" }}>
-          <Stack spacing={1.25} sx={{ mt: 0.5 }}>
-            <Typography sx={{ fontWeight: 900, fontSize: 18 }}>{deptView.department?.name || "—"}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {deptView.department?.hospital?.name || "—"}
-            </Typography>
-            <Divider />
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                Description
+      <Dialog
+        open={deptView.open}
+        onClose={() => setDeptView({ open: false, department: null })}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{
+          sx: {
+            maxHeight: "90vh",
+            m: { xs: 1, sm: 2 },
+            borderRadius: 3,
+            overflow: "hidden",
+            boxShadow: (t) => (t.palette.mode === "dark" ? "0 24px 48px rgba(0,0,0,0.4)" : "0 24px 48px rgba(0, 137, 123, 0.12)"),
+          },
+        }}
+      >
+        <Box
+          sx={{
+            background: (t) => `linear-gradient(135deg, ${t.palette.primary.dark || "#00695C"} 0%, ${t.palette.primary.main} 100%)`,
+            color: "primary.contrastText",
+            px: 3,
+            pt: 3,
+            pb: 2,
+          }}
+        >
+          <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+            <Avatar
+              variant="rounded"
+              sx={{
+                width: 56,
+                height: 56,
+                bgcolor: "rgba(255,255,255,0.2)",
+                color: "inherit",
+                fontWeight: 800,
+                fontSize: "1.5rem",
+              }}
+            >
+              <BusinessIcon sx={{ fontSize: 32 }} />
+            </Avatar>
+            <Box sx={{ minWidth: 0, flex: 1 }}>
+              <Typography variant="overline" sx={{ opacity: 0.9, letterSpacing: 1.2, fontWeight: 700 }}>
+                Department
               </Typography>
-              <Typography sx={{ fontWeight: 700, whiteSpace: "pre-wrap" }}>{deptView.department?.description || "—"}</Typography>
+              <Typography sx={{ fontWeight: 900, fontSize: { xs: "1.25rem", sm: "1.5rem" }, lineHeight: 1.2, mt: 0.25 }}>
+                {deptView.department?.name || "—"}
+              </Typography>
+              <Chip
+                size="small"
+                icon={<LocalHospitalIcon sx={{ fontSize: 16 }} />}
+                label={deptView.department?.hospital?.name || "—"}
+                sx={{
+                  mt: 1,
+                  bgcolor: "rgba(255,255,255,0.2)",
+                  color: "inherit",
+                  fontWeight: 700,
+                  "& .MuiChip-icon": { color: "inherit" },
+                }}
+              />
             </Box>
           </Stack>
+        </Box>
+        <DialogContent sx={{ overflowY: "auto", px: 3, pt: 2.5, pb: 1 }}>
+          <Stack spacing={2.5}>
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                bgcolor: (t) => (t.palette.mode === "dark" ? "rgba(255,255,255,0.04)" : "grey.50"),
+                border: (t) => `1px solid ${t.palette.divider}`,
+              }}
+            >
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>
+                Description
+              </Typography>
+              <Typography sx={{ mt: 1, whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{deptView.department?.description || "No description provided."}</Typography>
+            </Box>
+            {deptView.department?.createdAt && (
+              <Typography variant="caption" color="text.secondary">
+                Added {new Date(deptView.department.createdAt).toLocaleDateString(undefined, { dateStyle: "medium" })}
+              </Typography>
+            )}
+          </Stack>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeptView({ open: false, department: null })}>Close</Button>
+        <DialogActions sx={{ px: 3, py: 2, gap: 1, flexWrap: "wrap" }}>
+          {isSuperAdmin && (
+            <Button
+              variant="outlined"
+              startIcon={<EditIcon />}
+              onClick={() => {
+                setDeptView({ open: false, department: null });
+                openEditDept(deptView.department);
+              }}
+              sx={{ borderColor: "primary.main", color: "primary.main" }}
+            >
+              Edit
+            </Button>
+          )}
+          <Button variant="contained" onClick={() => setDeptView({ open: false, department: null })} sx={{ bgcolor: "primary.main", "&:hover": { bgcolor: "primary.dark" } }}>
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -3005,50 +3185,143 @@ export default function HospitalsManagement() {
       </Dialog>
 
       {/* Service view */}
-      <Dialog open={svcView.open} onClose={() => setSvcView({ open: false, service: null })} fullWidth maxWidth="sm" PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
-        <DialogTitle sx={{ fontWeight: 900 }}>Service Details</DialogTitle>
-        <DialogContent sx={{ overflowY: "auto" }}>
-          <Stack spacing={1.25} sx={{ mt: 0.5 }}>
-            <Stack direction="row" spacing={2} alignItems="center">
-              <Avatar
-                variant="rounded"
-                src={buildImageUrl(svcView.service?.image_path)}
-                sx={{ width: 64, height: 64, bgcolor: "grey.100", color: "secondary.main", fontWeight: 900 }}
-              >
-                {(svcView.service?.name || "S").trim().charAt(0).toUpperCase()}
-              </Avatar>
-              <Box sx={{ minWidth: 0 }}>
-                <Typography sx={{ fontWeight: 900, fontSize: 18 }}>{svcView.service?.name || "—"}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {svcView.service?.department?.name || "—"}
-                </Typography>
-              </Box>
-            </Stack>
-            <Divider />
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="caption" color="text.secondary">
-                  Price
-                </Typography>
-                <Typography sx={{ fontWeight: 700 }}>{svcView.service?.price != null && svcView.service?.price !== "" ? svcView.service?.price : "—"}</Typography>
-              </Box>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="caption" color="text.secondary">
-                  Status
-                </Typography>
-                <Typography sx={{ fontWeight: 700 }}>{svcView.service?.status || "—"}</Typography>
-              </Box>
-            </Stack>
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                Description
+      <Dialog
+        open={svcView.open}
+        onClose={() => setSvcView({ open: false, service: null })}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{
+          sx: {
+            maxHeight: "90vh",
+            m: { xs: 1, sm: 2 },
+            borderRadius: 3,
+            overflow: "hidden",
+            boxShadow: (t) => (t.palette.mode === "dark" ? "0 24px 48px rgba(0,0,0,0.4)" : "0 24px 48px rgba(0, 137, 123, 0.12)"),
+          },
+        }}
+      >
+        <Box
+          sx={{
+            background: (t) => `linear-gradient(135deg, ${t.palette.primary.dark || "#00695C"} 0%, ${t.palette.primary.main} 100%)`,
+            color: "primary.contrastText",
+            px: 3,
+            pt: 3,
+            pb: 2,
+          }}
+        >
+          <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+            <Avatar
+              variant="rounded"
+              src={buildImageUrl(svcView.service?.image_path)}
+              sx={{
+                width: 56,
+                height: 56,
+                bgcolor: "rgba(255,255,255,0.2)",
+                color: "inherit",
+                fontWeight: 800,
+                fontSize: "1.5rem",
+              }}
+            >
+              {(svcView.service?.name || "S").trim().charAt(0).toUpperCase()}
+            </Avatar>
+            <Box sx={{ minWidth: 0, flex: 1 }}>
+              <Typography variant="overline" sx={{ opacity: 0.9, letterSpacing: 1.2, fontWeight: 700 }}>
+                Service
               </Typography>
-              <Typography sx={{ fontWeight: 700, whiteSpace: "pre-wrap" }}>{svcView.service?.description || "—"}</Typography>
+              <Typography sx={{ fontWeight: 900, fontSize: { xs: "1.25rem", sm: "1.5rem" }, lineHeight: 1.2, mt: 0.25 }}>
+                {svcView.service?.name || "—"}
+              </Typography>
+              <Chip
+                size="small"
+                icon={<BusinessIcon sx={{ fontSize: 16 }} />}
+                label={svcView.service?.department?.name || "—"}
+                sx={{
+                  mt: 1,
+                  bgcolor: "rgba(255,255,255,0.2)",
+                  color: "inherit",
+                  fontWeight: 700,
+                  "& .MuiChip-icon": { color: "inherit" },
+                }}
+              />
             </Box>
           </Stack>
+        </Box>
+        <DialogContent sx={{ overflowY: "auto", px: 3, pt: 2.5, pb: 1 }}>
+          <Stack spacing={2.5}>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+              <Box
+                sx={{
+                  flex: 1,
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: (t) => (t.palette.mode === "dark" ? "rgba(255,255,255,0.04)" : "grey.50"),
+                  border: (t) => `1px solid ${t.palette.divider}`,
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>
+                  Price
+                </Typography>
+                <Typography sx={{ mt: 0.5, fontWeight: 700 }}>
+                  {svcView.service?.price != null && svcView.service?.price !== "" ? svcView.service?.price : "—"}
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  flex: 1,
+                  p: 2,
+                  borderRadius: 2,
+                  bgcolor: (t) => (t.palette.mode === "dark" ? "rgba(255,255,255,0.04)" : "grey.50"),
+                  border: (t) => `1px solid ${t.palette.divider}`,
+                }}
+              >
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>
+                  Status
+                </Typography>
+                <Chip
+                  size="small"
+                  label={svcView.service?.status || "—"}
+                  color={svcView.service?.status === "active" ? "success" : "default"}
+                  sx={{ mt: 0.5, fontWeight: 700, textTransform: "capitalize" }}
+                />
+              </Box>
+            </Stack>
+            <Box
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                bgcolor: (t) => (t.palette.mode === "dark" ? "rgba(255,255,255,0.04)" : "grey.50"),
+                border: (t) => `1px solid ${t.palette.divider}`,
+              }}
+            >
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, letterSpacing: 0.8, textTransform: "uppercase" }}>
+                Description
+              </Typography>
+              <Typography sx={{ mt: 1, whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{svcView.service?.description || "No description provided."}</Typography>
+            </Box>
+            {svcView.service?.createdAt && (
+              <Typography variant="caption" color="text.secondary">
+                Added {new Date(svcView.service.createdAt).toLocaleDateString(undefined, { dateStyle: "medium" })}
+              </Typography>
+            )}
+          </Stack>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSvcView({ open: false, service: null })}>Close</Button>
+        <DialogActions sx={{ px: 3, py: 2, gap: 1, flexWrap: "wrap" }}>
+          {isSuperAdmin && (
+            <Button
+              variant="outlined"
+              startIcon={<EditIcon />}
+              onClick={() => {
+                setSvcView({ open: false, service: null });
+                openEditService(svcView.service);
+              }}
+              sx={{ borderColor: "primary.main", color: "primary.main" }}
+            >
+              Edit
+            </Button>
+          )}
+          <Button variant="contained" onClick={() => setSvcView({ open: false, service: null })} sx={{ bgcolor: "primary.main", "&:hover": { bgcolor: "primary.dark" } }}>
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
 

@@ -8,6 +8,7 @@ import {
 import GuestNavbar from "./GuestNavbar";
 import Footer from "./Footer";
 import {
+  ArrowBack as ArrowBackIcon,
   ArrowForward as ArrowForwardIcon,
   MoneyOff as MoneyOffIcon,
   Cancel as CancelIcon,
@@ -239,6 +240,19 @@ export default function RefundCancellationPage() {
                 width: "100%",
               }}
             >
+              <Button
+                startIcon={<ArrowBackIcon />}
+                onClick={() => navigate("/privacy")}
+                sx={{
+                  color: "text.secondary",
+                  mb: 1,
+                  alignSelf: "flex-start",
+                  "&:hover": { bgcolor: "action.hover", color: primary },
+                }}
+              >
+                Back to Privacy Policy
+              </Button>
+
               <Box
                 sx={{
                   display: "inline-flex",
