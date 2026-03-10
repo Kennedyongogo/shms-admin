@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Route, Routes, Navigate } from "react-router-dom";
 import { Box, CircularProgress } from "@mui/material";
+import MedicalServicesIcon from "@mui/icons-material/MedicalServices";
 import Navbar from "./Navbar";
+import ChatbotWidget from "./ChatbotWidget";
 import NotFound from "../Pages/NotFound";
 import AdminUsersManagement from "./AdminUsersManagement";
 import PharmacyManagement from "./PharmacyManagement";
@@ -83,6 +85,20 @@ function PageRoutes() {
           </Routes>
         )}
       </Box>
+      {user && (
+        <ChatbotWidget
+          initialMessages={[
+            {
+              from: "ai",
+              text: "Hi! I'm here to help you navigate Carlvyne SHMS. Ask me about appointments, patients, billing, pharmacy, wards, diet, lab, and more.",
+            },
+          ]}
+          subtitle="Ask me how to navigate the system."
+          buttonLabel="Health chat"
+          buttonIcon={<MedicalServicesIcon sx={{ fontSize: 26 }} />}
+          placeholder="Ask about appointments, billing, patients, pharmacy..."
+        />
+      )}
     </Box>
   );
 }

@@ -14,8 +14,6 @@ import {
   DialogContentText,
   DialogActions,
   Tooltip,
-  useMediaQuery,
-  useTheme,
 } from "@mui/material";
 import {
   Visibility,
@@ -27,6 +25,7 @@ import {
 import GuestNavbar from "./GuestNavbar";
 import Footer from "./Footer";
 import ServicesSection from "./ServicesSection";
+import ChatbotWidget from "./ChatbotWidget";
 import Swal from "sweetalert2";
 
 const primaryTeal = "#00897B";
@@ -41,8 +40,6 @@ const BACKGROUND_INTERVAL_MS = 5500;
 const BACKGROUND_FADE_DURATION = "1.8s";
 
 export default function LoginPage() {
-  const theme = useTheme();
-  const isSmallScreen = useMediaQuery(theme.breakpoints.down("sm"));
   const navigate = useNavigate();
   const location = useLocation();
   const rfEmail = useRef();
@@ -57,7 +54,6 @@ export default function LoginPage() {
   const [openResetDialog, setOpenResetDialog] = useState(false);
   const [openLoginDialog, setOpenLoginDialog] = useState(false);
   const [backgroundIndex, setBackgroundIndex] = useState(0);
-
   useEffect(() => {
     const timer = setInterval(() => {
       setBackgroundIndex((prev) => (prev + 1) % BACKGROUND_IMAGES.length);
@@ -163,7 +159,7 @@ export default function LoginPage() {
     String(email).toLowerCase().match(/^(([^<>()[\]/.,;:\s@"]+(\.[^<>()[\]/.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/);
   const validatePassword = (password) => password && password.length >= 6;
 
-  const inputSx = {
+const inputSx = {
     "& .MuiOutlinedInput-root": {
       borderRadius: "8px",
       bgcolor: "white",
@@ -266,6 +262,18 @@ export default function LoginPage() {
         </Typography>
       </Box>
       </Box>
+
+      <ChatbotWidget
+        initialMessages={[
+          {
+            from: "ai",
+            text: "Hi 👋 I'm the Carlvyne assistant. Ask me anything about how this system works, signing up, or what to expect.",
+          },
+        ]}
+        subtitle="Ask how the system works before you sign in."
+        buttonLabel="Need help? Chat with us"
+        placeholder="Ask about features, registration, billing, etc."
+      />
 
       <ServicesSection />
       <Footer />
