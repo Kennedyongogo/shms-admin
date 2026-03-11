@@ -7,6 +7,7 @@ import {
   Typography,
   CircularProgress,
   Avatar,
+  Badge,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { useMediaQuery } from "@mui/material";
@@ -15,8 +16,11 @@ import {
   ArrowDropDown as ArrowDropDownIcon,
   AccountCircle as AccountCircleIcon,
   Logout as LogoutIcon,
+  NotificationsNone as NotificationsNoneIcon,
+  DeleteOutline as DeleteOutlineIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
+import { getNotificationsSocket } from "../../notificationsSocket";
 
 const LoadingScreen = () => (
   <Box
@@ -58,7 +62,8 @@ const fetchJson = async (url) => {
     },
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.message || `Request failed (${res.status})`);
+  if (!res.ok)
+    throw new Error(data?.message || `Request failed (${res.status})`);
   return data;
 };
 
@@ -117,6 +122,8 @@ export default function Header(props) {
   const [currentRoleName, setCurrentRoleName] = useState("");
   const [anchorEl, setAnchorEl] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -146,6 +153,12 @@ export default function Header(props) {
         const freshUser = meRes?.data?.user || null;
         const role = meRes?.data?.role || null;
         const menuItems = meRes?.data?.menuItems;
+        const notificationsRes = await fetchJson(
+          "/api/notifications/me?limit=50"
+        );
+        if (Array.isArray(notificationsRes?.data)) {
+          setNotifications(notificationsRes.data);
+        }
 
         if (freshUser) {
           setCurrentUser(freshUser);
@@ -153,7 +166,10 @@ export default function Header(props) {
           localStorage.setItem("user", JSON.stringify(freshUser));
         }
         setCurrentRoleName(role?.name || "");
-        localStorage.setItem("role", JSON.stringify(role ? { id: role.id, name: role.name } : null));
+        localStorage.setItem(
+          "role",
+          JSON.stringify(role ? { id: role.id, name: role.name } : null),
+        );
         if (Array.isArray(menuItems)) {
           localStorage.setItem("menuItems", JSON.stringify(menuItems));
         }
@@ -170,6 +186,22 @@ export default function Header(props) {
     };
 
     bootstrap();
+  }, []);
+
+  // Socket.IO: subscribe to real-time notifications
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+
+    const socket = getNotificationsSocket();
+    const handler = (notif) => {
+      setNotifications((prev) => [notif, ...prev]);
+    };
+    socket.on("notification_new", handler);
+
+    return () => {
+      socket.off("notification_new", handler);
+    };
   }, []);
 
   // When Settings (or elsewhere) updates profile, refresh header user and image immediately
@@ -194,9 +226,11 @@ export default function Header(props) {
           localStorage.setItem("user", JSON.stringify(freshUser));
         }
         if (role) setCurrentRoleName(role.name || "");
-        if (Array.isArray(menuItems)) localStorage.setItem("menuItems", JSON.stringify(menuItems));
+        if (Array.isArray(menuItems))
+          localStorage.setItem("menuItems", JSON.stringify(menuItems));
         const hospital = meRes?.data?.hospital;
-        if (hospital) localStorage.setItem("hospital", JSON.stringify(hospital));
+        if (hospital)
+          localStorage.setItem("hospital", JSON.stringify(hospital));
       } catch (_) {}
     };
     window.addEventListener("user-updated", onUserUpdated);
@@ -216,6 +250,48 @@ export default function Header(props) {
   const handleClose = () => {
     setAnchorEl(null);
   };
+
+  const handleNotificationClick = async (notifId) => {
+    // Mark as read but keep in list so user can still see history
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notifId ? { ...n, is_read: true } : n)),
+    );
+    const token = getToken();
+    if (!token) return;
+    try {
+      await fetch(`/api/notifications/${notifId}/read`, {
+        method: "PATCH",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    } catch (e) {
+      // If API fails, we won't re-add it; it's a minor UX issue, not fatal
+      console.error("Failed to mark notification as read:", e);
+    }
+  };
+
+  const handleNotificationDelete = async (notifId) => {
+    // Optimistically remove from local state
+    setNotifications((prev) => prev.filter((n) => n.id !== notifId));
+    const token = getToken();
+    if (!token) return;
+    try {
+      await fetch(`/api/notifications/${notifId}`, {
+        method: "DELETE",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    } catch (e) {
+      console.error("Failed to delete notification:", e);
+    }
+  };
+
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
     <>
@@ -250,6 +326,124 @@ export default function Header(props) {
         <Box sx={{ flexGrow: 1 }}></Box>
 
         <Box sx={{ display: "flex", alignItems: "center" }}>
+          <Box sx={{ position: "relative", mr: 2 }}>
+            <IconButton
+              color="inherit"
+              size="small"
+              onClick={() => setIsNotificationOpen((prev) => !prev)}
+            >
+              <Badge
+                color="error"
+                badgeContent={unreadCount || null}
+                overlap="circular"
+              >
+                <NotificationsNoneIcon />
+              </Badge>
+            </IconButton>
+            {isNotificationOpen && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: "115%",
+                  right: 0,
+                  minWidth: 280,
+                  bgcolor: "background.paper",
+                  color: "text.primary",
+                  boxShadow: 3,
+                  borderRadius: 1,
+                  p: 1.5,
+                  zIndex: 1400,
+                  maxHeight: 360,
+                  overflowY: "auto",
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    mb: 1,
+                    px: 0.5,
+                  }}
+                >
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                    Notifications
+                  </Typography>
+                  {unreadCount > 0 && (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                    >
+                      {unreadCount} unread
+                    </Typography>
+                  )}
+                </Box>
+                {notifications.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary">
+                    You have no new notifications.
+                  </Typography>
+                ) : (
+                  notifications.map((n) => (
+                    <Box
+                      key={n.id}
+                      sx={{
+                        mb: 0.75,
+                        px: 0.75,
+                        py: 0.5,
+                        borderRadius: 1,
+                        cursor: "pointer",
+                        "&:hover": {
+                          bgcolor: "action.hover",
+                        },
+                        "&:last-of-type": { mb: 0 },
+                      }}
+                      onClick={() => handleNotificationClick(n.id)}
+                    >
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          justifyContent: "space-between",
+                          gap: 1,
+                        }}
+                      >
+                        <Box onClick={() => handleNotificationClick(n.id)}>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontWeight: n.is_read ? 400 : 600,
+                              mb: 0.25,
+                            }}
+                          >
+                            {n.message}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                          >
+                            {new Date(
+                              n.createdAt || n.created_at,
+                            ).toLocaleString()}
+                          </Typography>
+                        </Box>
+                        <IconButton
+                          size="small"
+                          edge="end"
+                          color="inherit"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleNotificationDelete(n.id);
+                          }}
+                        >
+                          <DeleteOutlineIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </Box>
+                  ))
+                )}
+              </Box>
+            )}
+          </Box>
           <Typography variant="body1" sx={{ mr: 1 }}>
             {currentUser?.full_name}
           </Typography>
@@ -261,7 +455,9 @@ export default function Header(props) {
                 key={currentUser.updatedAt || currentUser.profile_image_path}
                 src={
                   buildImageUrl(currentUser.profile_image_path) +
-                  (currentUser.updatedAt ? `?t=${new Date(currentUser.updatedAt).getTime()}` : "")
+                  (currentUser.updatedAt
+                    ? `?t=${new Date(currentUser.updatedAt).getTime()}`
+                    : "")
                 }
                 alt={currentUser?.full_name}
                 sx={{
@@ -301,7 +497,8 @@ export default function Header(props) {
           <MenuItem
             onClick={() => {
               try {
-                const currentPath = window.location.pathname + window.location.search;
+                const currentPath =
+                  window.location.pathname + window.location.search;
                 if (!currentPath.includes("/account")) {
                   sessionStorage.setItem("prevRouteBeforeAccount", currentPath);
                 }
@@ -321,7 +518,6 @@ export default function Header(props) {
             <LogoutIcon sx={{ mr: 1 }} /> Logout
           </MenuItem>
         </Menu>
-
       </Box>
     </>
   );

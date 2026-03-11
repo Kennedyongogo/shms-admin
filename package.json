@@ -59,6 +59,7 @@
     "react-router-dom": "^7.6.0",
     "recharts": "^2.15.3",
     "sass": "^1.88.0",
+    "socket.io-client": "^4.8.1",
     "start": "^5.1.0",
     "sweetalert2": "^11.21.0",
     "url": "^0.11.4",
