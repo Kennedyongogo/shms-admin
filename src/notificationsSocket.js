@@ -24,3 +24,8 @@ export function getNotificationsSocket() {
   return socketInstance;
 }
 
+export function getChatSocket() {
+  // Reuse the same underlying connection; notifications and chat share the same Socket.IO server
+  return getNotificationsSocket();
+}
+

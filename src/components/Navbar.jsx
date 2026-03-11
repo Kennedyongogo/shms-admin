@@ -1,8 +1,24 @@
 import React, { cloneElement, useEffect, useState } from "react";
-import { Assessment, EventNote, History, Hotel, Inventory, LocalHospital, LocalPharmacy, Logout, PeopleAlt, PersonalInjury, ReceiptLong, RestaurantMenu, Science, Settings as SettingsIcon } from "@mui/icons-material";
+import {
+  Assessment,
+  EventNote,
+  History,
+  Hotel,
+  Inventory,
+  LocalHospital,
+  LocalPharmacy,
+  Logout,
+  PeopleAlt,
+  PersonalInjury,
+  ReceiptLong,
+  RestaurantMenu,
+  Science,
+  Settings as SettingsIcon,
+  Chat as ChatIcon,
+} from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { styled, useTheme } from "@mui/material/styles";
-import { useMediaQuery } from "@mui/material";
+import { useMediaQuery, Badge } from "@mui/material";
 import MuiDrawer from "@mui/material/Drawer";
 import MuiAppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
@@ -18,6 +34,7 @@ import ListItemText from "@mui/material/ListItemText";
 import Tooltip from "@mui/material/Tooltip";
 import { Box, Typography } from "@mui/material";
 import Header from "./Header/Header";
+import { getChatSocket } from "../notificationsSocket";
 
 const drawerWidth = 300;
 
@@ -102,6 +119,45 @@ const Navbar = (props) => {
     return window.innerWidth >= theme.breakpoints.values.md;
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
+
+  const getToken = () => localStorage.getItem("token");
+
+  const refreshChatUnread = async () => {
+    if (!user) {
+      setChatUnreadCount(0);
+      return;
+    }
+    try {
+      const token = getToken();
+      if (!token) return;
+      const res = await fetch("/api/chat/rooms", {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success || !Array.isArray(data.data)) {
+        return;
+      }
+      const nowUnread = data.data.reduce((count, room) => {
+        const mePart = (room.participants || []).find(
+          (p) => p.user_id === user.id || p.user?.id === user.id,
+        );
+        const lastMsg = room.last_message;
+        if (!lastMsg) return count;
+        const lastRead = mePart?.last_read_at ? new Date(mePart.last_read_at) : null;
+        const lastCreated = new Date(lastMsg.createdAt);
+        const unread = !lastRead || lastCreated > lastRead;
+        return unread ? count + 1 : count;
+      }, 0);
+      setChatUnreadCount(nowUnread);
+    } catch (e) {
+      // Silent failure for badge; core app should not break
+      // console.error("Failed to refresh chat unread:", e);
+    }
+  };
 
   // Keys must match backend ALL_MENU_KEYS (constants/menuKeys.js)
   const adminItems = [
@@ -118,6 +174,7 @@ const Navbar = (props) => {
     { key: "users", text: "Users & Roles", icon: <PeopleAlt />, path: "/users" },
     { key: "audit-logs", text: "Audit log", icon: <History />, path: "/audit-logs" },
     { key: "settings", text: "Settings", icon: <SettingsIcon />, path: "/settings" },
+    { key: "chat", text: "Chat", icon: <ChatIcon />, path: "/chat" },
   ];
 
   const role = (() => {
@@ -137,13 +194,26 @@ const Navbar = (props) => {
   })();
   const isSuperAdmin = role?.name === "Super Admin";
   // Use package-filtered menu from API (login/me) for everyone including Super Admin (silver vs gold).
-  const visibleItems = !user
-    ? []
-    : allowedMenuKeys != null && Array.isArray(allowedMenuKeys)
-      ? adminItems.filter((item) => allowedMenuKeys.includes(item.key))
-      : isSuperAdmin
-        ? adminItems
-        : [];
+  // But ensure "Chat" is always visible for all authenticated users in a hospital.
+  let visibleItems = [];
+  if (!user) {
+    visibleItems = [];
+  } else if (allowedMenuKeys != null && Array.isArray(allowedMenuKeys)) {
+    visibleItems = adminItems.filter((item) => allowedMenuKeys.includes(item.key));
+  } else if (isSuperAdmin) {
+    visibleItems = adminItems;
+  } else {
+    visibleItems = [];
+  }
+
+  // Ensure Chat is always present for logged-in users
+  if (user) {
+    const hasChat = visibleItems.some((item) => item.key === "chat");
+    if (!hasChat) {
+      const chatItem = adminItems.find((item) => item.key === "chat");
+      if (chatItem) visibleItems = [...visibleItems, chatItem];
+    }
+  }
   const menuItems = visibleItems;
 
   const handleDrawerOpen = () => {
@@ -172,8 +242,40 @@ const Navbar = (props) => {
     };
 
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [theme.breakpoints.values.md]);
+
+    const handleChatUnreadUpdated = () => {
+      refreshChatUnread();
+    };
+
+    window.addEventListener("chat-unread-updated", handleChatUnreadUpdated);
+
+    // initial load
+    refreshChatUnread();
+
+    // Socket for real-time chat unread updates
+    const token = getToken();
+    let socket;
+    if (token) {
+      socket = getChatSocket();
+      const handleMessageNew = () => {
+        refreshChatUnread();
+      };
+      socket.on("message_new", handleMessageNew);
+      window.addEventListener("focus", refreshChatUnread);
+
+      return () => {
+        window.removeEventListener("resize", handleResize);
+        window.removeEventListener("chat-unread-updated", handleChatUnreadUpdated);
+        window.removeEventListener("focus", refreshChatUnread);
+        socket.off("message_new", handleMessageNew);
+      };
+    }
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("chat-unread-updated", handleChatUnreadUpdated);
+    };
+  }, [theme.breakpoints.values.md, user]);
 
   const menuListContent = (
     <>
@@ -190,9 +292,17 @@ const Navbar = (props) => {
             }}
           >
             <ListItemIcon>
-              {cloneElement(item.icon, {
-                color: location.pathname === item.path ? "primary" : "textSecondary",
-              })}
+              {item.key === "chat" ? (
+                <Badge color="error" badgeContent={chatUnreadCount || null}>
+                  {cloneElement(item.icon, {
+                    color: location.pathname === item.path ? "primary" : "textSecondary",
+                  })}
+                </Badge>
+              ) : (
+                cloneElement(item.icon, {
+                  color: location.pathname === item.path ? "primary" : "textSecondary",
+                })
+              )}
             </ListItemIcon>
             <ListItemText
               primary={item.text}
@@ -271,9 +381,19 @@ const Navbar = (props) => {
                   }}
                 >
                   <ListItemIcon>
-                    {cloneElement(item.icon, {
-                      color: location.pathname === item.path ? "primary" : "textSecondary",
-                    })}
+                    {item.key === "chat" ? (
+                      <Badge color="error" badgeContent={chatUnreadCount || null}>
+                        {cloneElement(item.icon, {
+                          color:
+                            location.pathname === item.path ? "primary" : "textSecondary",
+                        })}
+                      </Badge>
+                    ) : (
+                      cloneElement(item.icon, {
+                        color:
+                          location.pathname === item.path ? "primary" : "textSecondary",
+                      })
+                    )}
                   </ListItemIcon>
                   <ListItemText
                     primary={item.text}

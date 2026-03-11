@@ -21,6 +21,7 @@ import PatientReportsPage from "./PatientReportsPage";
 import AuditLogsPage from "./AuditLogsPage";
 import DashboardPage from "./DashboardPage";
 import SettingsPage from "./SettingsPage";
+import ChatPage from "./ChatPage";
 import Account from "./Account";
 
 function PageRoutes() {
@@ -80,6 +81,7 @@ function PageRoutes() {
             <Route path="inventory" element={<InventoryManagement />} />
             <Route path="audit-logs" element={<AuditLogsPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="chat" element={<ChatPage />} />
             <Route path="account" element={<Account />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
