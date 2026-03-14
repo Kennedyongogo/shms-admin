@@ -44,6 +44,14 @@ const getInitials = (name) => {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 };
 
+const buildImageUrl = (imageUrl) => {
+  if (!imageUrl) return "";
+  if (String(imageUrl).startsWith("http")) return imageUrl;
+  if (String(imageUrl).startsWith("uploads/")) return `/${imageUrl}`;
+  if (String(imageUrl).startsWith("/uploads/")) return imageUrl;
+  return imageUrl;
+};
+
 export default function ChatPage() {
   const [rooms, setRooms] = useState([]);
   const [peers, setPeers] = useState([]);
@@ -325,7 +333,10 @@ export default function ChatPage() {
                       onClick={() => handleStartChatWithPeer(peer.id)}
                     >
                       <ListItemAvatar>
-                        <Avatar>
+                        <Avatar
+                          src={buildImageUrl(peer.profile_image_path)}
+                          imgProps={{ loading: "lazy" }}
+                        >
                           {getInitials(peer.full_name || peer.email)}
                         </Avatar>
                       </ListItemAvatar>

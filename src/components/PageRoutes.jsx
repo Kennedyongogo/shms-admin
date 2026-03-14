@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Route, Routes, Navigate } from "react-router-dom";
+import { Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { Box, CircularProgress } from "@mui/material";
 import MedicalServicesIcon from "@mui/icons-material/MedicalServices";
 import Navbar from "./Navbar";
@@ -27,6 +27,8 @@ import Account from "./Account";
 function PageRoutes() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
+  const isChatPage = location.pathname.endsWith("/chat") || location.pathname === "chat";
 
   useEffect(() => {
     const savedUser = localStorage.getItem("user");
@@ -87,7 +89,7 @@ function PageRoutes() {
           </Routes>
         )}
       </Box>
-      {user && (
+      {user && !isChatPage && (
         <ChatbotWidget
           initialMessages={[
             {

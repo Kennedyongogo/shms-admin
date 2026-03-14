@@ -330,7 +330,7 @@ const Navbar = (props) => {
     <Box sx={{ display: "flex" }}>
       <CssBaseline />
       <AppBar position="fixed" open={isDesktop && open}>
-        <Toolbar>
+        <Toolbar sx={{ pr: 0, minHeight: { xs: 56, sm: 64 } }}>
           <Header
             setUser={props.setUser}
             handleDrawerOpen={handleDrawerOpen}

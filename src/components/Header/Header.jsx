@@ -301,9 +301,12 @@ export default function Header(props) {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          p: 2,
+          px: 2,
+          py: 2,
+          pr: 0,
           color: "white",
           width: "100%",
+          boxSizing: "border-box",
         }}
       >
         <IconButton
@@ -355,6 +358,15 @@ export default function Header(props) {
                   zIndex: 1400,
                   maxHeight: 360,
                   overflowY: "auto",
+                  [theme.breakpoints.down("sm")]: {
+                    position: "fixed",
+                    left: 8,
+                    right: 8,
+                    top: 56,
+                    minWidth: 0,
+                    maxWidth: "none",
+                    maxHeight: "calc(100vh - 64px)",
+                  },
                 }}
               >
                 <Box
