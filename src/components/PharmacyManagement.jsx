@@ -43,6 +43,7 @@ import {
   Payment as PaymentIcon,
   Receipt as ReceiptIcon,
   EventNote as EventNoteIcon,
+  Medication as MedicationIcon,
 } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
 import Swal from "sweetalert2";
@@ -1081,6 +1082,22 @@ export default function PharmacyManagement() {
                 Medication catalogue, prescriptions, and dispense records.
               </Typography>
             </Box>
+            <Button
+              variant="contained"
+              size="medium"
+              startIcon={<MedicationIcon />}
+              onClick={() => navigate("/pharmacy/medicine-catalogue")}
+              sx={{
+                fontWeight: 700,
+                textTransform: "none",
+                boxShadow: 2,
+                bgcolor: "rgba(255,255,255,0.25)",
+                color: "white",
+                "&:hover": { bgcolor: "rgba(255,255,255,0.35)" },
+              }}
+            >
+              View Medicine
+            </Button>
           </Stack>
         </Box>
 
@@ -1150,7 +1167,7 @@ export default function PharmacyManagement() {
                   <Button
                     variant="contained"
                     startIcon={<AddIcon />}
-                    onClick={openCreateMed}
+                    onClick={() => navigate("/pharmacy/add-medication")}
                     sx={{ fontWeight: 700 }}
                   >
                     Add medication

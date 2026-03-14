@@ -7,6 +7,10 @@ import ChatbotWidget from "./ChatbotWidget";
 import NotFound from "../Pages/NotFound";
 import AdminUsersManagement from "./AdminUsersManagement";
 import PharmacyManagement from "./PharmacyManagement";
+import MedicineCataloguePage from "./MedicineCataloguePage";
+import CategoryFormulationsPage from "./CategoryFormulationsPage";
+import FormulationDrugsPage from "./FormulationDrugsPage";
+import AddMedicationPage from "./AddMedicationPage";
 import ConsultationManagement from "./ConsultationManagement";
 import HospitalsManagement from "./HospitalsManagement";
 import PatientsManagement from "./PatientsManagement";
@@ -70,6 +74,10 @@ function PageRoutes() {
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="users" element={<AdminUsersManagement />} />
             <Route path="pharmacy" element={<PharmacyManagement />} />
+            <Route path="pharmacy/medicine-catalogue" element={<MedicineCataloguePage />} />
+            <Route path="pharmacy/medicine-catalogue/category/:categoryId" element={<CategoryFormulationsPage />} />
+            <Route path="pharmacy/medicine-catalogue/category/:categoryId/formulation" element={<FormulationDrugsPage />} />
+            <Route path="pharmacy/add-medication" element={<AddMedicationPage />} />
             <Route path="appointments" element={<ConsultationManagement />} />
             <Route path="appointments/record-consultation" element={<RecordConsultationPage />} />
             <Route path="appointments/consultation/:id" element={<ConsultationViewPage />} />
