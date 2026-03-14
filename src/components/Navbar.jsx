@@ -430,23 +430,26 @@ const Navbar = (props) => {
           sx: (theme) => ({
             width: drawerWidth,
             boxSizing: "border-box",
-            borderRight: "none",
             top: theme.mixins.toolbar.minHeight ?? 64,
-            bottom: 0,
-            left: 0,
+            left: 8,
+            bottom: "auto",
             height: "auto",
-            maxHeight: "none",
+            maxHeight: "calc(100vh - 80px)",
             mt: 0,
             position: "fixed",
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
+            borderRadius: 2,
+            boxShadow: "0 10px 30px rgba(0,0,0,0.18)",
+            border: "1px solid",
+            borderColor: "divider",
           }),
         }}
       >
         <Box
           sx={{
-            flex: "1 1 0",
+            flex: "1 1 auto",
             minHeight: 0,
             overflowY: "auto",
             overflowX: "hidden",
