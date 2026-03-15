@@ -4,13 +4,18 @@ import { ArrowForward as ArrowForwardIcon } from "@mui/icons-material";
 
 const primary = "#0fb8b0";
 const CARD_IMAGE = "/bergy59-bed-8352775_1920.jpg";
+const FIRST_CARD_IMAGE = "/Gemini_Generated_Image_ywtxb4ywtxb4ywtx.png";
+const CARD_2_IMAGE = "/card_2.png";
+const CARD_3_IMAGE = "/card%203.png";
+const CARD_4_IMAGE = "/card%204.png";
+const CARD_5_IMAGE = "/card%205.png";
 
 const services = [
-  { name: "One place for operations", description: "Appointments, patients, lab, pharmacy, ward, diet, inventory, and billing in a single admin portal." },
-  { name: "Controlled access", description: "Users and roles so doctors, nurses, pharmacy, lab, and admin see only what they need." },
-  { name: "Traceability", description: "Audit log of who did what, when — for accountability and compliance." },
-  { name: "Scalable", description: "Supports multiple hospitals and branches and can grow with your facility." },
-  { name: "Integration-ready", description: "REST API so you can later add mobile apps, kiosks, or other software that talk to the same backend." },
+  { name: "One place for operations", description: "Appointments, patients, lab, pharmacy, ward, diet, inventory, and billing in a single admin portal.", image: FIRST_CARD_IMAGE },
+  { name: "Controlled access", description: "Users and roles so doctors, nurses, pharmacy, lab, and admin see only what they need.", image: CARD_2_IMAGE },
+  { name: "Traceability", description: "Audit log of who did what, when — for accountability and compliance.", image: CARD_3_IMAGE },
+  { name: "Scalable", description: "Supports multiple hospitals and branches and can grow with your facility.", image: CARD_4_IMAGE },
+  { name: "Integration-ready", description: "REST API so you can later add mobile apps, kiosks, or other software that talk to the same backend.", image: CARD_5_IMAGE },
 ];
 
 const CARD_HEIGHT = 240;
@@ -102,27 +107,10 @@ export default function ServicesSection() {
             "@media (max-width: 500px)": { gridTemplateColumns: "1fr" },
           }}
         >
-          {services.map(({ name, description }) => (
+          {services.map(({ name, description, image }) => (
             <Box key={name} sx={{ ...flipCardOuterSx, width: "100%", minWidth: 0 }}>
               <Box className="services-flip-inner" sx={flipCardInnerSx}>
-                <Box sx={flipCardFrontSx}>
-                  <Typography
-                    sx={{
-                      position: "absolute",
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      fontWeight: 700,
-                      color: "white",
-                      fontSize: { xs: "0.85rem", sm: "0.95rem" },
-                      px: 2,
-                      py: 1.5,
-                      textShadow: "0 1px 4px rgba(0,0,0,0.8)",
-                    }}
-                  >
-                    {name}
-                  </Typography>
-                </Box>
+                <Box sx={{ ...flipCardFrontSx, backgroundImage: `url(${image || CARD_IMAGE})` }} />
                 <Box sx={flipCardBackSx}>
                   <Typography
                     variant="body2"
