@@ -404,13 +404,13 @@ export default function PatientsManagement() {
               </Stack>
               <Typography sx={{ opacity: 0.9, mt: 0.5 }}>List, edit, and delete patient records.</Typography>
             </Box>
-            <Stack direction="row" spacing={1}>
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ width: { xs: "100%", sm: "auto" } }}>
               {isSuperAdmin && (
                 <Button
                   variant="outlined"
                   startIcon={<Add />}
                   onClick={openCreate}
-                  sx={{ color: "white", borderColor: "rgba(255,255,255,0.6)", fontWeight: 800, "&:hover": { borderColor: "white", bgcolor: "rgba(255,255,255,0.1)" } }}
+                  sx={{ width: { xs: "100%", sm: "auto" }, color: "white", borderColor: "rgba(255,255,255,0.6)", fontWeight: 800, fontSize: { xs: "0.875rem", sm: "inherit" }, "&:hover": { borderColor: "white", bgcolor: "rgba(255,255,255,0.1)" } }}
                 >
                   Add walk-in patient
                 </Button>
@@ -442,23 +442,21 @@ export default function PatientsManagement() {
             />
           </Stack>
 
-          <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
-            <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
+          <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%", width: "100%" }}>
+            <Table size="small" sx={{ tableLayout: "fixed", width: "100%", minWidth: "100%" }}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 900, width: 70, maxWidth: { xs: "18vw", sm: 70 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No.</TableCell>
-                  <TableCell sx={{ fontWeight: 900, maxWidth: { xs: "28vw", sm: 180, md: 260 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Patient</TableCell>
-                  <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 140 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Phone</TableCell>
-                  <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 180 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Email</TableCell>
-                  <TableCell sx={{ fontWeight: 900, width: 120, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 120 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Source</TableCell>
-                  <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, maxWidth: { md: 100 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Status</TableCell>
-                  <TableCell sx={{ fontWeight: 900, width: 140, textAlign: "right", maxWidth: { xs: "22vw", sm: 140 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Actions</TableCell>
+                  <TableCell sx={{ fontWeight: 900, width: { xs: "15%", sm: 70 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No.</TableCell>
+                  <TableCell sx={{ fontWeight: 900, width: { xs: "60%", sm: 180, md: 260 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Patient</TableCell>
+                  <TableCell sx={{ fontWeight: 900, width: 120, display: { xs: "none", md: "table-cell" }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Source</TableCell>
+                  <TableCell sx={{ fontWeight: 900, display: { xs: "none", md: "table-cell" }, width: { md: 100 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Status</TableCell>
+                  <TableCell sx={{ fontWeight: 900, width: { xs: "25%", sm: 140 }, textAlign: "right", minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7}>
+                    <TableCell colSpan={5}>
                       <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
                         <CircularProgress size={18} />
                         <Typography color="text.secondary">Loading…</Typography>
@@ -467,7 +465,7 @@ export default function PatientsManagement() {
                   </TableRow>
                 ) : rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7}>
+                    <TableCell colSpan={5}>
                       <Typography color="text.secondary" sx={{ py: 2 }}>
                         No patients found.
                       </Typography>
@@ -498,8 +496,6 @@ export default function PatientsManagement() {
                           </Box>
                         </Stack>
                       </TableCell>
-                      <TableCell sx={{ display: { xs: "none", md: "table-cell" }, maxWidth: { md: 140 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{fmt(p.phone)}</TableCell>
-                      <TableCell sx={{ display: { xs: "none", md: "table-cell" }, maxWidth: { md: 180 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>{fmt(p.email)}</TableCell>
                       <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{fmt(p.patient_source)}</TableCell>
                       <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{fmt(p.status)}</TableCell>
                       <TableCell align="right" sx={{ overflow: "hidden", minWidth: { xs: 96, md: 160 } }} data-actions-cell onClick={(e) => e.stopPropagation()}>

@@ -1533,7 +1533,7 @@ export default function ConsultationManagement() {
     <Card sx={{ borderRadius: 3, overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.08)", width: "100%", minWidth: 0 }}>
       <Box sx={{ p: 2.5, background: heroGradient, color: "white", width: "100%", minWidth: "100%", flexShrink: 0, boxSizing: "border-box" }}>
         <Stack direction={{ xs: "column", md: "row" }} spacing={2} alignItems={{ md: "center" }} justifyContent="space-between" sx={{ width: "100%", minWidth: 0 }}>
-          <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: 0.2 }}>
+          <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: 0.2, fontSize: { xs: "1rem", sm: "1.5rem" } }}>
             Consultation Management
           </Typography>
         </Stack>
@@ -1612,16 +1612,16 @@ export default function ConsultationManagement() {
               </Button>
             </Stack>
 
-            <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider", overflowX: "auto", maxWidth: "100%" }}>
-              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
+            <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider", overflowX: "auto", maxWidth: "100%", width: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%", minWidth: "100%" }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: "grey.100" }}>
-                    <TableCell sx={{ fontWeight: 800, width: 48, minWidth: 48, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 800, width: { xs: "15%", sm: 48 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No</TableCell>
                     <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "18%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Date</TableCell>
-                    <TableCell sx={{ fontWeight: 800, width: "30%", minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Patient</TableCell>
+                    <TableCell sx={{ fontWeight: 800, width: { xs: "60%", sm: "30%" }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Patient</TableCell>
                     <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "18%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Doctor</TableCell>
                     <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "14%", minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Status</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 800, width: 96, minWidth: 96, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Actions</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 800, width: { xs: "25%", sm: 96 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -1797,16 +1797,16 @@ export default function ConsultationManagement() {
               sx={{ mb: 2 }}
             />
 
-            <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider", overflowX: "auto", maxWidth: "100%" }}>
-              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
+            <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider", overflowX: "auto", maxWidth: "100%", width: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%", minWidth: "100%" }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: "grey.100" }}>
-                    <TableCell sx={{ fontWeight: 800, width: 48, minWidth: 48, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 800, width: { xs: "15%", sm: 48 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No</TableCell>
                     <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "16%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Created</TableCell>
-                    <TableCell sx={{ fontWeight: 800, width: "30%", minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Patient</TableCell>
+                    <TableCell sx={{ fontWeight: 800, width: { xs: "60%", sm: "30%" }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Patient</TableCell>
                     <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "18%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Doctor</TableCell>
                     <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "22%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Diagnosis</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 800, width: 96, minWidth: 96, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Actions</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 800, width: { xs: "25%", sm: 96 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -1905,18 +1905,18 @@ export default function ConsultationManagement() {
             <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
               Bills for appointments only.
             </Typography>
-            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
-              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
+            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%", width: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%", minWidth: "100%" }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: "grey.100" }}>
-                    <TableCell sx={{ fontWeight: 800, width: 48, minWidth: 48, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No</TableCell>
-                    <TableCell sx={{ fontWeight: 800, width: "28%", minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Patient</TableCell>
+                    <TableCell sx={{ fontWeight: 800, width: { xs: "15%", sm: 48 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 800, width: { xs: "60%", sm: "28%" }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Patient</TableCell>
                     <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Total</TableCell>
                     <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Paid</TableCell>
                     <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Balance</TableCell>
                     <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "14%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Status</TableCell>
                     <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "14%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Created</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 800, width: 96, minWidth: 96, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Actions</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 800, width: { xs: "25%", sm: 96 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -1996,17 +1996,17 @@ export default function ConsultationManagement() {
             <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
               Payments recorded for appointment bills.
             </Typography>
-            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%" }}>
-              <Table size="small" sx={{ tableLayout: "fixed", width: "100%" }}>
+            <TableContainer sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden", overflowX: "auto", maxWidth: "100%", width: "100%" }}>
+              <Table size="small" sx={{ tableLayout: "fixed", width: "100%", minWidth: "100%" }}>
                 <TableHead>
                   <TableRow sx={{ bgcolor: "grey.100" }}>
-                    <TableCell sx={{ fontWeight: 800, width: 48, minWidth: 48, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No</TableCell>
+                    <TableCell sx={{ fontWeight: 800, width: { xs: "15%", sm: 48 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>No</TableCell>
                     <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "16%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Date</TableCell>
-                    <TableCell sx={{ fontWeight: 800, width: "28%", minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Patient</TableCell>
+                    <TableCell sx={{ fontWeight: 800, width: { xs: "60%", sm: "28%" }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Patient</TableCell>
                     <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Amount</TableCell>
                     <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: "14%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Method</TableCell>
                     <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: "12%", overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Bill</TableCell>
-                    <TableCell sx={{ fontWeight: 800, width: 96, minWidth: 96, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }} align="center">Action</TableCell>
+                    <TableCell sx={{ fontWeight: 800, width: { xs: "25%", sm: 96 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }} align="center">Action</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -2111,11 +2111,11 @@ export default function ConsultationManagement() {
               {Array.isArray(mainBillView.bill.items) && mainBillView.bill.items.length > 0 && (
                 <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
                   <Typography variant="subtitle2" color="text.secondary" sx={{ px: 2, pt: 1.5, pb: 0.5 }}>Breakdown</Typography>
-                  <Table size="small">
+                  <Table size="small" sx={{ tableLayout: "fixed", width: "100%", minWidth: "100%" }}>
                     <TableHead>
                       <TableRow sx={{ bgcolor: "rgba(0,0,0,0.03)" }}>
-                        <TableCell sx={{ fontWeight: 700, maxWidth: { xs: "50vw", sm: 220 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Description</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 700, maxWidth: { xs: "22vw", sm: 100 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Amount</TableCell>
+                        <TableCell sx={{ fontWeight: 700, width: { xs: "70%", sm: 220 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Description</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 700, width: { xs: "30%", sm: 100 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Amount</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -2315,11 +2315,11 @@ export default function ConsultationManagement() {
                       {Array.isArray(apptBilling.items) && apptBilling.items.length > 0 && (
                         <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}>
                           <Typography variant="subtitle2" color="text.secondary" sx={{ px: 2, pt: 1.5, pb: 0.5 }}>Breakdown</Typography>
-                          <Table size="small">
+                          <Table size="small" sx={{ tableLayout: "fixed", width: "100%", minWidth: "100%" }}>
                             <TableHead>
                               <TableRow sx={{ bgcolor: "rgba(0,0,0,0.03)" }}>
-                                <TableCell sx={{ fontWeight: 700, maxWidth: { xs: "50vw", sm: 220 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Description</TableCell>
-                                <TableCell align="right" sx={{ fontWeight: 700, maxWidth: { xs: "22vw", sm: 100 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Amount</TableCell>
+                                <TableCell sx={{ fontWeight: 700, width: { xs: "70%", sm: 220 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Description</TableCell>
+                                <TableCell align="right" sx={{ fontWeight: 700, width: { xs: "30%", sm: 100 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Amount</TableCell>
                               </TableRow>
                             </TableHead>
                             <TableBody>

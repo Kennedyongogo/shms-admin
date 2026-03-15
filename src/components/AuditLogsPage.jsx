@@ -231,10 +231,11 @@ export default function AuditLogsPage() {
               overflow: "hidden",
               overflowX: "auto",
               maxWidth: "100%",
+              width: "100%",
               boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
             }}
           >
-            <Table size="medium" stickyHeader sx={{ tableLayout: "fixed", width: "100%" }}>
+            <Table size="medium" stickyHeader sx={{ tableLayout: "fixed", width: "100%", minWidth: "100%" }}>
               <TableHead>
                 <TableRow
                   sx={{
@@ -251,13 +252,13 @@ export default function AuditLogsPage() {
                     },
                   }}
                 >
-                  <TableCell align="center" sx={{ width: 64, minWidth: 0, maxWidth: { xs: "16vw", sm: 64 }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
+                  <TableCell align="center" sx={{ width: { xs: "15%", sm: 64 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
                     No
                   </TableCell>
-                  <TableCell sx={{ minWidth: 0, maxWidth: { sm: 150, md: 180 }, display: { xs: "none", sm: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>User</TableCell>
-                  <TableCell sx={{ minWidth: 0, maxWidth: { xs: "28vw", sm: 160 }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Action</TableCell>
-                  <TableCell sx={{ width: 120, minWidth: 0, maxWidth: { md: 120 }, display: { xs: "none", md: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Resource</TableCell>
-                  <TableCell align="center" sx={{ width: 72, minWidth: 72 }}>Action</TableCell>
+                  <TableCell sx={{ minWidth: 0, width: { sm: 150, md: 180 }, display: { xs: "none", sm: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>User</TableCell>
+                  <TableCell sx={{ minWidth: 0, width: { xs: "60%", sm: 160 }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Action</TableCell>
+                  <TableCell sx={{ width: { xs: 0, md: 120 }, minWidth: 0, display: { xs: "none", md: "table-cell" }, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Resource</TableCell>
+                  <TableCell align="center" sx={{ width: { xs: "25%", sm: 72 }, minWidth: 0 }}>Action</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
