@@ -1202,11 +1202,8 @@ export default function PharmacyManagement() {
                         No
                       </TableCell>
                       <TableCell sx={{ fontWeight: 800, width: { xs: "55%", sm: 140, md: 220 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Name</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: { sm: 110 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
+                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: { sm: 140 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
                         Dosage form
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: { md: 140 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
-                        Manufacturer
                       </TableCell>
                       <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: { md: 90 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Unit price</TableCell>
                       {isSilver ? (
@@ -1266,7 +1263,6 @@ export default function PharmacyManagement() {
                             {m.name}
                           </TableCell>
                           <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{m.dosage_form || "—"}</TableCell>
-                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{m.manufacturer || "—"}</TableCell>
                           <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{m.unit_price ?? "—"}</TableCell>
                           {isSilver ? (
                             <>

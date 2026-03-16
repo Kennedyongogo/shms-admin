@@ -285,7 +285,7 @@ export default function RegisterPage() {
           sx={{
             flexGrow: 1,
             minHeight: 0,
-            // No scroll on desktop for the register step; allow scroll only on small screens.
+            // Step 0: no scroll; Step 1: allow scroll only on small screens. On laptops/desktops, keep a fixed canvas with tight padding.
             overflowY: step === 0 ? "hidden" : { xs: "auto", md: "hidden" },
             overflowX: "hidden",
             display: step === 0 ? "flex" : "block",
@@ -304,10 +304,10 @@ export default function RegisterPage() {
             ),
             boxSizing: "border-box",
             mt: "1px",
-            px: { xs: 2, sm: 3, md: 4 },
+            px: { xs: 2, sm: 3, md: 3 },
             ...(step === 0
               ? { py: { xs: 1.5, sm: 2 }, pt: "1px" }
-              : { pt: "1px", pb: 4 }
+              : { pt: { xs: 1, md: 0.5 }, pb: { xs: 2, md: 1.5 } }
             ),
             ...(step === 1 ? { display: "block" } : {}),
           }}
@@ -315,8 +315,8 @@ export default function RegisterPage() {
         <Stepper
           activeStep={step}
           sx={{
-            pt: 1,
-            pb: 2,
+            pt: step === 0 ? 1 : 0.5,
+            pb: step === 0 ? 2 : 1,
             px: 0,
             "& .MuiStepIcon-root.Mui-active": { color: primaryTeal },
             "& .MuiStepIcon-root.Mui-completed": { color: primaryTeal },
@@ -713,7 +713,7 @@ export default function RegisterPage() {
 
         {step === 1 && (
           <>
-            <Box ref={registerHeaderRef} sx={{ mb: { xs: 1.5, md: 1 } }}>
+            <Box ref={registerHeaderRef} sx={{ mb: { xs: 1.25, md: 0.75 } }}>
               <Button
                 startIcon={<ArrowBackIcon />}
                 onClick={() => setStep(0)}
@@ -725,17 +725,19 @@ export default function RegisterPage() {
               >
                 Back to package
               </Button>
-              <Typography variant="h5" sx={{ fontWeight: 800, mb: 0.5, color: "text.primary" }}>
+              <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.25, color: "text.primary" }}>
                 Register your {packageSelected === "silver" ? "clinic" : "hospital"}
               </Typography>
             </Box>
-            <form onSubmit={handleSubmit} style={{ width: "100%" }}>
+            <form onSubmit={handleSubmit} style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column" }}>
               <Box
                 sx={{
+                  flex: 1,
+                  minHeight: 0,
                   // On small screens, keep the form within the viewport and allow it to scroll.
-                  // On larger screens, let it grow naturally with no internal scroll.
-                  maxHeight: { xs: "calc(100vh - 220px)", md: "none" },
-                  overflowY: { xs: "auto", md: "visible" },
+                  // On larger screens, fit within the available height with no scroll and tighter padding.
+                  maxHeight: { xs: "calc(100vh - 220px)", md: "100%" },
+                  overflowY: { xs: "auto", md: "hidden" },
                   pr: { xs: 1, md: 0 },
                 }}
               >
@@ -743,31 +745,33 @@ export default function RegisterPage() {
                   sx={{
                     display: "grid",
                     gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-                    gap: { xs: 3, md: 2 },
+                    gap: { xs: 2.25, md: 1.5 },
                     alignItems: "stretch",
-                    mb: 2,
+                    minHeight: 0,
+                    mb: { xs: 2.5, md: 3 },
                   }}
                 >
                 <Paper
                   elevation={0}
                   variant="outlined"
                   sx={{
-                    px: 2,
-                    pt: 2,
-                    pb: { xs: 1.5, sm: 2 }, // extra bottom padding on small screens so last input isn't clipped
+                    px: { xs: 1.75, md: 1.5 },
+                    pt: { xs: 1.75, md: 1.25 },
+                    pb: { xs: 1.1, sm: 1.5 },
                     borderRadius: 3,
                     border: "1px solid",
                     borderColor: "divider",
                     bgcolor: "#fff",
-                    height: "auto",
                     display: "flex",
                     flexDirection: "column",
+                    flex: 1,
+                    minHeight: 0,
                   }}
                 >
                   <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "text.primary", mb: 1.5 }}>
                     Hospital / Clinic
                   </Typography>
-                  <Stack spacing={2}>
+                  <Stack spacing={{ xs: 1.25, sm: 1.75 }}>
                     <Box sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 2 }}>
                       <Button
                         variant="outlined"
@@ -881,20 +885,21 @@ export default function RegisterPage() {
                   elevation={0}
                   variant="outlined"
                   sx={{
-                    p: 2,
+                    p: { xs: 1.75, md: 1.5 },
                     borderRadius: 3,
                     border: "1px solid",
                     borderColor: "divider",
                     bgcolor: "#fff",
-                    height: "auto",
                     display: "flex",
                     flexDirection: "column",
+                    flex: 1,
+                    minHeight: 0,
                   }}
                 >
                   <Typography variant="subtitle1" sx={{ fontWeight: 700, color: "text.primary", mb: 1.5 }}>
                     Super Admin account
                   </Typography>
-                  <Stack spacing={2}>
+                  <Stack spacing={{ xs: 1.25, sm: 1.75 }}>
                     <TextField
                       label="Full name"
                       required
@@ -1023,8 +1028,8 @@ export default function RegisterPage() {
                         form.password !== form.confirm_password
                       }
                       sx={{
-                        py: 1.25,
-                        mt: 0.5,
+                        py: 1.1,
+                        mt: 0.4,
                         bgcolor: primaryTeal,
                         fontWeight: 700,
                         borderRadius: 2,
