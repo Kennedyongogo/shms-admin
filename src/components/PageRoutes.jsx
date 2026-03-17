@@ -12,6 +12,7 @@ import CategoryFormulationsPage from "./CategoryFormulationsPage";
 import FormulationDrugsPage from "./FormulationDrugsPage";
 import AddMedicationPage from "./AddMedicationPage";
 import ConsultationManagement from "./ConsultationManagement";
+import AppointmentViewPage from "./AppointmentViewPage";
 import HospitalsManagement from "./HospitalsManagement";
 import PatientsManagement from "./PatientsManagement";
 import LaboratoryManagement from "./LaboratoryManagement";
@@ -81,6 +82,7 @@ function PageRoutes() {
             <Route path="pharmacy/medicine-catalogue/category/:categoryId/formulation" element={<FormulationDrugsPage />} />
             <Route path="pharmacy/add-medication" element={<AddMedicationPage />} />
             <Route path="appointments" element={<ConsultationManagement />} />
+            <Route path="appointments/:slug" element={<AppointmentViewPage />} />
             <Route path="appointments/record-consultation" element={<RecordConsultationPage />} />
             <Route path="appointments/consultation/:id" element={<ConsultationViewPage />} />
             <Route path="patients" element={<PatientsManagement />} />

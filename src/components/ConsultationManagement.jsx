@@ -838,32 +838,21 @@ export default function ConsultationManagement() {
     };
   };
 
-  const openViewAppointment = async (appt) => {
+  const openViewAppointment = (appt) => {
     if (!requireTokenGuard()) return;
-    setApptViewOpen(true);
-    setApptViewLoading(true);
-    setApptView(null);
-    setApptStatusDraft("");
-    setApptBilling(null);
-    setApptBillItemAmount("");
-    setApptBillItemNote("");
-    try {
-      const data = await fetchJson(`${API.appointments}/${appt.id}`, { token });
-      const full = data?.data || null;
-      setApptView(full);
-      setApptStatusDraft(full?.status || "");
-      if (full?.id) {
-        loadAppointmentBilling(full.id);
-        setApptViewInnerTab(full?.is_walk_in ? 1 : 0);
-      } else {
-        setApptViewInnerTab(0);
-      }
-    } catch (e) {
-      Swal.fire({ icon: "error", title: "Failed", text: e.message });
-      setApptViewOpen(false);
-    } finally {
-      setApptViewLoading(false);
-    }
+    const patientName =
+      appt?.patient?.full_name ||
+      appt?.patient?.user?.full_name ||
+      appt?.patient_name ||
+      "";
+    const slug = patientName
+      ? patientName
+          .toLowerCase()
+          .trim()
+          .replace(/\s+/g, "-")
+          .replace(/[^a-z0-9\-]/g, "")
+      : "appointment";
+    navigate(`/appointments/${encodeURIComponent(slug)}`);
   };
 
   const allowedNextStatuses = (current) => {
