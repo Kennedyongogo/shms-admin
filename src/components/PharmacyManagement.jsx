@@ -31,6 +31,7 @@ import {
   Typography,
   CircularProgress,
   Tooltip,
+  Autocomplete,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -153,6 +154,7 @@ export default function PharmacyManagement() {
     initial_quantity: "",
     unit: "",
     pack_size: "",
+    current_quantity: "",
   });
   const [medView, setMedView] = useState({ open: false, med: null });
   const [inventoryItems, setInventoryItems] = useState([]);
@@ -206,6 +208,16 @@ export default function PharmacyManagement() {
     prescriptionId: null,
   });
   const [mpesaSubmitting, setMpesaSubmitting] = useState(false);
+
+  // POS prescription dialog
+  const [posPresDialog, setPosPresDialog] = useState({
+    open: false,
+    saving: false,
+  });
+  const [posPresForm, setPosPresForm] = useState({
+    items: [{ medication: null, quantity: "1", dosage: "", frequency: "", duration: "" }],
+    note: "",
+  });
 
   // Dispense records
   const dispReqId = useRef(0);
@@ -289,6 +301,53 @@ export default function PharmacyManagement() {
     } finally {
       if (reqId !== presReqId.current) return;
       setPresLoading(false);
+    }
+  };
+
+  const openPosPrescriptionDialog = () => {
+    setPosPresForm({
+      items: [{ medication: null, quantity: "1", dosage: "", frequency: "", duration: "" }],
+      note: "",
+    });
+    if (!medications.length) {
+      loadMedications();
+    }
+    setPosPresDialog({ open: true, saving: false });
+  };
+
+  const savePosPrescription = async () => {
+    if (!requireTokenGuard()) return;
+    const cleanedItems = posPresForm.items
+      .map((it) => ({
+        medication_id: it.medication?.id || null,
+        quantity: Number(it.quantity || 0),
+        dosage: it.dosage || null,
+        frequency: it.frequency || null,
+        duration: it.duration || null,
+      }))
+      .filter((it) => it.medication_id && it.quantity > 0);
+    if (!cleanedItems.length) {
+      showToast("error", "Add at least one medication with quantity.");
+      return;
+    }
+    setPosPresDialog((prev) => ({ ...prev, saving: true }));
+    try {
+      await fetchJson(`${API.prescriptions}/pos`, {
+        method: "POST",
+        token,
+        body: {
+          source: "pos",
+          patient_id: null,
+          consultation_id: null,
+          items: cleanedItems,
+        },
+      });
+      showToast("success", "POS prescription created with billing.");
+      setPosPresDialog({ open: false, saving: false });
+      await loadPrescriptions();
+    } catch (e) {
+      showToast("error", e.message);
+      setPosPresDialog((prev) => ({ ...prev, saving: false }));
     }
   };
 
@@ -446,9 +505,12 @@ export default function PharmacyManagement() {
       manufacturer: m.manufacturer || "",
       unit_price: m.unit_price ?? "",
       inventory_item_id: m.inventory_item_id || "",
-      initial_quantity: m.initial_quantity != null ? String(m.initial_quantity) : "",
+      initial_quantity:
+        m.initial_quantity != null ? String(m.initial_quantity) : "",
       unit: m.unit || "",
       pack_size: m.pack_size != null ? String(m.pack_size) : "",
+      current_quantity:
+        m.current_quantity != null ? String(m.current_quantity) : "",
     });
     setMedDialog({ open: true, mode: "edit", id: m.id });
     if (inventoryItems.length === 0) loadInventoryItems();
@@ -1162,37 +1224,43 @@ export default function PharmacyManagement() {
           {/* MEDS / Medicine catalogue */}
           {tab === 0 && (
             <Box sx={{ p: 2 }}>
-              {isSuperAdmin() && isSilver && (
-                <Stack direction={{ xs: "column", sm: "row" }} justifyContent="flex-end" sx={{ mb: 2, width: { xs: "100%", sm: "auto" } }}>
-                  <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() => navigate("/pharmacy/add-medication")}
-                    sx={{ fontWeight: 700, width: { xs: "100%", sm: "auto" } }}
-                  >
-                    Add medication
-                  </Button>
-                </Stack>
-              )}
-              <TextField
-                value={medsSearch}
-                onChange={(e) => setMedsSearch(e.target.value)}
-                placeholder="Search medications (name, dosage form, manufacturer)…"
-                size="small"
-                fullWidth
-                name="meds_search"
-                type="search"
-                autoComplete="off"
-                onFocus={() => setMedsSearchLocked(false)}
-                onClick={() => setMedsSearchLocked(false)}
-                InputProps={{ readOnly: medsSearchLocked }}
-                inputProps={{
-                  autoComplete: "off",
-                  "data-lpignore": "true",
-                  "data-1p-ignore": "true",
-                }}
+              <Stack
+                direction={{ xs: "column", md: "row" }}
+                spacing={2}
+                alignItems={{ xs: "stretch", md: "center" }}
                 sx={{ mb: 2 }}
-              />
+              >
+                <TextField
+                  value={medsSearch}
+                  onChange={(e) => setMedsSearch(e.target.value)}
+                  placeholder="Search medications (name, dosage form, manufacturer)…"
+                  size="small"
+                  fullWidth
+                  name="meds_search"
+                  type="search"
+                  autoComplete="off"
+                  onFocus={() => setMedsSearchLocked(false)}
+                  onClick={() => setMedsSearchLocked(false)}
+                  InputProps={{ readOnly: medsSearchLocked }}
+                  inputProps={{
+                    autoComplete: "off",
+                    "data-lpignore": "true",
+                    "data-1p-ignore": "true",
+                  }}
+                />
+                {isSuperAdmin() && isSilver && (
+                  <Box sx={{ flexShrink: 0 }}>
+                    <Button
+                      variant="contained"
+                      startIcon={<AddIcon />}
+                      onClick={() => navigate("/pharmacy/add-medication")}
+                      sx={{ fontWeight: 700, width: { xs: "100%", md: "auto" } }}
+                    >
+                      Add medication
+                    </Button>
+                  </Box>
+                )}
+              </Stack>
 
               <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider", overflowX: "auto", maxWidth: "100%", width: "100%" }}>
                 <Table size="small" sx={{ tableLayout: "fixed", width: "100%", minWidth: "100%" }}>
@@ -1363,25 +1431,41 @@ export default function PharmacyManagement() {
           {/* PRESCRIPTIONS */}
           {tab === 1 && (
             <Box sx={{ p: 2 }}>
-              <TextField
-                value={presSearch}
-                onChange={(e) => setPresSearch(e.target.value)}
-                placeholder="Search prescriptions (id, patient_id, doctor_id)…"
-                size="small"
-                fullWidth
-                name="pres_search"
-                type="search"
-                autoComplete="off"
-                onFocus={() => setPresSearchLocked(false)}
-                onClick={() => setPresSearchLocked(false)}
-                InputProps={{ readOnly: presSearchLocked }}
-                inputProps={{
-                  autoComplete: "off",
-                  "data-lpignore": "true",
-                  "data-1p-ignore": "true",
-                }}
+              <Stack
+                direction={{ xs: "column", md: "row" }}
+                spacing={2}
+                alignItems={{ xs: "stretch", md: "center" }}
                 sx={{ mb: 2 }}
-              />
+              >
+                <TextField
+                  value={presSearch}
+                  onChange={(e) => setPresSearch(e.target.value)}
+                  placeholder="Search prescriptions (id, patient, doctor)…"
+                  size="small"
+                  fullWidth
+                  name="pres_search"
+                  type="search"
+                  autoComplete="off"
+                  onFocus={() => setPresSearchLocked(false)}
+                  onClick={() => setPresSearchLocked(false)}
+                  InputProps={{ readOnly: presSearchLocked }}
+                  inputProps={{
+                    autoComplete: "off",
+                    "data-lpignore": "true",
+                    "data-1p-ignore": "true",
+                  }}
+                />
+                <Box sx={{ flexShrink: 0 }}>
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    sx={{ fontWeight: 700, width: { xs: "100%", md: "auto" } }}
+                    onClick={openPosPrescriptionDialog}
+                  >
+                    Add prescription
+                  </Button>
+                </Box>
+              </Stack>
 
               <TableContainer sx={{ borderRadius: 2, border: "1px solid", borderColor: "divider", overflowX: "auto", maxWidth: "100%", width: "100%" }}>
                 <Table size="small" sx={{ tableLayout: "fixed", width: "100%", minWidth: "100%" }}>
@@ -1834,6 +1918,164 @@ export default function PharmacyManagement() {
         </DialogActions>
       </Dialog>
 
+      {/* POS prescription (pharmacy only) */}
+      <Dialog
+        open={posPresDialog.open}
+        onClose={() => !posPresDialog.saving && setPosPresDialog({ open: false, saving: false })}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
+      >
+        <DialogTitle sx={{ fontWeight: 900 }}>New POS prescription</DialogTitle>
+        <DialogContent sx={{ overflowY: "auto" }}>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              Record a pharmacy-only prescription for billing and dispensing. Patient details are optional and can remain anonymous.
+            </Typography>
+            {posPresForm.items.map((row, idx) => (
+              <Stack key={idx} spacing={1.5}>
+                <Autocomplete
+                  options={medications}
+                  value={row.medication}
+                  onChange={(_, v) =>
+                    setPosPresForm((prev) => {
+                      const items = [...prev.items];
+                      items[idx] = { ...items[idx], medication: v };
+                      return { ...prev, items };
+                    })
+                  }
+                  getOptionLabel={(m) =>
+                    m?.name
+                      ? `${m.name}${m.dosage_form ? " • " + m.dosage_form : ""}${
+                          m.unit_price != null && m.unit_price !== ""
+                            ? " • " + m.unit_price
+                            : ""
+                        }`
+                      : ""
+                  }
+                  isOptionEqualToValue={(opt, val) => opt.id === val.id}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Medication"
+                      size="small"
+                      fullWidth
+                    />
+                  )}
+                />
+                <TextField
+                  label="Qty"
+                  size="small"
+                  type="number"
+                  fullWidth
+                  value={row.quantity}
+                  onChange={(e) =>
+                    setPosPresForm((prev) => {
+                      const items = [...prev.items];
+                      items[idx] = { ...items[idx], quantity: e.target.value };
+                      return { ...prev, items };
+                    })
+                  }
+                  inputProps={{ min: 1 }}
+                />
+                <TextField
+                  label="Dosage"
+                  size="small"
+                  fullWidth
+                  value={row.dosage}
+                  onChange={(e) =>
+                    setPosPresForm((prev) => {
+                      const items = [...prev.items];
+                      items[idx] = { ...items[idx], dosage: e.target.value };
+                      return { ...prev, items };
+                    })
+                  }
+                />
+                <TextField
+                  label="Frequency"
+                  size="small"
+                  fullWidth
+                  value={row.frequency}
+                  onChange={(e) =>
+                    setPosPresForm((prev) => {
+                      const items = [...prev.items];
+                      items[idx] = { ...items[idx], frequency: e.target.value };
+                      return { ...prev, items };
+                    })
+                  }
+                />
+                <TextField
+                  label="Duration"
+                  size="small"
+                  fullWidth
+                  value={row.duration}
+                  onChange={(e) =>
+                    setPosPresForm((prev) => {
+                      const items = [...prev.items];
+                      items[idx] = { ...items[idx], duration: e.target.value };
+                      return { ...prev, items };
+                    })
+                  }
+                />
+                {posPresForm.items.length > 1 && (
+                  <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+                    <IconButton
+                      size="small"
+                      onClick={() =>
+                        setPosPresForm((prev) => ({
+                          ...prev,
+                          items: prev.items.filter((_, i) => i !== idx),
+                        }))
+                      }
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                )}
+              </Stack>
+            ))}
+            <Button
+              variant="text"
+              startIcon={<AddIcon />}
+              onClick={() =>
+                setPosPresForm((prev) => ({
+                  ...prev,
+                  items: [
+                    ...prev.items,
+                    {
+                      medication: null,
+                      quantity: "1",
+                      dosage: "",
+                      frequency: "",
+                      duration: "",
+                    },
+                  ],
+                }))
+              }
+              sx={{ alignSelf: "flex-start" }}
+            >
+              Add another medicine
+            </Button>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() =>
+              !posPresDialog.saving &&
+              setPosPresDialog({ open: false, saving: false })
+            }
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={savePosPrescription}
+            disabled={posPresDialog.saving}
+          >
+            {posPresDialog.saving ? "Saving…" : "Save POS prescription"}
+          </Button>
+        </DialogActions>
+      </Dialog>
       <ReceiptDialog
         open={!!receiptDialogPaymentId}
         onClose={() => setReceiptDialogPaymentId(null)}
@@ -2071,11 +2313,7 @@ export default function PharmacyManagement() {
                   <TextField
                     label="Curr qty"
                     fullWidth
-                    value={
-                      medView.med && medView.med.current_quantity != null
-                        ? String(medView.med.current_quantity)
-                        : "0"
-                    }
+                    value={medForm.current_quantity || "0"}
                     InputProps={{ readOnly: true }}
                   />
                 )}
