@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Card,
@@ -77,6 +77,7 @@ export default function AppointmentViewPage() {
   const navigate = useNavigate();
   const theme = useTheme();
   const isSmall = useMediaQuery(theme.breakpoints.down("sm"));
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [appointment, setAppointment] = useState(null);
   const [billing, setBilling] = useState(null);
@@ -139,6 +140,14 @@ export default function AppointmentViewPage() {
       active = false;
     };
   }, [slug]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get("tab");
+    if (tab === "billing") {
+      setInnerTab(1);
+    }
+  }, [location.search]);
 
   const appt = appointment;
 

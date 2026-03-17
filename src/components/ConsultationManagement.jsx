@@ -241,6 +241,7 @@ export default function ConsultationManagement() {
     apptId: null,
   });
   const [mpesaSubmitting, setMpesaSubmitting] = useState(false);
+  const [createApptSaving, setCreateApptSaving] = useState(false);
 
   const [consViewOpen, setConsViewOpen] = useState(false);
   const [consViewLoading, setConsViewLoading] = useState(false);
@@ -572,6 +573,7 @@ export default function ConsultationManagement() {
       bill_amount: walkIn ? Number(billAmount) : null,
     };
 
+    setCreateApptSaving(true);
     try {
       const created = await fetchJson(API.appointments, {
         method: "POST",
@@ -596,24 +598,11 @@ export default function ConsultationManagement() {
       }
 
       if (walkIn) {
-        const payNow = await Swal.fire({
+        Swal.fire({
           icon: "info",
           title: "Payment required",
-          text: "Walk-in appointments must be paid before they can be confirmed. Open Billing to add the bill item and record payment.",
-          showCancelButton: true,
-          confirmButtonText: "Open billing",
-          cancelButtonText: "Later",
-          reverseButtons: true,
+          text: "Walk-in appointments must be paid before they can be confirmed. You can open the appointment view later to handle billing and payment.",
         });
-        if (payNow.isConfirmed) {
-          openBillingForAppointment(fullAppt);
-        } else {
-          Swal.fire({
-            icon: "success",
-            title: "Created",
-            text: "Appointment created as pending (unpaid).",
-          });
-        }
       } else {
         Swal.fire({
           icon: "success",
@@ -628,6 +617,8 @@ export default function ConsultationManagement() {
         ? `${e?.message ?? "Failed"}. ${backendError}`
         : (e?.message ?? "Something went wrong.");
       Swal.fire({ icon: "error", title: "Failed", text });
+    } finally {
+      setCreateApptSaving(false);
     }
   };
 
@@ -686,18 +677,10 @@ export default function ConsultationManagement() {
       const ask = await Swal.fire({
         icon: "warning",
         title: "Appointment not confirmed",
-        text: "You can only record a consultation after payment is made and the appointment is confirmed. Open Billing to add the bill item and record payment.",
-        showCancelButton: true,
-        confirmButtonText: "Open billing",
-        cancelButtonText: "Later",
-        reverseButtons: true,
+        text: "You can only record a consultation after payment is made and the appointment is confirmed. Open the appointment view later to handle billing and payment.",
+        confirmButtonText: "OK",
       });
-      if (ask.isConfirmed) {
-        openBillingForAppointment(appt);
-        return;
-      } else {
-        return;
-      }
+      return;
     }
 
     try {
@@ -913,12 +896,20 @@ export default function ConsultationManagement() {
   };
 
   const openBillingForAppointment = (appt) => {
-    if (!appt?.id) return;
-    setTab(2);
-    setApptView(appt);
-    setApptViewOpen(true);
-    setApptViewInnerTab(1);
-    if (appt?.id) loadAppointmentBilling(appt.id);
+    if (!requireTokenGuard()) return;
+    const patientName =
+      appt?.patient?.full_name ||
+      appt?.patient?.user?.full_name ||
+      appt?.patient_name ||
+      "";
+    const slug = patientName
+      ? patientName
+          .toLowerCase()
+          .trim()
+          .replace(/\s+/g, "-")
+          .replace(/[^a-z0-9\-]/g, "")
+      : "appointment";
+    navigate(`/appointments/${encodeURIComponent(slug)}?tab=billing`);
   };
 
   const payForAppointment = async (appt) => {
@@ -2594,12 +2585,13 @@ export default function ConsultationManagement() {
           <Button
             variant="contained"
             onClick={createAppointment}
+            disabled={createApptSaving}
             sx={{
               bgcolor: theme.palette.primary.main,
               "&:hover": { bgcolor: theme.palette.primary.dark },
             }}
           >
-            Save
+            {createApptSaving ? "Saving…" : "Save"}
           </Button>
         </DialogActions>
       </Dialog>
