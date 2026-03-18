@@ -38,6 +38,7 @@ import useMediaQuery from "@mui/material/useMediaQuery";
 const API = {
   appointments: "/api/appointments",
   billing: "/api/billing",
+  payments: "/api/payments",
 };
 
 async function fetchJson(url, { method = "GET", body, token } = {}) {
@@ -96,6 +97,30 @@ export default function AppointmentViewPage() {
   });
   const [mpesaSubmitting, setMpesaSubmitting] = useState(false);
 
+  const reloadAppointmentAndBilling = async ({ tokenOverride } = {}) => {
+    const token = tokenOverride ?? getToken();
+    if (!slug) return;
+    const apptRes = await fetchJson(
+      `${API.appointments}/by-slug/${encodeURIComponent(slug)}`,
+      { token },
+    );
+    const apptData = apptRes?.data || null;
+    setAppointment(apptData);
+    if (apptData?.id) {
+      const billRes = await fetchJson(
+        `${API.billing}/by-reference?` +
+          new URLSearchParams({
+            item_type: "appointment",
+            reference_id: String(apptData.id),
+          }).toString(),
+        { token },
+      ).catch(() => null);
+      setBilling(billRes?.data || null);
+    } else {
+      setBilling(null);
+    }
+  };
+
   useEffect(() => {
     let active = true;
     const token = getToken();
@@ -104,28 +129,7 @@ export default function AppointmentViewPage() {
       setLoading(true);
       setError("");
       try {
-        const apptRes = await fetchJson(
-          `${API.appointments}/by-slug/${encodeURIComponent(slug)}`,
-          { token },
-        );
-        if (!active) return;
-        const apptData = apptRes?.data || null;
-        setAppointment(apptData);
-
-        if (apptData?.id) {
-          const billRes = await fetchJson(
-            `${API.billing}/by-reference?` +
-              new URLSearchParams({
-                item_type: "appointment",
-                reference_id: String(apptData.id),
-              }).toString(),
-            { token },
-          ).catch(() => null);
-          if (!active) return;
-          setBilling(billRes?.data || null);
-        } else {
-          setBilling(null);
-        }
+        await reloadAppointmentAndBilling({ tokenOverride: token });
       } catch (e) {
         if (!active) return;
         setError(e?.message || "Failed to load appointment.");
@@ -170,6 +174,7 @@ export default function AppointmentViewPage() {
       : appt?.bill_amount != null
       ? String(appt.bill_amount)
       : null;
+  const billLocked = billing?.status === "paid" || Number(billing?.balance ?? 0) <= 0;
 
   return (
     <Box
@@ -575,6 +580,7 @@ export default function AppointmentViewPage() {
                                       ? "Prescription"
                                       : it.item_type || "Item";
                                   const handleEdit = async () => {
+                                    if (billLocked) return;
                                     if (!it.id) return;
                                     const { value: formValues } = await Swal.fire({
                                       title: "Edit item",
@@ -643,6 +649,7 @@ export default function AppointmentViewPage() {
                                   };
 
                                   const handleRemove = async () => {
+                                    if (billLocked) return;
                                     if (!it.id) return;
                                     const confirm = await Swal.fire({
                                       icon: "warning",
@@ -736,6 +743,7 @@ export default function AppointmentViewPage() {
                                           <IconButton
                                             size="small"
                                             onClick={handleEdit}
+                                            disabled={billLocked}
                                           >
                                             <EditIcon fontSize="inherit" />
                                           </IconButton>
@@ -743,6 +751,7 @@ export default function AppointmentViewPage() {
                                             size="small"
                                             color="error"
                                             onClick={handleRemove}
+                                            disabled={billLocked}
                                           >
                                             <DeleteIcon fontSize="inherit" />
                                           </IconButton>
@@ -809,6 +818,7 @@ export default function AppointmentViewPage() {
                                       ? "Prescription"
                                       : it.item_type || "Item";
                                     const handleEdit = async () => {
+                                    if (billLocked) return;
                                     if (!it.id) return;
                                     const { value: formValues } = await Swal.fire({
                                       title: "Edit item",
@@ -867,6 +877,7 @@ export default function AppointmentViewPage() {
                                   };
 
                                     const handleRemove = async () => {
+                                    if (billLocked) return;
                                     if (!it.id) return;
                                     const confirm = await Swal.fire({
                                       icon: "warning",
@@ -929,6 +940,7 @@ export default function AppointmentViewPage() {
                                               size="small"
                                               variant="outlined"
                                               onClick={handleEdit}
+                                              disabled={billLocked}
                                               startIcon={
                                                 <EditIcon fontSize="small" />
                                               }
@@ -940,6 +952,7 @@ export default function AppointmentViewPage() {
                                               variant="outlined"
                                               color="error"
                                               onClick={handleRemove}
+                                              disabled={billLocked}
                                               startIcon={
                                                 <DeleteIcon fontSize="small" />
                                               }
@@ -1127,6 +1140,20 @@ export default function AppointmentViewPage() {
                                     { token },
                                   );
                                   setBilling(billRes?.data || null);
+                                  // Appointment status chip depends on appt.status, so reload it too
+                                  await reloadAppointmentAndBilling({ tokenOverride: token });
+                                  Swal.fire({
+                                    icon: "success",
+                                    title: "Cash recorded",
+                                    timer: 900,
+                                    showConfirmButton: false,
+                                  });
+                                } catch (e) {
+                                  Swal.fire({
+                                    icon: "error",
+                                    title: "Failed to record cash",
+                                    text: e?.message || "Request failed",
+                                  });
                                 } finally {
                                   setCashSaving(false);
                                 }

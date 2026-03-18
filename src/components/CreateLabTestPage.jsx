@@ -8,6 +8,9 @@ import {
   CircularProgress,
   IconButton,
   InputAdornment,
+  MenuItem,
+  FormControlLabel,
+  Switch,
   Stack,
   TextField,
   Typography,
@@ -55,6 +58,11 @@ export default function CreateLabTestPage() {
   const [selected, setSelected] = useState(null);
 
   const [form, setForm] = useState({ test_name: "", test_code: "", price: "" });
+  const [useTemplate, setUseTemplate] = useState(true);
+  const [templateFields, setTemplateFields] = useState([
+    { key: "result", label: "Result", type: "text", required: true, options: "", unit: "", rangeLow: "", rangeHigh: "", answer: "" },
+  ]);
+  const [templateUiError, setTemplateUiError] = useState("");
   const [saving, setSaving] = useState(false);
 
   // Load this hospital's lab tests first so we never show already-added tests in the cards
@@ -131,11 +139,84 @@ export default function CreateLabTestPage() {
       return;
     }
     const priceVal = String(form.price ?? "").trim();
+    let parsedTemplate = null;
+    if (useTemplate) {
+      const slugifyKey = (s) =>
+        String(s || "")
+          .toLowerCase()
+          .trim()
+          .replace(/\s+/g, "_")
+          .replace(/[^a-z0-9_]/g, "")
+          .slice(0, 64);
+
+      const clean = (templateFields || []).map((f) => ({
+        key: String(f.key || "").trim(),
+        label: String(f.label || "").trim(),
+        type: String(f.type || "text").trim(),
+        required: !!f.required,
+        // "answer" is an example/default answer the admin can set (optional)
+        answer: String(f.answer || "").trim() || undefined,
+        unit: String(f.unit || "").trim() || undefined,
+        range:
+          (String(f.rangeLow || "").trim() || String(f.rangeHigh || "").trim())
+            ? {
+                low: String(f.rangeLow || "").trim() === "" ? undefined : Number(f.rangeLow),
+                high: String(f.rangeHigh || "").trim() === "" ? undefined : Number(f.rangeHigh),
+              }
+            : undefined,
+        options:
+          String(f.options || "").trim() && (String(f.type || "").toLowerCase() === "select" || String(f.type || "").toLowerCase() === "multi_select")
+            ? String(f.options)
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : undefined,
+      }));
+
+      const errors = [];
+      const used = new Set();
+      for (const fld of clean) {
+        // Auto-generate key from question if missing
+        if (!fld.key && fld.label) fld.key = slugifyKey(fld.label);
+        if (!fld.key) errors.push("Each question must have text (used to generate a key)");
+        if (!fld.label) errors.push(`Each question must have text`);
+        if (fld.key) {
+          if (used.has(fld.key)) errors.push(`Duplicate field key: "${fld.key}"`);
+          used.add(fld.key);
+        }
+        const t = String(fld.type || "").toLowerCase();
+        if ((t === "select" || t === "multi_select") && (!Array.isArray(fld.options) || fld.options.length === 0)) {
+          errors.push(`Field "${fld.key}" needs options (comma separated)`);
+        }
+        if (fld.range) {
+          const lo = fld.range.low;
+          const hi = fld.range.high;
+          if (lo !== undefined && !Number.isFinite(lo)) errors.push(`Field "${fld.key}" range low must be a number`);
+          if (hi !== undefined && !Number.isFinite(hi)) errors.push(`Field "${fld.key}" range high must be a number`);
+        }
+      }
+      if (clean.length === 0) errors.push("Add at least one template field, or turn off templates");
+      if (errors.length) {
+        setTemplateUiError(errors[0]);
+        Swal.fire({ icon: "error", title: "Template error", text: errors[0] });
+        return;
+      }
+      setTemplateUiError("");
+      parsedTemplate = { version: 1, fields: clean.map((f) => {
+        const out = { key: f.key, label: f.label, type: f.type, required: f.required };
+        if (f.unit) out.unit = f.unit;
+        if (f.range && (f.range.low !== undefined || f.range.high !== undefined)) out.range = f.range;
+        if (Array.isArray(f.options)) out.options = f.options;
+        if (f.answer) out.answer = f.answer;
+        return out;
+      }) };
+    }
     const payload = {
       test_name: form.test_name.trim(),
       test_code: form.test_code.trim(),
       price: priceVal ? Number(priceVal) : null,
       ...(selected?.id ? { kenya_lab_test_id: selected.id } : {}),
+      ...(parsedTemplate ? { template: parsedTemplate } : {}),
     };
     setSaving(true);
     try {
@@ -353,6 +434,149 @@ export default function CreateLabTestPage() {
                   placeholder="0.00"
                   helperText="Your hospital&apos;s charge for this test"
                 />
+
+                <Box sx={{ pt: 0.5 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1 }}>
+                    Result template
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                    Build the result entry form for this test (no JSON needed). Supported field types:
+                    <b> checkbox</b>, <b>text</b>, <b>multi_text</b>, <b>number</b>, <b>select</b>, <b>multi_select</b>.
+                  </Typography>
+
+                  <FormControlLabel
+                    control={<Switch checked={useTemplate} onChange={(e) => setUseTemplate(e.target.checked)} />}
+                    label={useTemplate ? "Template enabled" : "No template (simple result only)"}
+                    sx={{ mb: 1 }}
+                  />
+
+                  {useTemplate && (
+                    <>
+                      {templateUiError && (
+                        <Typography color="error" variant="body2" sx={{ mb: 1 }}>
+                          {templateUiError}
+                        </Typography>
+                      )}
+
+                      <Stack spacing={1.25}>
+                        {(templateFields || []).map((f, idx) => {
+                          const type = String(f.type || "text");
+                          const showOptions = type === "select" || type === "multi_select";
+                          const showRange = type === "number";
+                          return (
+                            <Card key={`${idx}-${f.key || "field"}`} variant="outlined" sx={{ borderRadius: 2 }}>
+                              <CardContent sx={{ py: 2, "&:last-child": { pb: 2 } }}>
+                                <Stack spacing={1.5}>
+                                  <TextField
+                                    label="Question"
+                                    size="small"
+                                    value={f.label}
+                                    onChange={(e) =>
+                                      setTemplateFields((prev) =>
+                                        prev.map((x, i) => (i === idx ? { ...x, label: e.target.value } : x)),
+                                      )
+                                    }
+                                    placeholder="e.g. Malaria"
+                                    fullWidth
+                                  />
+                                  <TextField
+                                    label="Answer (optional)"
+                                    size="small"
+                                    value={f.answer || ""}
+                                    onChange={(e) =>
+                                      setTemplateFields((prev) =>
+                                        prev.map((x, i) => (i === idx ? { ...x, answer: e.target.value } : x)),
+                                      )
+                                    }
+                                    placeholder={type === "checkbox" ? "e.g. true" : type === "number" ? "e.g. 13.5" : "e.g. Negative"}
+                                    fullWidth
+                                  />
+                                  <TextField
+                                    select
+                                    label="Expected answer type"
+                                    size="small"
+                                    value={type}
+                                    onChange={(e) =>
+                                      setTemplateFields((prev) =>
+                                        prev.map((x, i) =>
+                                          i === idx
+                                            ? { ...x, type: e.target.value, options: e.target.value === "select" || e.target.value === "multi_select" ? x.options : "" }
+                                            : x,
+                                        ),
+                                      )
+                                    }
+                                    fullWidth
+                                  >
+                                    <MenuItem value="text">text</MenuItem>
+                                    <MenuItem value="multi_text">multi_text</MenuItem>
+                                    <MenuItem value="number">number</MenuItem>
+                                    <MenuItem value="checkbox">checkbox</MenuItem>
+                                    <MenuItem value="select">select</MenuItem>
+                                    <MenuItem value="multi_select">multi_select</MenuItem>
+                                  </TextField>
+                                  <FormControlLabel
+                                    control={
+                                      <Switch
+                                        checked={!!f.required}
+                                        onChange={(e) =>
+                                          setTemplateFields((prev) =>
+                                            prev.map((x, i) => (i === idx ? { ...x, required: e.target.checked } : x)),
+                                          )
+                                        }
+                                      />
+                                    }
+                                    label="Required"
+                                  />
+                                  <Button
+                                    type="button"
+                                    color="error"
+                                    variant="outlined"
+                                    onClick={() => setTemplateFields((prev) => prev.filter((_, i) => i !== idx))}
+                                    sx={{ alignSelf: "flex-start" }}
+                                  >
+                                    Remove
+                                  </Button>
+                                </Stack>
+
+                                {/* Unit/range removed from UI as requested */}
+
+                                {showOptions && (
+                                  <TextField
+                                    label="Options (comma separated)"
+                                    size="small"
+                                    fullWidth
+                                    sx={{ mt: 1 }}
+                                    value={f.options}
+                                    onChange={(e) =>
+                                      setTemplateFields((prev) =>
+                                        prev.map((x, i) => (i === idx ? { ...x, options: e.target.value } : x)),
+                                      )
+                                    }
+                                    placeholder="e.g. Positive, Negative"
+                                  />
+                                )}
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+
+                        <Button
+                          type="button"
+                          variant="outlined"
+                          onClick={() =>
+                            setTemplateFields((prev) => [
+                              ...prev,
+                              { key: "", label: "", type: "text", required: false, options: "", unit: "", rangeLow: "", rangeHigh: "", answer: "" },
+                            ])
+                          }
+                          sx={{ alignSelf: "flex-start" }}
+                        >
+                          Add question
+                        </Button>
+                      </Stack>
+                    </>
+                  )}
+                </Box>
                 <Stack direction="row" spacing={2} sx={{ pt: 1 }}>
                   <Button
                     type="button"

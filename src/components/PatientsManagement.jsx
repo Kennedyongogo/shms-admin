@@ -263,7 +263,6 @@ export default function PatientsManagement() {
 
   const saveCreate = async () => {
     if (!requireTokenGuard()) return;
-    if (!isSuperAdmin) return;
     if (!createForm.hospital_id) return Swal.fire({ icon: "warning", title: "Missing hospital", text: "Select a hospital." });
     if (!createForm.full_name.trim()) return Swal.fire({ icon: "warning", title: "Missing name", text: "Full name is required." });
     const normalizedPhone = normalizeKenyanPhone(createForm.phone);
@@ -334,7 +333,6 @@ export default function PatientsManagement() {
 
   const saveEdit = async () => {
     if (!requireTokenGuard()) return;
-    if (!isSuperAdmin) return;
     if (!editForm?.id) return;
     if (!editForm.full_name.trim()) return Swal.fire({ icon: "warning", title: "Missing name", text: "Full name is required." });
     if (!editForm.hospital_id) return Swal.fire({ icon: "warning", title: "Missing hospital", text: "Select a hospital." });
@@ -405,26 +403,20 @@ export default function PatientsManagement() {
               <Typography sx={{ opacity: 0.9, mt: 0.5 }}>List, edit, and delete patient records.</Typography>
             </Box>
             <Stack direction={{ xs: "column", sm: "row" }} spacing={1} sx={{ width: { xs: "100%", sm: "auto" } }}>
-              {isSuperAdmin && (
-                <Button
-                  variant="outlined"
-                  startIcon={<Add />}
-                  onClick={openCreate}
-                  sx={{ width: { xs: "100%", sm: "auto" }, color: "white", borderColor: "rgba(255,255,255,0.6)", fontWeight: 800, fontSize: { xs: "0.875rem", sm: "inherit" }, "&:hover": { borderColor: "white", bgcolor: "rgba(255,255,255,0.1)" } }}
-                >
-                  Add walk-in patient
-                </Button>
-              )}
+              <Button
+                variant="outlined"
+                startIcon={<Add />}
+                onClick={openCreate}
+                sx={{ width: { xs: "100%", sm: "auto" }, color: "white", borderColor: "rgba(255,255,255,0.6)", fontWeight: 800, fontSize: { xs: "0.875rem", sm: "inherit" }, "&:hover": { borderColor: "white", bgcolor: "rgba(255,255,255,0.1)" } }}
+              >
+                Add walk-in patient
+              </Button>
               </Stack>
           </Stack>
         </Box>
 
         <CardContent>
-          {!isSuperAdmin && (
-            <Alert severity="info" sx={{ mb: 2 }}>
-              You can view patients, but only Super Admin can edit or delete.
-            </Alert>
-          )}
+          
 
           <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ mb: 2 }} alignItems={{ md: "center" }}>
             <TextField
@@ -510,9 +502,9 @@ export default function PatientsManagement() {
                               <Visibility fontSize="inherit" />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title={isSuperAdmin ? "Edit" : "Super Admin only"}>
+                          <Tooltip title="Edit">
                             <span>
-                              <IconButton size="small" onClick={() => openEdit(p)} disabled={!isSuperAdmin}>
+                              <IconButton size="small" onClick={() => openEdit(p)}>
                                 <Edit fontSize="inherit" />
                               </IconButton>
                             </span>
@@ -854,7 +846,7 @@ export default function PatientsManagement() {
           <Button
             variant="contained"
             onClick={saveEdit}
-            disabled={!isSuperAdmin || editSaving || !editForm}
+            disabled={editSaving || !editForm}
             sx={{ bgcolor: theme.palette.primary.main, "&:hover": { bgcolor: theme.palette.primary.dark }, fontWeight: 900 }}
           >
             {editSaving ? "Saving…" : "Save"}
@@ -944,7 +936,7 @@ export default function PatientsManagement() {
         </DialogContent>
         <DialogActions>
           <Button variant="outlined" onClick={() => setCreateOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={saveCreate} disabled={!isSuperAdmin || createSaving} sx={{ fontWeight: 900 }}>
+          <Button variant="contained" onClick={saveCreate} disabled={createSaving} sx={{ fontWeight: 900 }}>
             {createSaving ? "Creating…" : "Create"}
           </Button>
         </DialogActions>

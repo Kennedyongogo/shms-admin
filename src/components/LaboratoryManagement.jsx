@@ -13,13 +13,16 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  FormControlLabel,
   FormControl,
   IconButton,
   InputAdornment,
   InputLabel,
   MenuItem,
+  ListItemText,
   Select,
   Stack,
+  Switch,
   Tab,
   Tabs,
   Table,
@@ -32,6 +35,7 @@ import {
   TextField,
   Tooltip,
   Typography,
+  Checkbox,
 } from "@mui/material";
 import {
   Add,
@@ -165,11 +169,17 @@ export default function LaboratoryManagement() {
     mode: "create",
     id: null,
   });
+  const [testView, setTestView] = useState({ open: false, loading: false, test: null });
   const [testForm, setTestForm] = useState({
     test_name: "",
     test_code: "",
     price: "",
   });
+  const [testTemplateEnabled, setTestTemplateEnabled] = useState(false);
+  const [testTemplateFields, setTestTemplateFields] = useState([
+    { label: "Result", answer: "", type: "text", required: true, options: "" },
+  ]);
+  const [testTemplateUiError, setTestTemplateUiError] = useState("");
 
   // Lab Results
   const resultReqId = useRef(0);
@@ -183,16 +193,14 @@ export default function LaboratoryManagement() {
 
   const [resultDialog, setResultDialog] = useState({
     open: false,
+    mode: "edit",
     lab_order_item_id: null,
     lab_order: null,
   });
   const [resultSaving, setResultSaving] = useState(false);
-  const [resultForm, setResultForm] = useState({
-    result_value: "",
-    reference_range: "",
-    interpretation: "",
-    result_date: "",
-  });
+  const [resultTemplate, setResultTemplate] = useState(null);
+  const [resultValues, setResultValues] = useState({});
+  const [resultForm, setResultForm] = useState({ interpretation: "", result_date: "" });
 
   // Lab billing & payment tab (bills for lab orders)
   const labBillsReqId = useRef(0);
@@ -862,6 +870,9 @@ export default function LaboratoryManagement() {
 
   const openCreateTest = () => {
     setTestForm({ test_name: "", test_code: "", price: "" });
+    setTestTemplateEnabled(false);
+    setTestTemplateFields([{ label: "Result", answer: "", type: "text", required: true, options: "" }]);
+    setTestTemplateUiError("");
     setTestDialog({ open: true, mode: "create", id: null });
   };
   const openEditTest = (t) => {
@@ -870,7 +881,36 @@ export default function LaboratoryManagement() {
       test_code: t.test_code || "",
       price: t.price ?? "",
     });
+    const fields = t?.template?.template?.fields;
+    if (Array.isArray(fields) && fields.length > 0) {
+      setTestTemplateEnabled(true);
+      setTestTemplateFields(
+        fields.map((q) => ({
+          label: q.label || "",
+          answer: q.answer != null ? String(q.answer) : "",
+          type: String(q.type || "text"),
+          required: !!q.required,
+          options: Array.isArray(q.options) ? q.options.join(", ") : "",
+        })),
+      );
+    } else {
+      setTestTemplateEnabled(false);
+      setTestTemplateFields([{ label: "Result", answer: "", type: "text", required: true, options: "" }]);
+    }
+    setTestTemplateUiError("");
     setTestDialog({ open: true, mode: "edit", id: t.id });
+  };
+
+  const openViewTest = async (t) => {
+    if (!requireTokenGuard() || !t?.id) return;
+    setTestView({ open: true, loading: true, test: null });
+    try {
+      const data = await fetchJson(`${API.labTests}/${t.id}`, { token });
+      setTestView({ open: true, loading: false, test: data?.data || null });
+    } catch (e) {
+      setTestView({ open: false, loading: false, test: null });
+      Swal.fire({ icon: "error", title: "Failed to load lab test", text: e.message });
+    }
   };
 
   const saveTest = async () => {
@@ -894,6 +934,64 @@ export default function LaboratoryManagement() {
       test_code: testForm.test_code.trim(),
       price: priceRaw ? priceRaw : null,
     };
+
+    const slugifyKey = (s) =>
+      String(s || "")
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, "_")
+        .replace(/[^a-z0-9_]/g, "")
+        .slice(0, 64);
+
+    if (testTemplateEnabled) {
+      const clean = (testTemplateFields || []).map((f) => ({
+        label: String(f.label || "").trim(),
+        key: slugifyKey(f.label),
+        type: String(f.type || "text").trim(),
+        required: !!f.required,
+        answer: String(f.answer || "").trim() || undefined,
+        options:
+          (String(f.type || "").toLowerCase() === "select" || String(f.type || "").toLowerCase() === "multi_select") &&
+          String(f.options || "").trim()
+            ? String(f.options)
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : undefined,
+      }));
+      const errors = [];
+      const used = new Set();
+      for (const q of clean) {
+        if (!q.label) errors.push("Each question must have text");
+        if (!q.key) errors.push("Each question must have text");
+        if (q.key) {
+          if (used.has(q.key)) errors.push(`Duplicate question: "${q.label}"`);
+          used.add(q.key);
+        }
+        const t = String(q.type || "").toLowerCase();
+        if ((t === "select" || t === "multi_select") && (!Array.isArray(q.options) || q.options.length === 0)) {
+          errors.push(`Question "${q.label}" needs options`);
+        }
+      }
+      if (clean.length === 0) errors.push("Add at least one question or disable template");
+      if (errors.length) {
+        setTestTemplateUiError(errors[0]);
+        Swal.fire({ icon: "error", title: "Template error", text: errors[0] });
+        return;
+      }
+      setTestTemplateUiError("");
+      payload.template = {
+        version: 1,
+        fields: clean.map((q) => {
+          const out = { key: q.key, label: q.label, type: q.type, required: q.required };
+          if (q.answer) out.answer = q.answer;
+          if (Array.isArray(q.options)) out.options = q.options;
+          return out;
+        }),
+      };
+    } else if (testDialog.mode === "edit") {
+      payload.template = null;
+    }
     try {
       if (testDialog.mode === "create") {
         await fetchJson(API.labTests, { method: "POST", token, body: payload });
@@ -950,15 +1048,42 @@ export default function LaboratoryManagement() {
     }
   };
 
-  const openEnterResult = (labOrderItemId, existingResult, labOrder) => {
+  const openEnterResult = async (labOrderItemId, existingResult, labOrder, mode = "edit") => {
+    if (!requireTokenGuard()) return;
+
+    // The Results tab often passes a labOrder without items; fetch full order if needed.
+    let orderObj = labOrder || existingResult?.labOrderItem?.labOrder || null;
+    const orderId = orderObj?.id || existingResult?.labOrderItem?.lab_order_id || null;
+
+    if (orderId && !(Array.isArray(orderObj?.items) && orderObj.items.length)) {
+      try {
+        const res = await fetchJson(`${API.labOrders}/${orderId}`, { token });
+        orderObj = res?.data || orderObj;
+      } catch {
+        // If this fails, we still open using existingResult (template may be missing)
+      }
+    }
+
+    const item = orderObj?.items?.find((x) => x.id === labOrderItemId) || null;
+    const template =
+      item?.labTest?.template?.template ||
+      existingResult?.template_snapshot ||
+      null;
+
+    setResultTemplate(template);
     setResultDialog({
       open: true,
+      mode,
       lab_order_item_id: labOrderItemId,
-      lab_order: labOrder || existingResult?.labOrderItem?.labOrder || null,
+      lab_order: orderObj,
     });
+
+    setResultValues(
+      existingResult?.results && typeof existingResult.results === "object"
+        ? existingResult.results
+        : {}
+    );
     setResultForm({
-      result_value: existingResult?.result_value || "",
-      reference_range: existingResult?.reference_range || "",
       interpretation: existingResult?.interpretation || "",
       result_date: existingResult?.result_date
         ? new Date(existingResult.result_date).toISOString().slice(0, 16)
@@ -969,6 +1094,7 @@ export default function LaboratoryManagement() {
   const saveResult = async () => {
     if (!requireTokenGuard()) return;
     if (!resultDialog.lab_order_item_id) return;
+    if (resultDialog.mode === "view") return;
     setResultSaving(true);
     try {
       await fetchJson(API.labResults, {
@@ -976,9 +1102,8 @@ export default function LaboratoryManagement() {
         token,
         body: {
           lab_order_item_id: resultDialog.lab_order_item_id,
-          result_value: resultForm.result_value.trim() || null,
-          reference_range: resultForm.reference_range.trim() || null,
           interpretation: resultForm.interpretation.trim() || null,
+          results: resultValues || {},
           result_date: resultForm.result_date
             ? new Date(resultForm.result_date).toISOString()
             : null,
@@ -993,6 +1118,7 @@ export default function LaboratoryManagement() {
       const orderId = resultDialog.lab_order?.id;
       setResultDialog({
         open: false,
+        mode: "edit",
         lab_order_item_id: null,
         lab_order: null,
       });
@@ -1009,28 +1135,6 @@ export default function LaboratoryManagement() {
         }
       }
     } catch (e) {
-      if (Number(e?.status) === 402 && e?.data?.code === "PAYMENT_REQUIRED") {
-        const ask = await Swal.fire({
-          icon: "warning",
-          title: "Payment required",
-          text: "Pay the lab order bill before entering results.",
-          showCancelButton: true,
-          confirmButtonText: "Open billing",
-          cancelButtonText: "Cancel",
-          reverseButtons: true,
-        });
-        if (ask.isConfirmed) {
-          const order = resultDialog.lab_order || null;
-          if (order?.id) openBillingForLabOrder(order);
-          else
-            Swal.fire({
-              icon: "info",
-              title: "Missing order",
-              text: "Open the lab order and use its Billing button.",
-            });
-        }
-        return;
-      }
       Swal.fire({ icon: "error", title: "Failed", text: e.message });
     } finally {
       setResultSaving(false);
@@ -1234,7 +1338,7 @@ export default function LaboratoryManagement() {
                           hover
                           onClick={(e) => {
                             if (e.target.closest("[data-actions-cell]")) return;
-                            openEditTest(t);
+                            openViewTest(t);
                           }}
                           sx={{ cursor: { xs: "pointer", sm: "default" } }}
                         >
@@ -1514,7 +1618,7 @@ export default function LaboratoryManagement() {
               <TextField
                 value={resultSearch}
                 onChange={(e) => setResultSearch(e.target.value)}
-                placeholder="Search results (value/range)…"
+                placeholder="Search results (patient/test/result)…"
                 size="small"
                 fullWidth
                 type="search"
@@ -1582,47 +1686,91 @@ export default function LaboratoryManagement() {
                         </TableCell>
                       </TableRow>
                     ) : results.length ? (
-                      results.map((r, idx) => (
-                        <TableRow key={r.id} hover>
-                          <TableCell
-                            sx={{ color: "text.secondary", fontWeight: 700 }}
-                          >
-                            {resultPage * resultRowsPerPage + idx + 1}
-                          </TableCell>
-                          <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" } }}>
-                            {formatDateTime(r.result_date || r.createdAt)}
-                          </TableCell>
-                          <TableCell>
-                            {r.labOrderItem?.labOrder?.patient?.full_name ||
-                              r.labOrderItem?.labOrder?.patient?.user
-                                ?.full_name ||
-                              "—"}
-                          </TableCell>
-                          <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
-                            {r.labOrderItem?.labTest?.test_name || "—"}
-                          </TableCell>
-                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{fmt(r.result_value)}</TableCell>
-                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{fmt(r.reference_range)}</TableCell>
-                          <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
-                            {r.labTechnician?.user?.full_name || "—"}
-                          </TableCell>
-                          <TableCell align="right">
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              onClick={() =>
-                                openEnterResult(
-                                  r.lab_order_item_id,
-                                  r,
-                                  r.labOrderItem?.labOrder,
-                                )
-                              }
-                            >
-                              Update
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                      results.map((r, idx) => {
+                        const resObj = r?.results && typeof r.results === "object" ? r.results : null;
+                        const rangeVal = (resObj && (resObj.reference_range ?? resObj.range)) ?? null;
+                        const displayPairs = resObj
+                          ? Object.entries(resObj)
+                              .filter(([k]) => k !== "reference_range" && k !== "range")
+                              .slice(0, 4)
+                              .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : String(v)}`)
+                          : [];
+                        const displayResult = displayPairs.length ? displayPairs.join(" | ") : resObj ? JSON.stringify(resObj) : "—";
+
+                        return (
+                          <TableRow key={r.id} hover>
+                            <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>
+                              {resultPage * resultRowsPerPage + idx + 1}
+                            </TableCell>
+                            <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" } }}>
+                              {formatDateTime(r.result_date || r.createdAt)}
+                            </TableCell>
+                            <TableCell>
+                              {r.labOrderItem?.labOrder?.patient?.full_name ||
+                                r.labOrderItem?.labOrder?.patient?.user?.full_name ||
+                                "—"}
+                            </TableCell>
+                            <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
+                              {r.labOrderItem?.labTest?.test_name || "—"}
+                            </TableCell>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  fontFamily: "monospace",
+                                  fontSize: 12,
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                }}
+                                title={resObj ? JSON.stringify(resObj) : ""}
+                              >
+                                {displayResult}
+                              </Typography>
+                            </TableCell>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
+                              {rangeVal != null && String(rangeVal).trim() ? String(rangeVal) : "—"}
+                            </TableCell>
+                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
+                              {r.labTechnician?.user?.full_name || "—"}
+                            </TableCell>
+                            <TableCell align="right">
+                            <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 0.5 }}>
+                              <Tooltip title="View">
+                                <IconButton
+                                  size="small"
+                                  onClick={() =>
+                                    openEnterResult(
+                                      r.lab_order_item_id,
+                                      r,
+                                      r.labOrderItem?.labOrder,
+                                      "view",
+                                    )
+                                  }
+                                >
+                                  <Visibility fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Edit">
+                                <IconButton
+                                  size="small"
+                                  onClick={() =>
+                                    openEnterResult(
+                                      r.lab_order_item_id,
+                                      r,
+                                      r.labOrderItem?.labOrder,
+                                      "edit",
+                                    )
+                                  }
+                                >
+                                  <Edit fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </Box>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
                     ) : (
                       <TableRow>
                         <TableCell colSpan={8}>
@@ -2098,7 +2246,7 @@ export default function LaboratoryManagement() {
               )}
               {!orderBilling?.paid && (
                 <Alert severity="warning" sx={{ mt: 1.5 }}>
-                  Lab order completion and entering results are blocked until payment is recorded.
+                  Payment is still required to mark a lab order as completed, but you can enter results before payment.
                 </Alert>
               )}
             </Box>
@@ -2146,8 +2294,10 @@ export default function LaboratoryManagement() {
                       <TableCell>{it.labTest?.test_name || "—"}</TableCell>
                       <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>{it.labTest?.test_code || "—"}</TableCell>
                       <TableCell>
-                        {it.result?.result_value ? (
-                          it.result.result_value
+                        {it.result?.results && typeof it.result.results === "object" ? (
+                          <Typography variant="body2" sx={{ fontFamily: "monospace", fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 260 }}>
+                            {JSON.stringify(it.result.results)}
+                          </Typography>
                         ) : (
                           <Chip size="small" label="pending" variant="outlined" />
                         )}
@@ -2156,7 +2306,6 @@ export default function LaboratoryManagement() {
                         <Button
                           size="small"
                           variant="outlined"
-                          disabled={!orderBilling?.paid}
                           onClick={() =>
                             openEnterResult(it.id, it.result, orderView.order)
                           }
@@ -2247,6 +2396,132 @@ export default function LaboratoryManagement() {
                 setTestForm((p) => ({ ...p, price: e.target.value }))
               }
             />
+
+            <Divider />
+            <Typography sx={{ fontWeight: 900 }}>Template</Typography>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={testTemplateEnabled}
+                  onChange={(e) => setTestTemplateEnabled(e.target.checked)}
+                />
+              }
+              label={testTemplateEnabled ? "Template enabled" : "No template"}
+            />
+
+            {testTemplateEnabled && (
+              <>
+                {testTemplateUiError && (
+                  <Typography color="error" variant="body2">
+                    {testTemplateUiError}
+                  </Typography>
+                )}
+                <Stack spacing={1.25}>
+                  {(testTemplateFields || []).map((q, idx) => {
+                    const type = String(q.type || "text").toLowerCase();
+                    const showOptions = type === "select" || type === "multi_select";
+                    return (
+                      <Card key={idx} variant="outlined" sx={{ borderRadius: 2 }}>
+                        <CardContent sx={{ py: 2, "&:last-child": { pb: 2 } }}>
+                          <Stack spacing={1.25}>
+                            <TextField
+                              label="Question"
+                              size="small"
+                              fullWidth
+                              value={q.label}
+                              onChange={(e) =>
+                                setTestTemplateFields((prev) =>
+                                  prev.map((x, i) => (i === idx ? { ...x, label: e.target.value } : x)),
+                                )
+                              }
+                            />
+                            <TextField
+                              label="Answer (optional)"
+                              size="small"
+                              fullWidth
+                              value={q.answer}
+                              onChange={(e) =>
+                                setTestTemplateFields((prev) =>
+                                  prev.map((x, i) => (i === idx ? { ...x, answer: e.target.value } : x)),
+                                )
+                              }
+                            />
+                            <TextField
+                              select
+                              label="Expected answer type"
+                              size="small"
+                              fullWidth
+                              value={q.type}
+                              onChange={(e) =>
+                                setTestTemplateFields((prev) =>
+                                  prev.map((x, i) => (i === idx ? { ...x, type: e.target.value } : x)),
+                                )
+                              }
+                            >
+                              <MenuItem value="text">text</MenuItem>
+                              <MenuItem value="multi_text">multi_text</MenuItem>
+                              <MenuItem value="number">number</MenuItem>
+                              <MenuItem value="checkbox">checkbox</MenuItem>
+                              <MenuItem value="select">select</MenuItem>
+                              <MenuItem value="multi_select">multi_select</MenuItem>
+                            </TextField>
+                            {showOptions && (
+                              <TextField
+                                label="Options (comma separated)"
+                                size="small"
+                                fullWidth
+                                value={q.options || ""}
+                                onChange={(e) =>
+                                  setTestTemplateFields((prev) =>
+                                    prev.map((x, i) => (i === idx ? { ...x, options: e.target.value } : x)),
+                                  )
+                                }
+                                placeholder="e.g. Positive, Negative"
+                              />
+                            )}
+                            <FormControlLabel
+                              control={
+                                <Switch
+                                  checked={!!q.required}
+                                  onChange={(e) =>
+                                    setTestTemplateFields((prev) =>
+                                      prev.map((x, i) => (i === idx ? { ...x, required: e.target.checked } : x)),
+                                    )
+                                  }
+                                />
+                              }
+                              label="Required"
+                            />
+                            <Button
+                              type="button"
+                              color="error"
+                              variant="outlined"
+                              onClick={() => setTestTemplateFields((prev) => prev.filter((_, i) => i !== idx))}
+                              sx={{ alignSelf: "flex-start" }}
+                            >
+                              Remove question
+                            </Button>
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                  <Button
+                    type="button"
+                    variant="outlined"
+                    onClick={() =>
+                      setTestTemplateFields((prev) => [
+                        ...prev,
+                        { label: "", answer: "", type: "text", required: false, options: "" },
+                      ])
+                    }
+                    sx={{ alignSelf: "flex-start" }}
+                  >
+                    Add question
+                  </Button>
+                </Stack>
+              </>
+            )}
             {!isSuperAdmin && (
               <Alert severity="info">
                 Only Super Admin can create/edit lab tests.
@@ -2278,12 +2553,169 @@ export default function LaboratoryManagement() {
         </DialogActions>
       </Dialog>
 
+      {/* Lab test view (includes template) */}
+      <Dialog
+        open={testView.open}
+        onClose={() => setTestView({ open: false, loading: false, test: null })}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
+      >
+        <DialogTitle sx={{ fontWeight: 900 }}>Lab Test</DialogTitle>
+        <DialogContent dividers sx={{ overflowY: "auto" }}>
+          {testView.loading ? (
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ py: 2 }}>
+              <CircularProgress size={18} />
+              <Typography color="text.secondary">Loading…</Typography>
+            </Stack>
+          ) : !testView.test ? (
+            <Typography color="text.secondary">No data.</Typography>
+          ) : (
+            <Stack spacing={2}>
+              <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
+                <Typography sx={{ fontWeight: 900 }}>{testView.test.test_name || "—"}</Typography>
+                <Typography color="text.secondary">Code: {testView.test.test_code || "—"}</Typography>
+                <Typography color="text.secondary">Price: {fmt(testView.test.price)}</Typography>
+              </Box>
+
+              <Box sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, p: 2 }}>
+                <Typography sx={{ fontWeight: 900, mb: 1 }}>Template</Typography>
+                {testView.test.template?.template?.fields?.length ? (
+                  <Stack spacing={1.5}>
+                    <Typography variant="body2" color="text.secondary">
+                      Preview (read-only)
+                    </Typography>
+                    {testView.test.template.template.fields.map((q, i) => {
+                      const type = String(q?.type || "text").toLowerCase();
+                      const label = q?.label || q?.key || `Question ${i + 1}`;
+                      const required = !!q?.required;
+                      const answer = q?.answer;
+                      const options = Array.isArray(q?.options) ? q.options : [];
+
+                      if (type === "checkbox" || type === "boolean") {
+                        const checked = String(answer).toLowerCase() === "true";
+                        return (
+                          <Box key={q.key || i} sx={{ p: 1.5, borderRadius: 2, bgcolor: "background.paper", border: "1px solid", borderColor: "divider" }}>
+                            <FormControlLabel
+                              control={<Checkbox checked={checked} disabled />}
+                              label={
+                                <Typography sx={{ fontWeight: 800 }}>
+                                  {label}{required ? " *" : ""}
+                                </Typography>
+                              }
+                            />
+                          </Box>
+                        );
+                      }
+
+                      if (type === "select") {
+                        const value = answer != null ? String(answer) : "";
+                        return (
+                          <Box key={q.key || i} sx={{ p: 1.5, borderRadius: 2, bgcolor: "background.paper", border: "1px solid", borderColor: "divider" }}>
+                            <TextField
+                              label={label}
+                              fullWidth
+                              size="small"
+                              value={options.includes(value) ? value : ""}
+                              disabled
+                              helperText={required ? "Required" : "Optional"}
+                            />
+                            {options.length > 0 && (
+                              <Box sx={{ mt: 1 }}>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+                                  Options
+                                </Typography>
+                                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
+                                  {options.map((opt) => (
+                                    <Chip
+                                      key={opt}
+                                      size="small"
+                                      label={opt}
+                                      color={opt === value ? "primary" : "default"}
+                                      variant={opt === value ? "filled" : "outlined"}
+                                    />
+                                  ))}
+                                </Box>
+                              </Box>
+                            )}
+                          </Box>
+                        );
+                      }
+
+                      if (type === "multi_select") {
+                        const valueArr = Array.isArray(answer) ? answer.map(String) : (typeof answer === "string" ? answer.split(",").map((s) => s.trim()).filter(Boolean) : []);
+                        return (
+                          <Box key={q.key || i} sx={{ p: 1.5, borderRadius: 2, bgcolor: "background.paper", border: "1px solid", borderColor: "divider" }}>
+                            <TextField
+                              label={label}
+                              fullWidth
+                              size="small"
+                              value={valueArr.join(", ")}
+                              disabled
+                              helperText={options.length ? `Options: ${options.join(", ")}` : (required ? "Required" : "Optional")}
+                            />
+                          </Box>
+                        );
+                      }
+
+                      if (type === "multi_text") {
+                        const valueArr = Array.isArray(answer) ? answer.map(String) : (answer != null ? [String(answer)] : []);
+                        return (
+                          <Box key={q.key || i} sx={{ p: 1.5, borderRadius: 2, bgcolor: "background.paper", border: "1px solid", borderColor: "divider" }}>
+                            <TextField
+                              label={label}
+                              fullWidth
+                              size="small"
+                              multiline
+                              minRows={3}
+                              value={valueArr.join("\n")}
+                              disabled
+                              helperText={required ? "Required" : "Optional"}
+                            />
+                          </Box>
+                        );
+                      }
+
+                      // number / text / default
+                      return (
+                        <Box key={q.key || i} sx={{ p: 1.5, borderRadius: 2, bgcolor: "background.paper", border: "1px solid", borderColor: "divider" }}>
+                          <TextField
+                            label={label}
+                            fullWidth
+                            size="small"
+                            type={type === "number" ? "number" : "text"}
+                            value={answer != null ? String(answer) : ""}
+                            disabled
+                            helperText={required ? "Required" : "Optional"}
+                          />
+                        </Box>
+                      );
+                    })}
+                  </Stack>
+                ) : (
+                  <Typography color="text.secondary">No template saved for this test.</Typography>
+                )}
+              </Box>
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setTestView({ open: false, loading: false, test: null })}>Close</Button>
+          {isSuperAdmin && testView.test?.id && (
+            <Button variant="contained" onClick={() => { setTestView({ open: false, loading: false, test: null }); openEditTest(testView.test); }} sx={{ fontWeight: 900 }}>
+              Edit
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+
       {/* Enter/Update result */}
       <Dialog
         open={resultDialog.open}
         onClose={() =>
           setResultDialog({
             open: false,
+            mode: "edit",
             lab_order_item_id: null,
             lab_order: null,
           })
@@ -2292,34 +2724,164 @@ export default function LaboratoryManagement() {
         maxWidth="sm"
         PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}
       >
-        <DialogTitle sx={{ fontWeight: 900 }}>Lab Result</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 900 }}>
+          {resultDialog.mode === "view" ? "View lab result" : "Enter lab result"}
+        </DialogTitle>
         <DialogContent sx={{ overflowY: "auto" }}>
+          {(() => {
+            const readOnly = resultDialog.mode === "view";
+            return (
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              label="Result value"
-              fullWidth
-              value={resultForm.result_value}
-              onChange={(e) =>
-                setResultForm((p) => ({ ...p, result_value: e.target.value }))
-              }
-            />
-            <TextField
-              label="Reference range (optional)"
-              fullWidth
-              value={resultForm.reference_range}
-              onChange={(e) =>
-                setResultForm((p) => ({
-                  ...p,
-                  reference_range: e.target.value,
-                }))
-              }
-            />
+            {Array.isArray(resultTemplate?.fields) && resultTemplate.fields.length ? (
+              <Stack spacing={2}>
+                {resultTemplate.fields.map((q, i) => {
+                  const key = q?.key || q?.name || `q_${i}`;
+                  const label = q?.label || q?.name || q?.key || `Question ${i + 1}`;
+                  const type = (q?.type || "text").toLowerCase();
+                  const options = Array.isArray(q?.options) ? q.options.map(String) : [];
+                  const required = Boolean(q?.required);
+                  const value = resultValues?.[key];
+
+                  if (type === "checkbox") {
+                    return (
+                      <FormControlLabel
+                        key={key}
+                        control={
+                          <Checkbox
+                            checked={Boolean(value)}
+                            disabled={readOnly}
+                            onChange={(e) =>
+                              setResultValues((p) => ({ ...(p || {}), [key]: e.target.checked }))
+                            }
+                          />
+                        }
+                        label={required ? `${label} *` : label}
+                      />
+                    );
+                  }
+
+                  if (type === "select") {
+                    return (
+                      <FormControl key={key} fullWidth size="small">
+                        <InputLabel>{required ? `${label} *` : label}</InputLabel>
+                        <Select
+                          label={required ? `${label} *` : label}
+                          disabled={readOnly}
+                          value={value != null ? String(value) : ""}
+                          onChange={(e) =>
+                            setResultValues((p) => ({ ...(p || {}), [key]: e.target.value }))
+                          }
+                        >
+                          <MenuItem value="">
+                            <em>Select…</em>
+                          </MenuItem>
+                          {options.map((opt) => (
+                            <MenuItem key={opt} value={opt}>
+                              {opt}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    );
+                  }
+
+                  if (type === "multi_select") {
+                    const arr = Array.isArray(value)
+                      ? value.map(String)
+                      : typeof value === "string"
+                        ? value
+                            .split(",")
+                            .map((s) => s.trim())
+                            .filter(Boolean)
+                        : [];
+                    return (
+                      <FormControl key={key} fullWidth size="small">
+                        <InputLabel>{required ? `${label} *` : label}</InputLabel>
+                        <Select
+                          multiple
+                          label={required ? `${label} *` : label}
+                          disabled={readOnly}
+                          value={arr}
+                          onChange={(e) =>
+                            setResultValues((p) => ({ ...(p || {}), [key]: e.target.value }))
+                          }
+                          renderValue={(selected) => (
+                            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                              {(selected || []).map((v) => (
+                                <Chip key={v} size="small" label={v} />
+                              ))}
+                            </Box>
+                          )}
+                        >
+                          {options.map((opt) => (
+                            <MenuItem key={opt} value={opt}>
+                              <Checkbox checked={arr.indexOf(opt) > -1} />
+                              <ListItemText primary={opt} />
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    );
+                  }
+
+                  if (type === "multi_text") {
+                    const arr = Array.isArray(value) ? value.map(String) : value != null ? [String(value)] : [];
+                    return (
+                      <TextField
+                        key={key}
+                        label={required ? `${label} *` : label}
+                        fullWidth
+                        size="small"
+                        multiline
+                        minRows={3}
+                        value={arr.join("\n")}
+                        disabled={readOnly}
+                        onChange={(e) => {
+                          const lines = e.target.value
+                            .split("\n")
+                            .map((s) => s.trim())
+                            .filter((s) => s.length);
+                          setResultValues((p) => ({ ...(p || {}), [key]: lines }));
+                        }}
+                      />
+                    );
+                  }
+
+                  // number / text default
+                  return (
+                    <TextField
+                      key={key}
+                      label={required ? `${label} *` : label}
+                      fullWidth
+                      size="small"
+                      type={type === "number" ? "number" : "text"}
+                      value={value != null ? String(value) : ""}
+                      disabled={readOnly}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        const parsed = type === "number" ? (raw === "" ? "" : Number(raw)) : raw;
+                        setResultValues((p) => ({ ...(p || {}), [key]: parsed }));
+                      }}
+                    />
+                  );
+                })}
+              </Stack>
+            ) : (
+              <TextField
+                label="Result"
+                fullWidth
+                value={resultValues?.result != null ? String(resultValues.result) : ""}
+                disabled={readOnly}
+                onChange={(e) => setResultValues((p) => ({ ...(p || {}), result: e.target.value }))}
+              />
+            )}
             <TextField
               label="Interpretation (optional)"
               fullWidth
               multiline
               minRows={3}
               value={resultForm.interpretation}
+              disabled={readOnly}
               onChange={(e) =>
                 setResultForm((p) => ({ ...p, interpretation: e.target.value }))
               }
@@ -2330,6 +2892,7 @@ export default function LaboratoryManagement() {
               InputLabelProps={{ shrink: true }}
               fullWidth
               value={resultForm.result_date}
+              disabled={readOnly}
               onChange={(e) =>
                 setResultForm((p) => ({ ...p, result_date: e.target.value }))
               }
@@ -2339,24 +2902,28 @@ export default function LaboratoryManagement() {
               (if available).
             </Alert>
           </Stack>
+            );
+          })()}
         </DialogContent>
         <DialogActions>
           <Button
             variant="outlined"
             onClick={() =>
-              setResultDialog({ open: false, lab_order_item_id: null })
+              setResultDialog({ open: false, mode: "edit", lab_order_item_id: null, lab_order: null })
             }
           >
-            Cancel
+            Close
           </Button>
-          <Button
-            variant="contained"
-            onClick={saveResult}
-            disabled={resultSaving}
-            sx={{ fontWeight: 900 }}
-          >
-            {resultSaving ? "Saving…" : "Save"}
-          </Button>
+          {resultDialog.mode !== "view" && (
+            <Button
+              variant="contained"
+              onClick={saveResult}
+              disabled={resultSaving}
+              sx={{ fontWeight: 900 }}
+            >
+              {resultSaving ? "Saving…" : "Save"}
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>
