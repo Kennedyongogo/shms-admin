@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Alert,
   Box,
@@ -50,6 +50,7 @@ import {
 import { useTheme } from "@mui/material/styles";
 import Swal from "sweetalert2";
 import ReceiptDialog from "./ReceiptDialog";
+import LabResultViewReceipt from "./LabResultViewReceipt";
 
 const API = {
   labOrders: "/api/lab-orders",
@@ -103,6 +104,82 @@ const formatDateTime = (value) => {
 
 const fmt = (v) => (v == null || v === "" ? "—" : String(v));
 
+// Evaluate conditional visibility rules stored inside `lab_test_templates.template.fields[]`.
+// Supported minimal schema:
+// - `show_if: { key: "<fieldKey>", equals: "<value>" }`
+// - `show_if: { any: [ <rule>, ... ] }`
+// - `show_if: { all: [ <rule>, ... ] }`
+// If no rule exists, the field is visible.
+const normalizeScalarForCompare = (v) => {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "boolean") return v;
+  if (typeof v === "number") return v;
+  const s = String(v).trim();
+  const lower = s.toLowerCase();
+  if (lower === "true") return true;
+  if (lower === "false") return false;
+  if (s !== "" && /^-?\d+(\.\d+)?$/.test(s)) {
+    const n = Number(s);
+    return Number.isFinite(n) ? n : s;
+  }
+  return s;
+};
+
+const evaluateShowIfRule = (rule, values) => {
+  if (!rule || typeof rule !== "object") return true;
+
+  // AND / OR groups
+  if (Array.isArray(rule.all)) {
+    return rule.all.every((r) => evaluateShowIfRule(r, values));
+  }
+  if (Array.isArray(rule.any)) {
+    return rule.any.some((r) => evaluateShowIfRule(r, values));
+  }
+
+  // Base rule: key + equals (minimal)
+  const key = rule.key ?? rule.field ?? rule.dep_key ?? null;
+  if (!key) return true;
+  const expected = rule.equals ?? rule.value ?? null;
+  const actual = values?.[key];
+
+  const nExpected = normalizeScalarForCompare(expected);
+
+  // If the actual value is an array, treat `equals` as "contains"
+  // (e.g. show_if expects "A" and actual is ["A","B"]).
+  if (Array.isArray(actual)) {
+    const normalizedArray = actual.map((x) => normalizeScalarForCompare(x));
+    return normalizedArray.some((x) => x === nExpected);
+  }
+
+  const nActual = normalizeScalarForCompare(actual);
+
+  // For null/undefined: treat as no match unless expected is also nullish.
+  if (nActual === null) return nExpected === null;
+  return nActual === nExpected;
+};
+
+const shouldShowTemplateField = (q, values) => {
+  const rule = q?.show_if ?? q?.visible_if ?? q?.showIf ?? null;
+  return evaluateShowIfRule(rule, values);
+};
+
+const slugifyKeyForTemplate = (s) =>
+  String(s || "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_]/g, "")
+    .slice(0, 64);
+
+const makeFieldId = () => {
+  // Stable-enough client id for wiring `show_if` dependencies in the editor.
+  // (Not stored in DB; only used for frontend UI selection.)
+  try {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  } catch {}
+  return `f_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+};
+
 export default function LaboratoryManagement() {
   const theme = useTheme();
   const token = getToken();
@@ -129,7 +206,14 @@ export default function LaboratoryManagement() {
     return true;
   };
 
-  const [tab, setTab] = useState(0); // 0 tests, 1 orders, 2 results, 3 billing, 4 payment
+  const location = useLocation();
+  const [tab, setTab] = useState(location.state?.tab ?? 0); // 0 tests, 1 orders, 2 results, 3 billing, 4 payment
+
+  useEffect(() => {
+    const desiredTab = location.state?.tab;
+    if (typeof desiredTab === "number" && desiredTab !== tab) setTab(desiredTab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   // Lab Orders
   const orderReqId = useRef(0);
@@ -170,6 +254,9 @@ export default function LaboratoryManagement() {
     id: null,
   });
   const [testView, setTestView] = useState({ open: false, loading: false, test: null });
+  // Local interactive state for the "Lab Test view" dialog.
+  // NOTE: This dialog does not have a lab_order_item_id, so values are not saved to DB.
+  const [testTemplateValues, setTestTemplateValues] = useState({});
   const [testForm, setTestForm] = useState({
     test_name: "",
     test_code: "",
@@ -177,7 +264,7 @@ export default function LaboratoryManagement() {
   });
   const [testTemplateEnabled, setTestTemplateEnabled] = useState(false);
   const [testTemplateFields, setTestTemplateFields] = useState([
-    { label: "Result", answer: "", type: "text", required: true, options: "" },
+    { id: makeFieldId(), label: "Result", answer: "", type: "text", required: true, options: "", show_if: null },
   ]);
   const [testTemplateUiError, setTestTemplateUiError] = useState("");
 
@@ -197,6 +284,9 @@ export default function LaboratoryManagement() {
     lab_order_item_id: null,
     lab_order: null,
   });
+  // Standalone receipt-style view (not a dialog) for lab results.
+  const [labResultViewOpen, setLabResultViewOpen] = useState(false);
+  const [labResultViewMeta, setLabResultViewMeta] = useState(null);
   const [resultSaving, setResultSaving] = useState(false);
   const [resultTemplate, setResultTemplate] = useState(null);
   const [resultValues, setResultValues] = useState({});
@@ -871,7 +961,9 @@ export default function LaboratoryManagement() {
   const openCreateTest = () => {
     setTestForm({ test_name: "", test_code: "", price: "" });
     setTestTemplateEnabled(false);
-    setTestTemplateFields([{ label: "Result", answer: "", type: "text", required: true, options: "" }]);
+    setTestTemplateFields([
+      { id: makeFieldId(), label: "Result", answer: "", type: "text", required: true, options: "", show_if: null },
+    ]);
     setTestTemplateUiError("");
     setTestDialog({ open: true, mode: "create", id: null });
   };
@@ -884,29 +976,112 @@ export default function LaboratoryManagement() {
     const fields = t?.template?.template?.fields;
     if (Array.isArray(fields) && fields.length > 0) {
       setTestTemplateEnabled(true);
-      setTestTemplateFields(
-        fields.map((q) => ({
-          label: q.label || "",
-          answer: q.answer != null ? String(q.answer) : "",
-          type: String(q.type || "text"),
-          required: !!q.required,
-          options: Array.isArray(q.options) ? q.options.join(", ") : "",
-        })),
-      );
+      const mapped = fields.map((q) => ({
+        id: makeFieldId(),
+        label: q.label || "",
+        answer: q.answer != null ? String(q.answer) : "",
+        type: String(q.type || "text"),
+        required: !!q.required,
+        options: Array.isArray(q.options) ? q.options.join(", ") : "",
+        show_if: null,
+      }));
+
+      // Re-hydrate show_if from stored JSON (expects { key, equals } style).
+      const withRules = mapped.map((f, idx) => {
+        const src = fields[idx];
+        const rule = src?.show_if ?? src?.visible_if ?? src?.showIf ?? null;
+        if (!rule || typeof rule !== "object") return f;
+        const depKey = rule.key ?? rule.field ?? null;
+        if (!depKey) return f;
+        const depIndex = mapped.findIndex((x) => slugifyKeyForTemplate(x.label) === depKey);
+        if (depIndex === -1) return f;
+        return {
+          ...f,
+          show_if: {
+            dependsOnId: mapped[depIndex].id,
+            equals: rule.equals ?? rule.value ?? rule.match ?? "",
+          },
+        };
+      });
+
+      setTestTemplateFields(withRules);
     } else {
       setTestTemplateEnabled(false);
-      setTestTemplateFields([{ label: "Result", answer: "", type: "text", required: true, options: "" }]);
+      setTestTemplateFields([
+        { id: makeFieldId(), label: "Result", answer: "", type: "text", required: true, options: "", show_if: null },
+      ]);
     }
     setTestTemplateUiError("");
     setTestDialog({ open: true, mode: "edit", id: t.id });
   };
 
   const openViewTest = async (t) => {
-    if (!requireTokenGuard() || !t?.id) return;
+    if (!requireTokenGuard() || !t?.test_name) return;
     setTestView({ open: true, loading: true, test: null });
     try {
-      const data = await fetchJson(`${API.labTests}/${t.id}`, { token });
-      setTestView({ open: true, loading: false, test: data?.data || null });
+      const qs = new URLSearchParams({
+        test_name: String(t.test_name),
+      });
+      // If the list payload includes hospital_id, we can pass it.
+      // Otherwise the backend will scope using the logged-in user's hospital_id.
+      if (t?.hospital_id) qs.set("hospital_id", String(t.hospital_id));
+
+      const data = await fetchJson(`${API.labTests}/by-name?${qs.toString()}`, { token });
+      const test = data?.data || null;
+
+      // Initialize interactive values from the template's saved "answer" (example/default).
+      const fields = test?.template?.template?.fields;
+      const initialValues = {};
+      if (Array.isArray(fields)) {
+        fields.forEach((q, i) => {
+          const key = q?.key || q?.label || `field_${i}`;
+          const type = String(q?.type || "text").toLowerCase();
+          const answer = q?.answer;
+
+          if (type === "checkbox" || type === "boolean") {
+            initialValues[key] = String(answer).toLowerCase() === "true";
+            return;
+          }
+
+          if (type === "select") {
+            initialValues[key] = answer != null ? String(answer) : "";
+            return;
+          }
+
+          if (type === "multi_select") {
+            if (Array.isArray(answer)) initialValues[key] = answer.map(String);
+            else if (typeof answer === "string") {
+              initialValues[key] = answer
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean);
+            } else initialValues[key] = [];
+            return;
+          }
+
+          if (type === "multi_text") {
+            if (Array.isArray(answer)) initialValues[key] = answer.map(String);
+            else if (answer != null) initialValues[key] = [String(answer)];
+            else initialValues[key] = [];
+            return;
+          }
+
+          if (type === "number") {
+            if (answer == null || String(answer).trim() === "") initialValues[key] = "";
+            else {
+              const n = Number(answer);
+              initialValues[key] = Number.isFinite(n) ? n : "";
+            }
+            return;
+          }
+
+          // default: text
+          initialValues[key] = answer != null ? String(answer) : "";
+        });
+      }
+
+      setTestTemplateValues(initialValues);
+      setTestView({ open: true, loading: false, test });
     } catch (e) {
       setTestView({ open: false, loading: false, test: null });
       Swal.fire({ icon: "error", title: "Failed to load lab test", text: e.message });
@@ -958,6 +1133,7 @@ export default function LaboratoryManagement() {
                 .map((s) => s.trim())
                 .filter(Boolean)
             : undefined,
+        show_if: f.show_if ?? null,
       }));
       const errors = [];
       const used = new Set();
@@ -986,6 +1162,17 @@ export default function LaboratoryManagement() {
           const out = { key: q.key, label: q.label, type: q.type, required: q.required };
           if (q.answer) out.answer = q.answer;
           if (Array.isArray(q.options)) out.options = q.options;
+
+          // Conditional display rule
+          if (q.show_if?.dependsOnId) {
+            const depField = (testTemplateFields || []).find((x) => x?.id === q.show_if.dependsOnId);
+            const depKey = depField ? slugifyKey(depField.label) : null;
+            const equals = String(q.show_if?.equals ?? "").trim();
+            if (depKey && equals) {
+              out.show_if = { key: depKey, equals };
+            }
+          }
+
           return out;
         }),
       };
@@ -1066,17 +1253,13 @@ export default function LaboratoryManagement() {
 
     const item = orderObj?.items?.find((x) => x.id === labOrderItemId) || null;
     const template =
-      item?.labTest?.template?.template ||
+      // Important: for existing results, always prefer the saved snapshot so
+      // editing the lab test template later does not change how old results are displayed.
       existingResult?.template_snapshot ||
+      item?.labTest?.template?.template ||
       null;
 
     setResultTemplate(template);
-    setResultDialog({
-      open: true,
-      mode,
-      lab_order_item_id: labOrderItemId,
-      lab_order: orderObj,
-    });
 
     setResultValues(
       existingResult?.results && typeof existingResult.results === "object"
@@ -1088,6 +1271,62 @@ export default function LaboratoryManagement() {
       result_date: existingResult?.result_date
         ? new Date(existingResult.result_date).toISOString().slice(0, 16)
         : "",
+    });
+
+    if (mode === "view") {
+      const viewResultId = existingResult?.id || existingResult?.lab_order_item_id || null;
+      const patientName =
+        existingResult?.labOrderItem?.labOrder?.patient?.full_name ||
+        existingResult?.labOrderItem?.labOrder?.patient?.user?.full_name ||
+        "—";
+      const testName = existingResult?.labOrderItem?.labTest?.test_name || "—";
+      const technicianName = existingResult?.labTechnician?.user?.full_name || "—";
+      const resultDateLabel = existingResult?.result_date
+        ? formatDateTime(existingResult.result_date)
+        : existingResult?.createdAt
+          ? formatDateTime(existingResult.createdAt)
+          : "—";
+
+      // Open preview on another page (receipt style).
+      if (viewResultId) {
+        setLabResultViewOpen(false);
+        setLabResultViewMeta(null);
+        setResultDialog({
+          open: false,
+          mode: "view",
+          lab_order_item_id: null,
+          lab_order: null,
+        });
+        navigate(`/laboratory/lab-results/${encodeURIComponent(viewResultId)}`);
+        return;
+      }
+
+      // Fallback: if id is missing, keep the inline preview.
+      setLabResultViewMeta({
+        patientName,
+        testName,
+        technicianName,
+        resultDateLabel,
+      });
+      setLabResultViewOpen(true);
+      setResultDialog({
+        open: false,
+        mode: "view",
+        lab_order_item_id: null,
+        lab_order: null,
+      });
+      return;
+    }
+
+    // Switching from view to edit: hide the standalone receipt preview.
+    setLabResultViewOpen(false);
+    setLabResultViewMeta(null);
+
+    setResultDialog({
+      open: true,
+      mode,
+      lab_order_item_id: labOrderItemId,
+      lab_order: orderObj,
     });
   };
 
@@ -1354,6 +1593,19 @@ export default function LaboratoryManagement() {
                           <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>{fmt(t.price)}</TableCell>
                           <TableCell align="right" sx={{ overflow: "hidden", minWidth: 96 }} data-actions-cell onClick={(e) => e.stopPropagation()}>
                             <Box sx={{ display: { xs: "grid", md: "flex" }, gridTemplateColumns: { xs: "repeat(2, auto)", md: "unset" }, flexDirection: { md: "row" }, gap: 0.5, justifyContent: "flex-end", justifyItems: { xs: "end" }, maxWidth: "100%" }}>
+                              <Tooltip title="View">
+                                <IconButton
+                                  size="small"
+                                  color="primary"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openViewTest(t);
+                                  }}
+                                  aria-label="View"
+                                >
+                                  <Visibility fontSize="inherit" />
+                                </IconButton>
+                              </Tooltip>
                               {isSuperAdmin && (
                                 <>
                                   <Tooltip title="Edit">
@@ -1657,11 +1909,8 @@ export default function LaboratoryManagement() {
                       <TableCell sx={{ fontWeight: 800, width: { xs: "15%", sm: 64 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
                         No
                       </TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: { md: 100 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Date</TableCell>
                       <TableCell sx={{ fontWeight: 800, width: { xs: "60%", sm: 140, md: 220 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Patient</TableCell>
                       <TableCell sx={{ fontWeight: 800, display: { xs: "none", sm: "table-cell" }, width: { sm: 100 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Test</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: { md: 100 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Result</TableCell>
-                      <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: { md: 100 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Range</TableCell>
                       <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" }, width: { md: 100 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>Technician</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 800, width: { xs: "25%", sm: 120 }, minWidth: 0, overflow: { xs: "hidden", md: "visible" }, textOverflow: { xs: "ellipsis", md: "clip" }, whiteSpace: { xs: "nowrap", md: "normal" } }}>
                         Actions
@@ -1671,7 +1920,7 @@ export default function LaboratoryManagement() {
                   <TableBody>
                     {resultLoading ? (
                       <TableRow>
-                        <TableCell colSpan={8}>
+                        <TableCell colSpan={5}>
                           <Stack
                             direction="row"
                             spacing={1}
@@ -1702,9 +1951,6 @@ export default function LaboratoryManagement() {
                             <TableCell sx={{ color: "text.secondary", fontWeight: 700 }}>
                               {resultPage * resultRowsPerPage + idx + 1}
                             </TableCell>
-                            <TableCell sx={{ fontWeight: 800, display: { xs: "none", md: "table-cell" } }}>
-                              {formatDateTime(r.result_date || r.createdAt)}
-                            </TableCell>
                             <TableCell>
                               {r.labOrderItem?.labOrder?.patient?.full_name ||
                                 r.labOrderItem?.labOrder?.patient?.user?.full_name ||
@@ -1712,24 +1958,6 @@ export default function LaboratoryManagement() {
                             </TableCell>
                             <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
                               {r.labOrderItem?.labTest?.test_name || "—"}
-                            </TableCell>
-                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  fontFamily: "monospace",
-                                  fontSize: 12,
-                                  whiteSpace: "nowrap",
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                }}
-                                title={resObj ? JSON.stringify(resObj) : ""}
-                              >
-                                {displayResult}
-                              </Typography>
-                            </TableCell>
-                            <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
-                              {rangeVal != null && String(rangeVal).trim() ? String(rangeVal) : "—"}
                             </TableCell>
                             <TableCell sx={{ display: { xs: "none", md: "table-cell" } }}>
                               {r.labTechnician?.user?.full_name || "—"}
@@ -1773,7 +2001,7 @@ export default function LaboratoryManagement() {
                       })
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={8}>
+                        <TableCell colSpan={5}>
                           <Typography sx={{ py: 2 }} color="text.secondary">
                             No results found.
                           </Typography>
@@ -1783,6 +2011,22 @@ export default function LaboratoryManagement() {
                   </TableBody>
                 </Table>
               </TableContainer>
+
+            {labResultViewOpen && (
+              <LabResultViewReceipt
+                open={labResultViewOpen}
+                onClose={() => setLabResultViewOpen(false)}
+                hospital={JSON.parse(localStorage.getItem("hospital") || "null")}
+                patientName={labResultViewMeta?.patientName}
+                testName={labResultViewMeta?.testName}
+                technicianName={labResultViewMeta?.technicianName}
+                resultDateLabel={labResultViewMeta?.resultDateLabel}
+                resultTemplate={resultTemplate}
+                resultValues={resultValues}
+                interpretation={resultForm.interpretation}
+                shouldShowTemplateField={shouldShowTemplateField}
+              />
+            )}
 
               <TablePagination
                 component="div"
@@ -2420,6 +2664,15 @@ export default function LaboratoryManagement() {
                   {(testTemplateFields || []).map((q, idx) => {
                     const type = String(q.type || "text").toLowerCase();
                     const showOptions = type === "select" || type === "multi_select";
+                    const selectedDep = (testTemplateFields || []).find((x) => x?.id === q?.show_if?.dependsOnId) || null;
+                    const depType = String(selectedDep?.type || "text").toLowerCase();
+                    const depOptionsArr =
+                      typeof selectedDep?.options === "string"
+                        ? selectedDep.options
+                            .split(",")
+                            .map((s) => s.trim())
+                            .filter(Boolean)
+                        : [];
                     return (
                       <Card key={idx} variant="outlined" sx={{ borderRadius: 2 }}>
                         <CardContent sx={{ py: 2, "&:last-child": { pb: 2 } }}>
@@ -2492,11 +2745,140 @@ export default function LaboratoryManagement() {
                               }
                               label="Required"
                             />
+                            <FormControl fullWidth size="small">
+                              <InputLabel>Show if</InputLabel>
+                              <Select
+                                label="Show if"
+                                value={q.show_if?.dependsOnId ?? ""}
+                                onChange={(e) => {
+                                  const dependsOnId = e.target.value || "";
+                                  setTestTemplateFields((prev) => {
+                                    const nextDep = prev?.find((x) => x?.id === dependsOnId) || null;
+                                    const nextDepType = String(nextDep?.type || "text").toLowerCase();
+                                    const nextDepOptions =
+                                      typeof nextDep?.options === "string"
+                                        ? nextDep.options
+                                            .split(",")
+                                            .map((s) => s.trim())
+                                            .filter(Boolean)
+                                        : [];
+                                    let defaultEquals = "";
+                                    if (!dependsOnId) defaultEquals = "";
+                                    else if (nextDepType === "checkbox" || nextDepType === "boolean") defaultEquals = "true";
+                                    else if (nextDepType === "select" || nextDepType === "multi_select") defaultEquals = nextDepOptions[0] || "";
+                                    else defaultEquals = prev?.[idx]?.show_if?.equals ?? "";
+
+                                    return prev.map((x, i) => {
+                                      if (i !== idx) return x;
+                                      if (!dependsOnId) return { ...x, show_if: null };
+                                      return {
+                                        ...x,
+                                        show_if: {
+                                          dependsOnId,
+                                          equals: defaultEquals,
+                                        },
+                                      };
+                                    });
+                                  });
+                                }}
+                              >
+                                <MenuItem value="">
+                                  <em>Always</em>
+                                </MenuItem>
+                                {(testTemplateFields || []).map((dep, depIdx) => {
+                                  if (depIdx === idx) return null;
+                                  return (
+                                    <MenuItem key={dep.id || depIdx} value={dep.id || ""}>
+                                      {dep.label || `Question ${depIdx + 1}`}
+                                    </MenuItem>
+                                  );
+                                })}
+                              </Select>
+                            </FormControl>
+                            {q.show_if?.dependsOnId ? (
+                              depType === "checkbox" || depType === "boolean" ? (
+                                <FormControl fullWidth size="small">
+                                  <InputLabel>Equals</InputLabel>
+                                  <Select
+                                    label="Equals"
+                                    value={q.show_if?.equals ?? ""}
+                                    onChange={(e) =>
+                                      setTestTemplateFields((prev) =>
+                                        prev.map((x, i) => {
+                                          if (i !== idx) return x;
+                                          return x?.show_if
+                                            ? { ...x, show_if: { ...x.show_if, equals: e.target.value } }
+                                            : x;
+                                        }),
+                                      )
+                                    }
+                                  >
+                                    <MenuItem value="true">true</MenuItem>
+                                    <MenuItem value="false">false</MenuItem>
+                                  </Select>
+                                </FormControl>
+                              ) : depType === "select" || depType === "multi_select" ? (
+                                <FormControl fullWidth size="small">
+                                  <InputLabel>Equals</InputLabel>
+                                  <Select
+                                    label="Equals"
+                                    value={q.show_if?.equals ?? ""}
+                                    onChange={(e) =>
+                                      setTestTemplateFields((prev) =>
+                                        prev.map((x, i) => {
+                                          if (i !== idx) return x;
+                                          return x?.show_if
+                                            ? { ...x, show_if: { ...x.show_if, equals: e.target.value } }
+                                            : x;
+                                        }),
+                                      )
+                                    }
+                                  >
+                                    <MenuItem value="">
+                                      <em>None</em>
+                                    </MenuItem>
+                                    {depOptionsArr.map((opt) => (
+                                      <MenuItem key={opt} value={opt}>
+                                        {opt}
+                                      </MenuItem>
+                                    ))}
+                                  </Select>
+                                </FormControl>
+                              ) : (
+                                <TextField
+                                  fullWidth
+                                  size="small"
+                                  label="Equals"
+                                  value={q.show_if?.equals ?? ""}
+                                  onChange={(e) =>
+                                    setTestTemplateFields((prev) =>
+                                      prev.map((x, i) => {
+                                        if (i !== idx) return x;
+                                        return x?.show_if
+                                          ? { ...x, show_if: { ...x.show_if, equals: e.target.value } }
+                                          : x;
+                                      }),
+                                    )
+                                  }
+                                />
+                              )
+                            ) : null}
                             <Button
                               type="button"
                               color="error"
                               variant="outlined"
-                              onClick={() => setTestTemplateFields((prev) => prev.filter((_, i) => i !== idx))}
+                              onClick={() =>
+                                setTestTemplateFields((prev) => {
+                                  const removed = prev[idx];
+                                  const removedId = removed?.id;
+                                  const next = prev.filter((_, i) => i !== idx);
+                                  return next.map((f) =>
+                                    f?.show_if?.dependsOnId && removedId && f.show_if.dependsOnId === removedId
+                                      ? { ...f, show_if: null }
+                                      : f,
+                                  );
+                                })
+                              }
                               sx={{ alignSelf: "flex-start" }}
                             >
                               Remove question
@@ -2512,7 +2894,7 @@ export default function LaboratoryManagement() {
                     onClick={() =>
                       setTestTemplateFields((prev) => [
                         ...prev,
-                        { label: "", answer: "", type: "text", required: false, options: "" },
+                        { id: makeFieldId(), label: "", answer: "", type: "text", required: false, options: "", show_if: null },
                       ])
                     }
                     sx={{ alignSelf: "flex-start" }}
@@ -2583,21 +2965,35 @@ export default function LaboratoryManagement() {
                 {testView.test.template?.template?.fields?.length ? (
                   <Stack spacing={1.5}>
                     <Typography variant="body2" color="text.secondary">
-                      Preview (read-only)
+                      Fill template
                     </Typography>
                     {testView.test.template.template.fields.map((q, i) => {
                       const type = String(q?.type || "text").toLowerCase();
                       const label = q?.label || q?.key || `Question ${i + 1}`;
                       const required = !!q?.required;
                       const answer = q?.answer;
+                      const fieldKey = q?.key || q?.label || `field_${i}`;
                       const options = Array.isArray(q?.options) ? q.options : [];
 
+                      // Apply conditional visibility inside the "fill template" preview.
+                      if (!shouldShowTemplateField(q, testTemplateValues)) return null;
+
                       if (type === "checkbox" || type === "boolean") {
-                        const checked = String(answer).toLowerCase() === "true";
+                        const checked =
+                          testTemplateValues?.[fieldKey] != null
+                            ? Boolean(testTemplateValues[fieldKey])
+                            : String(answer).toLowerCase() === "true";
                         return (
                           <Box key={q.key || i} sx={{ p: 1.5, borderRadius: 2, bgcolor: "background.paper", border: "1px solid", borderColor: "divider" }}>
                             <FormControlLabel
-                              control={<Checkbox checked={checked} disabled />}
+                              control={
+                                <Checkbox
+                                  checked={checked}
+                                  onChange={(e) =>
+                                    setTestTemplateValues((p) => ({ ...(p || {}), [fieldKey]: e.target.checked }))
+                                  }
+                                />
+                              }
                               label={
                                 <Typography sx={{ fontWeight: 800 }}>
                                   {label}{required ? " *" : ""}
@@ -2609,68 +3005,100 @@ export default function LaboratoryManagement() {
                       }
 
                       if (type === "select") {
-                        const value = answer != null ? String(answer) : "";
+                        const value =
+                          testTemplateValues?.[fieldKey] != null
+                            ? String(testTemplateValues[fieldKey])
+                            : answer != null
+                              ? String(answer)
+                              : "";
                         return (
                           <Box key={q.key || i} sx={{ p: 1.5, borderRadius: 2, bgcolor: "background.paper", border: "1px solid", borderColor: "divider" }}>
-                            <TextField
-                              label={label}
-                              fullWidth
-                              size="small"
-                              value={options.includes(value) ? value : ""}
-                              disabled
-                              helperText={required ? "Required" : "Optional"}
-                            />
-                            {options.length > 0 && (
-                              <Box sx={{ mt: 1 }}>
-                                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
-                                  Options
-                                </Typography>
-                                <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
-                                  {options.map((opt) => (
-                                    <Chip
-                                      key={opt}
-                                      size="small"
-                                      label={opt}
-                                      color={opt === value ? "primary" : "default"}
-                                      variant={opt === value ? "filled" : "outlined"}
-                                    />
-                                  ))}
-                                </Box>
-                              </Box>
-                            )}
+                            <FormControl fullWidth size="small">
+                              <InputLabel>{required ? `${label} *` : label}</InputLabel>
+                              <Select
+                                label={required ? `${label} *` : label}
+                                value={options.includes(value) ? value : ""}
+                                onChange={(e) =>
+                                  setTestTemplateValues((p) => ({ ...(p || {}), [fieldKey]: e.target.value }))
+                                }
+                              >
+                                <MenuItem value="">
+                                  <em>None</em>
+                                </MenuItem>
+                                {options.map((opt) => (
+                                  <MenuItem key={opt} value={opt}>
+                                    {opt}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
                           </Box>
                         );
                       }
 
                       if (type === "multi_select") {
-                        const valueArr = Array.isArray(answer) ? answer.map(String) : (typeof answer === "string" ? answer.split(",").map((s) => s.trim()).filter(Boolean) : []);
+                        const valueArr = Array.isArray(testTemplateValues?.[fieldKey])
+                          ? testTemplateValues[fieldKey].map(String)
+                          : Array.isArray(answer)
+                            ? answer.map(String)
+                            : typeof answer === "string"
+                              ? answer.split(",").map((s) => s.trim()).filter(Boolean)
+                              : [];
                         return (
                           <Box key={q.key || i} sx={{ p: 1.5, borderRadius: 2, bgcolor: "background.paper", border: "1px solid", borderColor: "divider" }}>
-                            <TextField
-                              label={label}
-                              fullWidth
-                              size="small"
-                              value={valueArr.join(", ")}
-                              disabled
-                              helperText={options.length ? `Options: ${options.join(", ")}` : (required ? "Required" : "Optional")}
-                            />
+                            <FormControl fullWidth size="small">
+                              <InputLabel>{required ? `${label} *` : label}</InputLabel>
+                              <Select
+                                label={required ? `${label} *` : label}
+                                multiple
+                                value={valueArr}
+                                onChange={(e) =>
+                                  setTestTemplateValues((p) => ({ ...(p || {}), [fieldKey]: e.target.value }))
+                                }
+                                renderValue={(selected) => (
+                                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
+                                    {(selected || []).map((v) => (
+                                      <Chip key={v} size="small" label={v} />
+                                    ))}
+                                  </Box>
+                                )}
+                              >
+                                {options.map((opt) => (
+                                  <MenuItem key={opt} value={opt}>
+                                    <Checkbox checked={valueArr.indexOf(opt) > -1} />
+                                    <ListItemText primary={opt} />
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
                           </Box>
                         );
                       }
 
                       if (type === "multi_text") {
-                        const valueArr = Array.isArray(answer) ? answer.map(String) : (answer != null ? [String(answer)] : []);
+                        const valueArr = Array.isArray(testTemplateValues?.[fieldKey])
+                          ? testTemplateValues[fieldKey].map(String)
+                          : Array.isArray(answer)
+                            ? answer.map(String)
+                            : answer != null
+                              ? [String(answer)]
+                              : [];
                         return (
                           <Box key={q.key || i} sx={{ p: 1.5, borderRadius: 2, bgcolor: "background.paper", border: "1px solid", borderColor: "divider" }}>
                             <TextField
-                              label={label}
+                              label={required ? `${label} *` : label}
                               fullWidth
                               size="small"
                               multiline
                               minRows={3}
                               value={valueArr.join("\n")}
-                              disabled
-                              helperText={required ? "Required" : "Optional"}
+                              onChange={(e) => {
+                                const lines = e.target.value
+                                  .split("\n")
+                                  .map((s) => s.trim())
+                                  .filter((s) => s.length);
+                                setTestTemplateValues((p) => ({ ...(p || {}), [fieldKey]: lines }));
+                              }}
                             />
                           </Box>
                         );
@@ -2680,12 +3108,32 @@ export default function LaboratoryManagement() {
                       return (
                         <Box key={q.key || i} sx={{ p: 1.5, borderRadius: 2, bgcolor: "background.paper", border: "1px solid", borderColor: "divider" }}>
                           <TextField
-                            label={label}
+                            label={required ? `${label} *` : label}
                             fullWidth
                             size="small"
                             type={type === "number" ? "number" : "text"}
-                            value={answer != null ? String(answer) : ""}
-                            disabled
+                            value={
+                              type === "number"
+                                ? testTemplateValues?.[fieldKey] != null
+                                  ? testTemplateValues[fieldKey]
+                                  : answer != null
+                                    ? Number(answer)
+                                    : ""
+                                : testTemplateValues?.[fieldKey] != null
+                                  ? String(testTemplateValues[fieldKey])
+                                  : answer != null
+                                    ? String(answer)
+                                    : ""
+                            }
+                            onChange={(e) => {
+                              if (type === "number") {
+                                const raw = e.target.value;
+                                const parsed = raw === "" ? "" : Number(raw);
+                                setTestTemplateValues((p) => ({ ...(p || {}), [fieldKey]: parsed }));
+                              } else {
+                                setTestTemplateValues((p) => ({ ...(p || {}), [fieldKey]: e.target.value }));
+                              }
+                            }}
                             helperText={required ? "Required" : "Optional"}
                           />
                         </Box>
@@ -2701,17 +3149,12 @@ export default function LaboratoryManagement() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setTestView({ open: false, loading: false, test: null })}>Close</Button>
-          {isSuperAdmin && testView.test?.id && (
-            <Button variant="contained" onClick={() => { setTestView({ open: false, loading: false, test: null }); openEditTest(testView.test); }} sx={{ fontWeight: 900 }}>
-              Edit
-            </Button>
-          )}
         </DialogActions>
       </Dialog>
 
       {/* Enter/Update result */}
       <Dialog
-        open={resultDialog.open}
+        open={resultDialog.open && resultDialog.mode !== "view"}
         onClose={() =>
           setResultDialog({
             open: false,
@@ -2740,6 +3183,10 @@ export default function LaboratoryManagement() {
                   const type = (q?.type || "text").toLowerCase();
                   const options = Array.isArray(q?.options) ? q.options.map(String) : [];
                   const required = Boolean(q?.required);
+                  const visible = shouldShowTemplateField(q, resultValues);
+
+                  // Hide conditional questions until their rule matches current answers.
+                  if (!visible) return null;
                   const value = resultValues?.[key];
 
                   if (type === "checkbox") {
@@ -2897,10 +3344,12 @@ export default function LaboratoryManagement() {
                 setResultForm((p) => ({ ...p, result_date: e.target.value }))
               }
             />
-            <Alert severity="info">
-              Technician is saved automatically from the logged-in staff account
-              (if available).
-            </Alert>
+            {!readOnly && (
+              <Alert severity="info">
+                Technician is saved automatically from the logged-in staff account
+                (if available).
+              </Alert>
+            )}
           </Stack>
             );
           })()}

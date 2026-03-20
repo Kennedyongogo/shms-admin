@@ -18,6 +18,7 @@ import PatientsManagement from "./PatientsManagement";
 import LaboratoryManagement from "./LaboratoryManagement";
 import KenyaLabTestsPage from "./KenyaLabTestsPage";
 import CreateLabTestPage from "./CreateLabTestPage";
+import LabResultPreviewPage from "./LabResultPreviewPage";
 import BillingPaymentsManagement from "./BillingPaymentsManagement";
 import WardManagement from "./WardManagement";
 import DietManagement from "./DietManagement";
@@ -90,6 +91,7 @@ function PageRoutes() {
             <Route path="laboratory" element={<LaboratoryManagement />} />
             <Route path="laboratory/create-lab-test" element={<CreateLabTestPage />} />
             <Route path="laboratory/kenya-lab-tests" element={<KenyaLabTestsPage />} />
+            <Route path="laboratory/lab-results/:resultId" element={<LabResultPreviewPage />} />
             <Route path="hospitals" element={<HospitalsManagement />} />
             <Route path="billing" element={<BillingPaymentsManagement />} />
             <Route path="ward" element={<WardManagement />} />

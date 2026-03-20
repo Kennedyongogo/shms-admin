@@ -43,6 +43,7 @@ const API = {
   consultations: "/api/consultations",
   labTests: "/api/lab-tests",
   labOrders: "/api/lab-orders",
+  labResults: "/api/lab-results",
   medications: "/api/medications",
   prescriptions: "/api/prescriptions",
   admissions: "/api/admissions",
@@ -89,6 +90,78 @@ async function fetchPdfBlob(url, token) {
   });
   if (!res.ok) throw new Error("Failed to load PDF");
   return res.blob();
+}
+
+function InlineLabReceipt({ resultId, token, height = 260 }) {
+  const [pdfUrl, setPdfUrl] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const urlRef = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      if (!resultId) return;
+      setLoading(true);
+      setError(null);
+      setPdfUrl(null);
+      try {
+        const blob = await fetchPdfBlob(`${API.labResults}/${encodeURIComponent(resultId)}/receipt/pdf`, token);
+        if (cancelled) return;
+        if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+        const url = URL.createObjectURL(blob);
+        urlRef.current = url;
+        setPdfUrl(url);
+      } catch (e) {
+        if (!cancelled) setError(e?.message || "Failed to load lab receipt PDF.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+      if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+      urlRef.current = null;
+    };
+  }, [resultId, token]);
+
+  if (!resultId) return null;
+
+  return (
+    <Box
+      sx={{
+        mt: 1,
+        border: "1px solid",
+        borderColor: "divider",
+        borderRadius: 2,
+        overflow: "hidden",
+        bgcolor: "grey.100",
+      }}
+    >
+      {loading ? (
+        <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ p: 2 }}>
+          <CircularProgress size={20} />
+          <Typography color="text.secondary" variant="body2">
+            Loading lab PDF...
+          </Typography>
+        </Stack>
+      ) : error ? (
+        <Box sx={{ p: 2 }}>
+          <Typography sx={{ fontWeight: 800 }} variant="body2">
+            Failed to load lab PDF
+          </Typography>
+          <Typography color="text.secondary" variant="body2">
+            {error}
+          </Typography>
+        </Box>
+      ) : (
+        pdfUrl && <iframe title="Lab result PDF preview" src={pdfUrl} style={{ width: "100%", height, border: "none" }} />
+      )}
+    </Box>
+  );
 }
 
 const formatDateTime = (value) => {
@@ -869,6 +942,7 @@ export default function ConsultationViewPage() {
                     resultValue: result?.result_value ?? null,
                     referenceRange: result?.reference_range ?? null,
                     interpretation: result?.interpretation ?? null,
+                      resultId: result?.id ?? null,
                     resultDate: result?.result_date ? new Date(result.result_date) : null,
                     labTechnicianName: result?.labTechnician?.user?.full_name || result?.labTechnician?.staff_type || null,
                     status: result ? "Entered" : "Pending",
@@ -885,18 +959,34 @@ export default function ConsultationViewPage() {
                   {rows.map((r, idx) => (
                     <Card key={idx} variant="outlined" sx={{ borderRadius: 2 }}>
                       <CardContent sx={{ "&:last-child": { pb: 2 }, py: 1.5, px: 2 }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>{r.testName}{r.testCode !== "—" ? ` (${r.testCode})` : ""}</Typography>
-                        <Stack spacing={0.5}>
-                          <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">{label("Test name")}{value(r.testName)}</Stack>
-                          <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">{label("Test code")}{value(r.testCode)}</Stack>
-                          {r.price != null && <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">{label("Price")}{value(r.price)}</Stack>}
-                          <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">{label("Result")}{value(r.resultValue ?? "—", true)}</Stack>
-                          <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">{label("Reference range")}{value(r.referenceRange ?? "—")}</Stack>
-                          {r.interpretation != null && r.interpretation !== "" && <Stack direction="row" spacing={1} alignItems="flex-start" flexWrap="wrap">{label("Interpretation")}{value(r.interpretation)}</Stack>}
-                          <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">{label("Result date")}{value(r.resultDate ? r.resultDate.toLocaleString() : "—")}</Stack>
-                          {r.labTechnicianName && <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">{label("Lab technician")}{value(r.labTechnicianName)}</Stack>}
-                          <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">{label("Status")}<Typography component="span" variant="body2" color={r.status === "Entered" ? "success.main" : "text.secondary"} fontWeight={600}>{r.status}</Typography></Stack>
-                        </Stack>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                          {r.testName}
+                          {r.testCode !== "—" ? ` (${r.testCode})` : ""}
+                        </Typography>
+
+                        {r.resultId && r.status === "Entered" ? (
+                          <>
+                            <InlineLabReceipt resultId={r.resultId} token={token} />
+                            <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap" sx={{ mt: 1 }}>
+                              {label("Status")}
+                              <Typography component="span" variant="body2" color={r.status === "Entered" ? "success.main" : "text.secondary"} fontWeight={600}>
+                                {r.status}
+                              </Typography>
+                            </Stack>
+                          </>
+                        ) : (
+                          <Stack spacing={0.5}>
+                            <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">{label("Test name")}{value(r.testName)}</Stack>
+                            <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">{label("Test code")}{value(r.testCode)}</Stack>
+                            {r.price != null && <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">{label("Price")}{value(r.price)}</Stack>}
+                            <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">{label("Result")}{value(r.resultValue ?? "—", true)}</Stack>
+                            <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">{label("Reference range")}{value(r.referenceRange ?? "—")}</Stack>
+                            {r.interpretation != null && r.interpretation !== "" && <Stack direction="row" spacing={1} alignItems="flex-start" flexWrap="wrap">{label("Interpretation")}{value(r.interpretation)}</Stack>}
+                            <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">{label("Result date")}{value(r.resultDate ? r.resultDate.toLocaleString() : "—")}</Stack>
+                            {r.labTechnicianName && <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">{label("Lab technician")}{value(r.labTechnicianName)}</Stack>}
+                            <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">{label("Status")}<Typography component="span" variant="body2" color={r.status === "Entered" ? "success.main" : "text.secondary"} fontWeight={600}>{r.status}</Typography></Stack>
+                          </Stack>
+                        )}
                       </CardContent>
                     </Card>
                   ))}

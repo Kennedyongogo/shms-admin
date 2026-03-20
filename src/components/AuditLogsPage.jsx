@@ -73,6 +73,14 @@ const shortId = (v) => {
 export default function AuditLogsPage() {
   const theme = useTheme();
   const token = getToken();
+  const currentHospitalId = (() => {
+    try {
+      const h = JSON.parse(localStorage.getItem("hospital") || "null");
+      return h?.id || null;
+    } catch {
+      return null;
+    }
+  })();
 
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -111,8 +119,19 @@ export default function AuditLogsPage() {
       if (filterTable) params.set("table_name", filterTable);
       if (filterUserId) params.set("user_id", filterUserId);
       const data = await fetchJson(`${API.auditLogs}?${params.toString()}`, { token });
-      setRows(data?.data || []);
-      setTotal(data?.pagination?.total ?? 0);
+      const backendRows = Array.isArray(data?.data) ? data.data : [];
+      const hospitalScopedRows = currentHospitalId
+        ? backendRows.filter((r) => {
+            const rowHospitalId = r?.hospital_id || r?.user?.hospital_id || null;
+            return !rowHospitalId || rowHospitalId === currentHospitalId;
+          })
+        : backendRows;
+      setRows(hospitalScopedRows);
+      setTotal(
+        currentHospitalId
+          ? hospitalScopedRows.length
+          : data?.pagination?.total ?? hospitalScopedRows.length
+      );
     } catch (e) {
       setRows([]);
       setTotal(0);

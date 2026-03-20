@@ -30,6 +30,8 @@ import {
   Image as ImageIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
+  EmojiEvents as EmojiEventsIcon,
+  Star as StarIcon,
 } from "@mui/icons-material";
 import Swal from "sweetalert2";
 import GuestNavbar from "./GuestNavbar";
@@ -57,6 +59,7 @@ const SILVER_MENU_ITEMS = [
   "Pharmacy",
   "Billing & Payments",
   "Users & Roles",
+  "Audit log",
   "Settings",
 ];
 /** Labels must match Navbar and backend ALL_MENU_KEYS order. */
@@ -356,15 +359,14 @@ export default function RegisterPage() {
                   border: "3px solid",
                   borderColor: packageSelected === "silver" ? SILVER_BORDER : SILVER_MAIN,
                   borderRadius: 3,
-                  background: packageSelected === "silver"
-                    ? `linear-gradient(145deg, ${SILVER_LIGHT} 0%, ${SILVER_MAIN} 50%, ${SILVER_DARK} 100%)`
-                    : `linear-gradient(145deg, #f5f5f5 0%, ${SILVER_LIGHT} 100%)`,
+                  position: "relative",
+                  background: "linear-gradient(135deg, #e2e8f0 0%, #94a3b8 100%)",
                   cursor: "pointer",
                   boxShadow: packageSelected === "silver" ? `0 8px 24px ${SILVER_DARK}40` : "none",
                   transition: "border-color 0.2s, box-shadow 0.2s, background 0.2s",
                   "&:hover": {
                     borderColor: SILVER_BORDER,
-                    background: `linear-gradient(145deg, ${SILVER_LIGHT} 0%, ${SILVER_MAIN} 50%, ${SILVER_DARK} 100%)`,
+                    background: "linear-gradient(135deg, #dbe3ea 0%, #7b8fb1 100%)",
                     boxShadow: `0 8px 24px ${SILVER_DARK}50`,
                   },
                   display: "flex",
@@ -384,6 +386,19 @@ export default function RegisterPage() {
                     "&:last-child": { pb: { xs: 1, sm: 1.25 } },
                   }}
                 >
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      top: 16,
+                      right: 16,
+                      opacity: 0.22,
+                      pointerEvents: "none",
+                      fontSize: 92,
+                      lineHeight: 1,
+                    }}
+                  >
+                    <EmojiEventsIcon sx={{ fontSize: 92 }} />
+                  </Box>
                   <Stack
                     direction="row"
                     alignItems="center"
@@ -395,8 +410,8 @@ export default function RegisterPage() {
                       checked={packageSelected === "silver"}
                       onChange={() => handlePackageChange("silver")}
                       sx={{
-                        color: SILVER_DARK,
-                        "&.Mui-checked": { color: "#5a5a5a" },
+                        color: "rgba(255,255,255,0.92)",
+                        "&.Mui-checked": { color: "#ffffff" },
                         padding: { xs: 0.5, sm: 0.75 },
                       }}
                     />
@@ -405,8 +420,8 @@ export default function RegisterPage() {
                       sx={{
                         fontWeight: 800,
                         fontSize: { xs: "0.95rem", sm: "1rem" },
-                        color: packageSelected === "silver" ? "#424242" : "text.primary",
-                        textShadow: packageSelected === "silver" ? "0 1px 2px rgba(255,255,255,0.8)" : "none",
+                        color: "#ffffff",
+                        textShadow: "0 1px 2px rgba(0,0,0,0.18)",
                       }}
                     >
                       Silver package
@@ -416,7 +431,7 @@ export default function RegisterPage() {
                     variant="body2"
                     sx={{
                       fontWeight: 600,
-                      color: packageSelected === "silver" ? "#37474f" : "text.secondary",
+                      color: "#000000",
                       lineHeight: { xs: 1.25, sm: 1.35 },
                       mb: { xs: 0.25, sm: 0.35 },
                       pl: { xs: 2.5, sm: 4.5 },
@@ -431,7 +446,7 @@ export default function RegisterPage() {
                     variant="subtitle2"
                     sx={{
                       fontWeight: 700,
-                      color: "inherit",
+                      color: "rgba(255,255,255,0.95)",
                       mb: 0.25,
                       pl: { xs: 2.5, sm: 4.5 },
                       fontSize: { xs: "0.65rem", sm: "0.7rem" },
@@ -474,12 +489,12 @@ export default function RegisterPage() {
                           cursor: "pointer",
                           fontWeight: 600,
                           fontSize: "0.7rem",
-                          bgcolor: packageSelected === "silver" ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.06)",
-                          borderColor: packageSelected === "silver" ? "rgba(255,255,255,0.8)" : "divider",
-                          color: packageSelected === "silver" ? "#37474f" : "text.secondary",
+                          bgcolor: "rgba(255,255,255,0.22)",
+                          borderColor: "rgba(255,255,255,0.45)",
+                          color: "rgba(255,255,255,0.95)",
                           "&:hover": {
-                            bgcolor: packageSelected === "silver" ? "rgba(255,255,255,0.7)" : "rgba(0,0,0,0.1)",
-                            borderColor: packageSelected === "silver" ? "#fff" : "text.secondary",
+                            bgcolor: "rgba(255,255,255,0.30)",
+                            borderColor: "#ffffff",
                           },
                         }}
                         variant="outlined"
@@ -508,9 +523,9 @@ export default function RegisterPage() {
                           py: 0.25,
                           fontSize: { xs: "0.6rem", sm: "0.65rem" },
                           fontWeight: 600,
-                          bgcolor: packageSelected === "silver" ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.06)",
-                          borderColor: packageSelected === "silver" ? "rgba(255,255,255,0.8)" : "divider",
-                          color: packageSelected === "silver" ? "#37474f" : "text.secondary",
+                          bgcolor: "rgba(255,255,255,0.22)",
+                          borderColor: "rgba(255,255,255,0.45)",
+                          color: "rgba(255,255,255,0.95)",
                         }}
                         variant="outlined"
                       />
@@ -526,15 +541,14 @@ export default function RegisterPage() {
                   border: "3px solid",
                   borderColor: packageSelected === "gold" ? GOLD_BORDER : GOLD_DARK,
                   borderRadius: 3,
-                  background: packageSelected === "gold"
-                    ? `linear-gradient(145deg, ${GOLD_LIGHT} 0%, ${GOLD_MAIN} 40%, ${GOLD_DARK} 100%)`
-                    : `linear-gradient(145deg, #FFFEF5 0%, ${GOLD_LIGHT} 100%)`,
+                  position: "relative",
+                  background: "linear-gradient(135deg, #fbbf24 0%, #b45309 100%)",
                   cursor: "pointer",
                   boxShadow: packageSelected === "gold" ? `0 8px 24px ${GOLD_DARK}60` : "none",
                   transition: "border-color 0.2s, box-shadow 0.2s, background 0.2s",
                   "&:hover": {
                     borderColor: GOLD_BORDER,
-                    background: `linear-gradient(145deg, ${GOLD_LIGHT} 0%, ${GOLD_MAIN} 40%, ${GOLD_DARK} 100%)`,
+                    background: "linear-gradient(135deg, #f59e0b 0%, #a13a06 100%)",
                     boxShadow: `0 8px 24px ${GOLD_DARK}70`,
                   },
                   display: "flex",
@@ -554,6 +568,19 @@ export default function RegisterPage() {
                     "&:last-child": { pb: { xs: 1, sm: 1.25 } },
                   }}
                 >
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      top: 16,
+                      right: 16,
+                      opacity: 0.22,
+                      pointerEvents: "none",
+                      fontSize: 92,
+                      lineHeight: 1,
+                    }}
+                  >
+                    <StarIcon sx={{ fontSize: 92 }} />
+                  </Box>
                   <Stack
                     direction="row"
                     alignItems="center"
@@ -565,8 +592,8 @@ export default function RegisterPage() {
                       checked={packageSelected === "gold"}
                       onChange={() => handlePackageChange("gold")}
                       sx={{
-                        color: GOLD_DARK,
-                        "&.Mui-checked": { color: "#5d4e37" },
+                        color: "rgba(255,255,255,0.92)",
+                        "&.Mui-checked": { color: "#ffffff" },
                         padding: { xs: 0.5, sm: 0.75 },
                       }}
                     />
@@ -575,8 +602,8 @@ export default function RegisterPage() {
                       sx={{
                         fontWeight: 800,
                         fontSize: { xs: "0.95rem", sm: "1rem" },
-                        color: packageSelected === "gold" ? "#3e2723" : "text.primary",
-                        textShadow: packageSelected === "gold" ? "0 1px 2px rgba(255,255,255,0.6)" : "none",
+                        color: "#ffffff",
+                        textShadow: "0 1px 2px rgba(0,0,0,0.18)",
                       }}
                     >
                       Gold package
@@ -586,7 +613,7 @@ export default function RegisterPage() {
                     variant="body2"
                     sx={{
                       fontWeight: 600,
-                      color: packageSelected === "gold" ? "#4e342e" : "text.secondary",
+                      color: "#000000",
                       lineHeight: { xs: 1.25, sm: 1.35 },
                       mb: { xs: 0.35, sm: 0.5 },
                       pl: { xs: 2.5, sm: 4.5 },
@@ -601,7 +628,7 @@ export default function RegisterPage() {
                     variant="subtitle2"
                     sx={{
                       fontWeight: 700,
-                      color: "inherit",
+                      color: "rgba(255,255,255,0.95)",
                       mb: 0.25,
                       pl: { xs: 2.5, sm: 4.5 },
                       fontSize: { xs: "0.65rem", sm: "0.7rem" },
@@ -644,12 +671,12 @@ export default function RegisterPage() {
                           cursor: "pointer",
                           fontWeight: 600,
                           fontSize: "0.7rem",
-                          bgcolor: packageSelected === "gold" ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.05)",
-                          borderColor: packageSelected === "gold" ? "rgba(255,255,255,0.7)" : "divider",
-                          color: packageSelected === "gold" ? "#4e342e" : "text.secondary",
+                          bgcolor: "rgba(255,255,255,0.22)",
+                          borderColor: "rgba(255,255,255,0.45)",
+                          color: "rgba(255,255,255,0.95)",
                           "&:hover": {
-                            bgcolor: packageSelected === "gold" ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.1)",
-                            borderColor: packageSelected === "gold" ? "#fff" : "text.secondary",
+                            bgcolor: "rgba(255,255,255,0.30)",
+                            borderColor: "#ffffff",
                           },
                         }}
                         variant="outlined"
@@ -678,9 +705,9 @@ export default function RegisterPage() {
                           py: 0.25,
                           fontSize: { xs: "0.6rem", sm: "0.65rem" },
                           fontWeight: 600,
-                          bgcolor: packageSelected === "gold" ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.05)",
-                          borderColor: packageSelected === "gold" ? "rgba(255,255,255,0.7)" : "divider",
-                          color: packageSelected === "gold" ? "#4e342e" : "text.secondary",
+                          bgcolor: "rgba(255,255,255,0.22)",
+                          borderColor: "rgba(255,255,255,0.45)",
+                          color: "rgba(255,255,255,0.95)",
                         }}
                         variant="outlined"
                       />
