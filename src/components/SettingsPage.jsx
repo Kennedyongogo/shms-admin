@@ -29,6 +29,8 @@ import {
   Settings as SettingsIcon,
   PhotoCamera,
   Palette as PaletteIcon,
+  CloudDownload,
+  DeleteForever,
 } from "@mui/icons-material";
 import Avatar from "@mui/material/Avatar";
 import Swal from "sweetalert2";
@@ -38,6 +40,19 @@ const API_CHANGE_PASSWORD = "/api/auth/change-password";
 const API_ME_PROFILE_IMAGE = "/api/auth/me/profile-image";
 const API_HOSPITALS = "/api/hospitals";
 const DEFAULT_PRIMARY_COLOR = "#00897B";
+const SUPER_ADMIN_ROLE_NAME = "Super Admin";
+
+function resolveIsSuperAdmin(roleFromApi) {
+  const name = roleFromApi?.name != null ? String(roleFromApi.name).trim() : "";
+  if (name === SUPER_ADMIN_ROLE_NAME) return true;
+  try {
+    const stored = JSON.parse(localStorage.getItem("role") || "null");
+    const n = stored?.name != null ? String(stored.name).trim() : "";
+    return n === SUPER_ADMIN_ROLE_NAME;
+  } catch {
+    return false;
+  }
+}
 
 const getToken = () => localStorage.getItem("token");
 
@@ -114,6 +129,9 @@ export default function SettingsPage() {
   const [portalColor, setPortalColor] = useState(DEFAULT_PRIMARY_COLOR);
   const [portalColorSaving, setPortalColorSaving] = useState(false);
   const [hospitalId, setHospitalId] = useState(null);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [purgeBusy, setPurgeBusy] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   const checkPasswordCriteria = (password) => {
     setPasswordCriteria({
@@ -144,6 +162,8 @@ export default function SettingsPage() {
             profile_image_path: u.profile_image_path || "",
           });
         }
+        const role = data?.data?.role;
+        setIsSuperAdmin(resolveIsSuperAdmin(role));
         const hospital = data?.data?.hospital;
         if (hospital?.id) {
           setHospitalId(hospital.id);
@@ -158,6 +178,7 @@ export default function SettingsPage() {
           } catch (_) {}
         }
       } catch {
+        setIsSuperAdmin(resolveIsSuperAdmin(null));
         Swal.fire({ icon: "error", title: "Error", text: "Failed to load profile." });
       } finally {
         setMeLoading(false);
@@ -266,6 +287,105 @@ export default function SettingsPage() {
       Swal.fire({ icon: "error", title: "Update failed", text: err?.message || "Failed to update password." });
     } finally {
       setPLoading(false);
+    }
+  };
+
+  const handleDownloadHospitalExport = async () => {
+    if (!hospitalId || !token) return;
+    setExportLoading(true);
+    try {
+      const res = await fetch(`${API_HOSPITALS}/${hospitalId}/export-data`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || `Export failed (${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `hospital-${hospitalId}-export.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      Swal.fire({
+        icon: "success",
+        title: "Download started",
+        text: "Keep this file safe if you are moving to another system or need a backup.",
+        confirmButtonColor: teal,
+      });
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Export failed", text: e?.message || "Could not download export." });
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handlePurgeOrganization = async () => {
+    if (!hospitalId || !token) return;
+    const { value: formValues } = await Swal.fire({
+      title: "Delete organization permanently",
+      html: `
+        <p style="text-align:left;margin-bottom:12px;font-size:14px;">
+          This removes your hospital and all related data from this system. You should <strong>download your data</strong> first.
+          This cannot be undone.
+        </p>
+        <input id="purge-pw" type="password" class="swal2-input" placeholder="Your login password" autocomplete="current-password" />
+        <input id="purge-phrase" type="text" class="swal2-input" placeholder="Type: DELETE MY ORGANIZATION" autocomplete="off" />
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: "Delete everything",
+      confirmButtonColor: "#c62828",
+      cancelButtonColor: "#757575",
+      preConfirm: () => {
+        const password = document.getElementById("purge-pw")?.value;
+        const confirmPhrase = document.getElementById("purge-phrase")?.value?.trim();
+        if (!password) {
+          Swal.showValidationMessage("Password is required");
+          return false;
+        }
+        if (confirmPhrase !== "DELETE MY ORGANIZATION") {
+          Swal.showValidationMessage('Confirmation phrase must be exactly: DELETE MY ORGANIZATION');
+          return false;
+        }
+        return { password, confirmPhrase };
+      },
+    });
+    if (!formValues) return;
+    setPurgeBusy(true);
+    try {
+      const res = await fetch(`${API_HOSPITALS}/${hospitalId}/purge-organization`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          password: formValues.password,
+          confirmPhrase: formValues.confirmPhrase,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || `Request failed (${res.status})`);
+      await Swal.fire({
+        icon: "success",
+        title: "Organization removed",
+        text: "You will be signed out now.",
+        confirmButtonColor: teal,
+      });
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("role");
+      localStorage.removeItem("menuItems");
+      localStorage.removeItem("hospital");
+      window.location.href = "/";
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Could not delete", text: e?.message || "Operation failed." });
+    } finally {
+      setPurgeBusy(false);
     }
   };
 
@@ -467,6 +587,48 @@ export default function SettingsPage() {
                 >
                   {portalColorSaving ? "Saving…" : "Apply to portal"}
                 </Button>
+              </Stack>
+            </CardContent>
+          </Card>
+        )}
+
+        {hospitalId && isSuperAdmin && (
+          <Card elevation={0} sx={cardSx}>
+            <CardHeader
+              avatar={<CloudDownload sx={{ color: teal }} />}
+              title="Your hospital data"
+              subheader="Download a JSON copy of data tied to your hospital before you leave or switch systems. You can also permanently delete your organization here after exporting."
+              titleTypographyProps={{ fontWeight: 700, color: "text.primary" }}
+              subheaderTypographyProps={{ color: "text.secondary", variant: "body2" }}
+              sx={{ pb: 0 }}
+            />
+            <Divider sx={{ borderColor: "divider" }} />
+            <CardContent>
+              <Stack spacing={2}>
+                <Typography variant="body2" color="text.secondary">
+                  Super Admins only. Passwords are never included in the export. Store the file securely; it may contain personal health information.
+                </Typography>
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} flexWrap="wrap">
+                  <Button
+                    variant="contained"
+                    startIcon={<CloudDownload />}
+                    disabled={exportLoading}
+                    onClick={handleDownloadHospitalExport}
+                    sx={{ bgcolor: teal, "&:hover": { bgcolor: tealDark } }}
+                  >
+                    {exportLoading ? "Preparing…" : "Download data export (JSON)"}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    startIcon={<DeleteForever />}
+                    disabled={purgeBusy || exportLoading}
+                    onClick={handlePurgeOrganization}
+                    sx={{ borderColor: "error.main" }}
+                  >
+                    Delete organization permanently
+                  </Button>
+                </Stack>
               </Stack>
             </CardContent>
           </Card>

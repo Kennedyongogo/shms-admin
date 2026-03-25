@@ -14,6 +14,10 @@ import {
   DialogContentText,
   DialogActions,
   Tooltip,
+  Stack,
+  ToggleButton,
+  ToggleButtonGroup,
+  FormLabel,
 } from "@mui/material";
 import {
   Visibility,
@@ -27,9 +31,32 @@ import Footer from "./Footer";
 import ServicesSection from "./ServicesSection";
 import ChatbotWidget from "./ChatbotWidget";
 import Swal from "sweetalert2";
+import {
+  setSubscriptionPaymentPending,
+  clearSubscriptionPaymentPending,
+  completeSubscriptionPaymentReturn,
+} from "../utils/subscriptionPaymentReturn";
 
 const primaryTeal = "#00897B";
 const primaryTealDark = "#00695C";
+
+function normalizeSubscriptionPackage(p) {
+  return String(p || "silver").toLowerCase() === "gold" ? "gold" : "silver";
+}
+
+/** Uses API `package_amounts_kes_subunits` when present; otherwise infers from legacy payload. */
+function getRenewalPackageAmountsSubunits(ctx) {
+  const a = ctx?.package_amounts_kes_subunits;
+  if (a && Number.isFinite(Number(a.silver)) && Number.isFinite(Number(a.gold))) {
+    return { silver: Number(a.silver), gold: Number(a.gold) };
+  }
+  const cur = normalizeSubscriptionPackage(ctx?.subscription_package);
+  const sub = Number(ctx?.amount_kes_subunits || 0);
+  return {
+    silver: cur === "silver" ? sub : 10 * 100,
+    gold: cur === "gold" ? sub : 20 * 100,
+  };
+}
 
 const BACKGROUND_IMAGES = [
   "/bergy59-bed-8352775_1920.jpg",
@@ -53,6 +80,10 @@ export default function LoginPage() {
   const [body, updateBody] = useState({ email: null });
   const [openResetDialog, setOpenResetDialog] = useState(false);
   const [openLoginDialog, setOpenLoginDialog] = useState(false);
+  const [paymentRequiredOpen, setPaymentRequiredOpen] = useState(false);
+  const [paymentContext, setPaymentContext] = useState(null);
+  const [renewalPackage, setRenewalPackage] = useState("silver");
+  const [payRedirecting, setPayRedirecting] = useState(false);
   const [backgroundIndex, setBackgroundIndex] = useState(0);
   useEffect(() => {
     const timer = setInterval(() => {
@@ -73,6 +104,53 @@ export default function LoginPage() {
       if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth" }), 100);
     }
   }, [location.hash]);
+
+  /** After Paystack, land on /?reference= — complete subscription then offer sign in. */
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const ref = params.get("reference") || params.get("trxref");
+    if (!ref || !sessionStorage.getItem("shms_subscription_pay_pending")) return;
+
+    const procKey = `shms_sub_pay_proc_${ref}`;
+    if (sessionStorage.getItem(procKey)) return;
+    sessionStorage.setItem(procKey, "1");
+
+    (async () => {
+      try {
+        const result = await completeSubscriptionPaymentReturn(ref);
+        window.history.replaceState({}, "", location.pathname || "/");
+        if (result.noPending) {
+          sessionStorage.removeItem(procKey);
+          return;
+        }
+        if (result.ok) {
+          await Swal.fire({
+            icon: "success",
+            title: "Payment recorded",
+            text: "Your subscription is active. Sign in with your email and password.",
+            confirmButtonColor: primaryTeal,
+          });
+          setOpenLoginDialog(true);
+        } else {
+          await Swal.fire({
+            icon: "error",
+            title: "Could not confirm payment",
+            text: result.message || "Try again or contact support.",
+            confirmButtonColor: primaryTeal,
+          });
+        }
+      } catch (e) {
+        await Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: e?.message || "Something went wrong.",
+          confirmButtonColor: primaryTeal,
+        });
+      } finally {
+        sessionStorage.removeItem(procKey);
+      }
+    })();
+  }, [location.search, location.pathname]);
 
   const login = async (e) => {
     if (e) e.preventDefault();
@@ -96,9 +174,37 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify(d),
       });
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        Swal.fire({ icon: "error", title: "Login Failed", text: data.message || "Login failed", confirmButtonColor: primaryTeal });
+        if (response.status === 403 && data.code === "PAYMENT_REQUIRED" && data.data) {
+          Swal.close();
+          setPaymentContext({
+            hospital_id: data.data.hospital_id,
+            subscription_package: data.data.subscription_package,
+            amount_kes_subunits: data.data.amount_kes_subunits,
+            package_amounts_kes_subunits: data.data.package_amounts_kes_subunits,
+            paystack_public_key: data.data.paystack_public_key,
+            email: d.email,
+          });
+          setRenewalPackage(normalizeSubscriptionPackage(data.data.subscription_package));
+          setPaymentRequiredOpen(true);
+        } else if (response.status === 403 && data.code === "PAYMENT_REQUIRED") {
+          await Swal.fire({
+            icon: "warning",
+            title: "Subscription payment required",
+            text: data.message || "Complete payment for your organization to continue.",
+            confirmButtonColor: primaryTeal,
+          });
+        } else if (response.status === 403 && data.code === "SUBSCRIPTION_EXPIRED") {
+          await Swal.fire({
+            icon: "info",
+            title: "Subscription inactive",
+            text: data.message || "Your organization's subscription has expired. Please contact your Super Admin.",
+            confirmButtonColor: primaryTeal,
+          });
+        } else {
+          Swal.fire({ icon: "error", title: "Login Failed", text: data.message || "Login failed", confirmButtonColor: primaryTeal });
+        }
       } else if (data.success) {
         localStorage.setItem("token", data.data.token);
         localStorage.setItem("user", JSON.stringify(data.data.user));
@@ -158,6 +264,55 @@ export default function LoginPage() {
   const validateEmail = (email) =>
     String(email).toLowerCase().match(/^(([^<>()[\]/.,;:\s@"]+(\.[^<>()[\]/.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/);
   const validatePassword = (password) => password && password.length >= 6;
+
+  const startPaystackForSubscription = async () => {
+    if (!paymentContext?.hospital_id || !paymentContext?.email) return;
+    const pkg = normalizeSubscriptionPackage(renewalPackage);
+    setPayRedirecting(true);
+    try {
+      setSubscriptionPaymentPending({
+        hospital_id: paymentContext.hospital_id,
+        package: pkg,
+        email: paymentContext.email,
+      });
+      const res = await fetch("/api/auth/payment/initialize-registration", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          package: pkg,
+          email: paymentContext.email,
+          hospital_id: paymentContext.hospital_id,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success || !json.data?.authorization_url) {
+        clearSubscriptionPaymentPending();
+        await Swal.fire({
+          icon: "error",
+          title: "Could not start payment",
+          text: json.message || "Check Paystack configuration and try again.",
+          confirmButtonColor: primaryTeal,
+        });
+        return;
+      }
+      window.location.href = json.data.authorization_url;
+    } catch (e) {
+      clearSubscriptionPaymentPending();
+      await Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: e?.message || "Could not connect to payment.",
+        confirmButtonColor: primaryTeal,
+      });
+    } finally {
+      setPayRedirecting(false);
+    }
+  };
+
+  const fmtKes = (subunits) => {
+    const n = Number(subunits || 0) / 100;
+    return n.toLocaleString(undefined, { style: "currency", currency: "KES" });
+  };
 
 const inputSx = {
     "& .MuiOutlinedInput-root": {
@@ -390,6 +545,92 @@ const inputSx = {
       </Dialog>
 
       {/* Forgot password dialog */}
+      <Dialog
+        open={paymentRequiredOpen}
+        onClose={() => {
+          if (!payRedirecting) {
+            setPaymentRequiredOpen(false);
+            setPaymentContext(null);
+            setRenewalPackage("silver");
+          }
+        }}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3, border: "1px solid", borderColor: "divider" } }}
+      >
+        <DialogTitle sx={{ fontWeight: 800, color: "text.primary" }}>Complete subscription payment</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2, color: "text.primary" }}>
+            Your trial or paid period has ended. Choose the package you want for this renewal (you can upgrade or downgrade). Pay with
+            Paystack, then return here to confirm and sign in.
+          </DialogContentText>
+          {paymentContext && (
+            <Stack spacing={2} sx={{ mb: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                Package on record:{" "}
+                <strong>
+                  {normalizeSubscriptionPackage(paymentContext.subscription_package) === "gold" ? "Gold" : "Silver"}
+                </strong>
+              </Typography>
+              <Box>
+                <FormLabel component="legend" sx={{ mb: 1, display: "block", fontWeight: 700, color: "text.primary" }}>
+                  Renew as
+                </FormLabel>
+                <ToggleButtonGroup
+                  exclusive
+                  fullWidth
+                  value={renewalPackage}
+                  onChange={(_e, v) => v && setRenewalPackage(v)}
+                  disabled={payRedirecting}
+                  aria-label="Subscription package for renewal"
+                  sx={{
+                    "& .MuiToggleButton-root": { py: 1.25, fontWeight: 700, textTransform: "none" },
+                    "& .MuiToggleButton-root.Mui-selected": {
+                      bgcolor: `${primaryTeal}14`,
+                      color: primaryTeal,
+                      borderColor: primaryTeal,
+                      "&:hover": { bgcolor: `${primaryTeal}22` },
+                    },
+                  }}
+                >
+                  <ToggleButton value="silver">Silver</ToggleButton>
+                  <ToggleButton value="gold">Gold</ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: primaryTeal }}>
+                {fmtKes(getRenewalPackageAmountsSubunits(paymentContext)[normalizeSubscriptionPackage(renewalPackage)])}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" display="block">
+                You will be redirected to Paystack using <strong>{paymentContext.email}</strong>. After paying, you will return here to
+                confirm and can sign in.
+              </Typography>
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1, flexWrap: "wrap" }}>
+          <Button
+            onClick={() => {
+              setPaymentRequiredOpen(false);
+              setPaymentContext(null);
+              setRenewalPackage("silver");
+            }}
+            disabled={payRedirecting}
+            variant="outlined"
+          >
+            Not now
+          </Button>
+          <Button
+            variant="contained"
+            disabled={payRedirecting || !paymentContext}
+            onClick={startPaystackForSubscription}
+            startIcon={payRedirecting ? <CircularProgress size={18} color="inherit" /> : null}
+            sx={{ bgcolor: primaryTeal, "&:hover": { bgcolor: primaryTealDark } }}
+          >
+            {payRedirecting ? "Redirecting…" : "Pay with Paystack"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog
         open={openResetDialog}
         onClose={() => !resetLoading && setOpenResetDialog(false)}

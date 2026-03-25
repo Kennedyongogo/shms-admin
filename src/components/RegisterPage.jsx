@@ -17,6 +17,7 @@ import {
   Typography,
   Stack,
   InputAdornment,
+  CircularProgress,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
@@ -34,6 +35,7 @@ import {
   Star as StarIcon,
 } from "@mui/icons-material";
 import Swal from "sweetalert2";
+import { completeSubscriptionPaymentReturn } from "../utils/subscriptionPaymentReturn";
 import GuestNavbar from "./GuestNavbar";
 
 const primaryTeal = "#00897B";
@@ -84,11 +86,86 @@ const SILVER_DESCRIPTION =
 const GOLD_DESCRIPTION =
   "Complete hospital system: everything in Silver plus ward admissions, diet & meals, inventory, and audit log. Full traceability and multi-department support. Best for hospitals, multi-ward facilities, and organizations that need in-patient and inventory management.";
 
+const REG_DRAFT_KEY = "shms_reg_draft";
+/** ~3MB cap — sessionStorage limit varies by browser */
+const MAX_LOGO_DATA_URL_CHARS = 3 * 1024 * 1024;
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(new Error("Could not read logo file"));
+    r.readAsDataURL(file);
+  });
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * @param {string} ref - Paystack transaction reference
+ * @param {object} fields - flat fields including package, hospital_*, full_name, email, phone, password, confirm_password
+ * @param {File | null} logoFile
+ */
+async function postRegisterOrganization(ref, fields, logoFile) {
+  const pkg = fields.package;
+  const payRef = ref && String(ref).trim() ? String(ref).trim() : null;
+  if (logoFile) {
+    const fd = new FormData();
+    fd.append("hospital_name", String(fields.hospital_name || "").trim());
+    fd.append("hospital_address", String(fields.hospital_address || "").trim());
+    fd.append("hospital_phone", String(fields.hospital_phone || "").trim());
+    fd.append("hospital_email", String(fields.hospital_email || "").trim());
+    fd.append("full_name", String(fields.full_name || "").trim());
+    fd.append("email", String(fields.email || "").trim().toLowerCase());
+    fd.append("phone", String(fields.phone || "").trim());
+    fd.append("password", fields.password);
+    fd.append("confirm_password", fields.confirm_password);
+    fd.append("package", pkg);
+    if (payRef) fd.append("paystack_reference", payRef);
+    fd.append("hospital_logo", logoFile);
+    return fetch("/api/auth/register-organization", {
+      method: "POST",
+      headers: { Accept: "application/json" },
+      body: fd,
+    });
+  }
+  const body = {
+    hospital: {
+      name: String(fields.hospital_name || "").trim(),
+      address: fields.hospital_address?.trim() || undefined,
+      phone: fields.hospital_phone?.trim() || undefined,
+      email: fields.hospital_email?.trim() || undefined,
+    },
+    full_name: String(fields.full_name || "").trim(),
+    email: String(fields.email || "").trim().toLowerCase(),
+    phone: fields.phone?.trim() || undefined,
+    password: fields.password,
+    confirm_password: fields.confirm_password,
+    package: pkg,
+  };
+  if (payRef) body.paystack_reference = payRef;
+  return fetch("/api/auth/register-organization", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+function isSubscriptionRenewalReturnFromPaystack() {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  const ref = params.get("reference") || params.get("trxref");
+  return Boolean(ref?.trim() && sessionStorage.getItem("shms_subscription_pay_pending"));
+}
+
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const [subscriptionReturnBusy, setSubscriptionReturnBusy] = useState(isSubscriptionRenewalReturnFromPaystack);
   const [step, setStep] = useState(0);
   const [packageSelected, setPackageSelected] = useState(null);
+  const [paystackReference, setPaystackReference] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [completingRegistration, setCompletingRegistration] = useState(false);
   const [form, setForm] = useState({
     hospital_name: "",
     hospital_address: "",
@@ -107,6 +184,147 @@ export default function RegisterPage() {
   const [showNavbar, setShowNavbar] = useState(true);
   const scrollContainerRef = useRef(null);
   const registerHeaderRef = useRef(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("reference") || params.get("trxref");
+    if (!ref) return;
+
+    /** Super Admin paying after trial — same Paystack callback URL may land on /register */
+    if (sessionStorage.getItem("shms_subscription_pay_pending")) {
+      const procKeySub = `shms_sub_pay_proc_${ref}`;
+      if (sessionStorage.getItem(procKeySub)) return;
+      sessionStorage.setItem(procKeySub, "1");
+      (async () => {
+        try {
+          const result = await completeSubscriptionPaymentReturn(ref);
+          window.history.replaceState({}, "", "/register");
+          sessionStorage.removeItem(procKeySub);
+          if (result.noPending) {
+            setSubscriptionReturnBusy(false);
+            return;
+          }
+          if (result.ok) {
+            await Swal.fire({
+              icon: "success",
+              title: "Payment recorded",
+              text: "Your subscription is active. Sign in from the home page.",
+              confirmButtonColor: primaryTeal,
+            });
+            navigate("/", { replace: true });
+          } else {
+            setSubscriptionReturnBusy(false);
+            await Swal.fire({
+              icon: "error",
+              title: "Could not confirm payment",
+              text: result.message || "Try again or contact support.",
+              confirmButtonColor: primaryTeal,
+            });
+          }
+        } catch (err) {
+          sessionStorage.removeItem(procKeySub);
+          window.history.replaceState({}, "", "/register");
+          setSubscriptionReturnBusy(false);
+          Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: err?.message || "Something went wrong.",
+            confirmButtonColor: primaryTeal,
+          });
+        }
+      })();
+      return;
+    }
+
+    const procKey = `shms_reg_processing_${ref}`;
+    if (sessionStorage.getItem(procKey)) return;
+    sessionStorage.setItem(procKey, "1");
+
+    const draftRaw = sessionStorage.getItem(REG_DRAFT_KEY);
+    if (!draftRaw) {
+      sessionStorage.removeItem(procKey);
+      window.history.replaceState({}, "", "/register");
+      Swal.fire({
+        icon: "warning",
+        title: "Session expired",
+        text: "We could not find your registration details. Fill the form again, then register.",
+        confirmButtonColor: primaryTeal,
+      });
+      return;
+    }
+
+    let draft;
+    try {
+      draft = JSON.parse(draftRaw);
+    } catch {
+      sessionStorage.removeItem(procKey);
+      window.history.replaceState({}, "", "/register");
+      Swal.fire({
+        icon: "error",
+        title: "Invalid session",
+        text: "Please start registration again.",
+        confirmButtonColor: primaryTeal,
+      });
+      return;
+    }
+    window.history.replaceState({}, "", "/register");
+    sessionStorage.setItem("shms_reg_paystack_ref", ref);
+    setPaystackReference(ref);
+    setPackageSelected(draft.package || "silver");
+    setStep(1);
+
+    (async () => {
+      setCompletingRegistration(true);
+      try {
+        let logoFile = null;
+        if (draft.hospital_logo_data_url) {
+          const imgRes = await fetch(draft.hospital_logo_data_url);
+          const blob = await imgRes.blob();
+          logoFile = new File([blob], draft.hospital_logo_name || "logo.png", { type: blob.type || "image/jpeg" });
+        }
+        const response = await postRegisterOrganization(ref, draft, logoFile);
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.message || "Registration failed");
+        }
+        if (!data.success || !data.data) {
+          throw new Error(data.message || "Registration failed");
+        }
+        sessionStorage.removeItem(REG_DRAFT_KEY);
+        sessionStorage.removeItem("shms_reg_paystack_ref");
+        sessionStorage.removeItem(procKey);
+        localStorage.setItem("token", data.data.token);
+        localStorage.setItem("user", JSON.stringify(data.data.user));
+        localStorage.setItem("role", JSON.stringify(data.data.role ?? null));
+        localStorage.setItem("menuItems", JSON.stringify(data.data.menuItems ?? []));
+        if (data.data.hospital) {
+          localStorage.setItem("hospital", JSON.stringify(data.data.hospital));
+        }
+        const inv = data.data.registration_invoice;
+        const trialMsg =
+          inv?.status === "unpaid"
+            ? "You are signed in as Super Admin. Use your trial; when it ends, sign in again to pay with Paystack and restore access."
+            : "You are signed in as Super Admin. You can now create users and roles for your hospital.";
+        Swal.fire({
+          icon: "success",
+          title: "Registration complete",
+          text: trialMsg,
+          confirmButtonColor: primaryTeal,
+        });
+        navigate("/dashboard", { replace: true });
+      } catch (err) {
+        sessionStorage.removeItem(procKey);
+        Swal.fire({
+          icon: "error",
+          title: "Registration failed",
+          text: err?.message || "Something went wrong.",
+          confirmButtonColor: primaryTeal,
+        });
+      } finally {
+        setCompletingRegistration(false);
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     if (step !== 1) {
@@ -178,47 +396,44 @@ export default function RegisterPage() {
       });
       return;
     }
+    if (!form.full_name?.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "Full name is required",
+        confirmButtonColor: primaryTeal,
+      });
+      return;
+    }
+    const loginEmail = form.email.trim().toLowerCase();
+    if (!loginEmail || !EMAIL_RE.test(loginEmail)) {
+      Swal.fire({
+        icon: "warning",
+        title: "Super Admin email",
+        text: "Enter a valid email — you will use it to sign in.",
+        confirmButtonColor: primaryTeal,
+      });
+      return;
+    }
+
+    const ref =
+      paystackReference ||
+      (typeof sessionStorage !== "undefined" ? sessionStorage.getItem("shms_reg_paystack_ref") : null);
+
     setLoading(true);
     try {
-      let response;
-      if (hospitalLogoFile) {
-        const fd = new FormData();
-        fd.append("hospital_name", form.hospital_name.trim());
-        fd.append("hospital_address", form.hospital_address?.trim() || "");
-        fd.append("hospital_phone", form.hospital_phone?.trim() || "");
-        fd.append("hospital_email", form.hospital_email?.trim() || "");
-        fd.append("full_name", form.full_name.trim());
-        fd.append("email", form.email.trim().toLowerCase());
-        fd.append("phone", form.phone?.trim() || "");
-        fd.append("password", form.password);
-        fd.append("confirm_password", form.confirm_password);
-        fd.append("package", packageSelected);
-        fd.append("hospital_logo", hospitalLogoFile);
-        response = await fetch("/api/auth/register-organization", {
-          method: "POST",
-          headers: { Accept: "application/json" },
-          body: fd,
-        });
-      } else {
-        response = await fetch("/api/auth/register-organization", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({
-            hospital: {
-              name: form.hospital_name.trim(),
-              address: form.hospital_address?.trim() || undefined,
-              phone: form.hospital_phone?.trim() || undefined,
-              email: form.hospital_email?.trim() || undefined,
-            },
-            full_name: form.full_name.trim(),
-            email: form.email.trim().toLowerCase(),
-            phone: form.phone?.trim() || undefined,
-            password: form.password,
-            confirm_password: form.confirm_password,
-            package: packageSelected,
-          }),
-        });
-      }
+      const fields = {
+        package: packageSelected,
+        hospital_name: form.hospital_name.trim(),
+        hospital_address: form.hospital_address?.trim() || "",
+        hospital_phone: form.hospital_phone?.trim() || "",
+        hospital_email: form.hospital_email?.trim() || "",
+        full_name: form.full_name.trim(),
+        email: loginEmail,
+        phone: form.phone?.trim() || "",
+        password: form.password,
+        confirm_password: form.confirm_password,
+      };
+      const response = await postRegisterOrganization(ref || null, fields, hospitalLogoFile);
       const data = await response.json();
       if (!response.ok) {
         Swal.fire({
@@ -230,6 +445,8 @@ export default function RegisterPage() {
         return;
       }
       if (data.success && data.data) {
+        sessionStorage.removeItem(REG_DRAFT_KEY);
+        sessionStorage.removeItem("shms_reg_paystack_ref");
         localStorage.setItem("token", data.data.token);
         localStorage.setItem("user", JSON.stringify(data.data.user));
         localStorage.setItem("role", JSON.stringify(data.data.role ?? null));
@@ -237,10 +454,15 @@ export default function RegisterPage() {
         if (data.data.hospital) {
           localStorage.setItem("hospital", JSON.stringify(data.data.hospital));
         }
+        const inv = data.data.registration_invoice;
+        const trialMsg =
+          inv?.status === "unpaid"
+            ? "You are signed in as Super Admin. Use your trial; when it ends, sign in again to pay with Paystack and restore access."
+            : "You are signed in as Super Admin. You can now create users and roles for your hospital.";
         Swal.fire({
           icon: "success",
           title: "Registration complete",
-          text: "You are signed in as Super Admin. You can now create users and roles for your hospital.",
+          text: trialMsg,
           confirmButtonColor: primaryTeal,
         });
         navigate("/dashboard", { replace: true });
@@ -269,6 +491,32 @@ export default function RegisterPage() {
   };
 
   const steps = ["Choose package", "Register"];
+
+  if (subscriptionReturnBusy) {
+    return (
+      <Box
+        component="main"
+        sx={{
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          bgcolor: "#fafafa",
+          px: 2,
+          boxSizing: "border-box",
+        }}
+      >
+        <CircularProgress sx={{ color: primaryTeal, mb: 2 }} size={48} />
+        <Typography variant="h6" sx={{ fontWeight: 800, color: "text.primary", textAlign: "center" }}>
+          Confirming your payment…
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1, textAlign: "center", maxWidth: 380 }}>
+          Please wait while we verify your subscription with Paystack. You will be redirected to sign in shortly.
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box
@@ -338,8 +586,8 @@ export default function RegisterPage() {
             <Typography variant="h5" sx={{ fontWeight: 800, mb: 0.5, color: "text.primary", flexShrink: 0, fontSize: { xs: "1.25rem", sm: "1.5rem" } }}>
               Choose your package
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2, flexShrink: 0, maxWidth: 560 }}>
-              Select one package below. You can manage patients, appointments, lab, pharmacy, and billing. Then proceed to register your organization.
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1, flexShrink: 0, maxWidth: 560 }}>
+              Select a package (Silver KES 10, Gold KES 20 in test mode). On the next step you will enter hospital and Super Admin details and register. Subscription payment is completed later, after the trial, when you sign in again as Super Admin.
             </Typography>
             <Box
               sx={{
@@ -424,7 +672,7 @@ export default function RegisterPage() {
                         textShadow: "0 1px 2px rgba(0,0,0,0.18)",
                       }}
                     >
-                      Silver package
+                      Silver — KES 10
                     </Typography>
                   </Stack>
                   <Typography
@@ -606,7 +854,7 @@ export default function RegisterPage() {
                         textShadow: "0 1px 2px rgba(0,0,0,0.18)",
                       }}
                     >
-                      Gold package
+                      Gold — KES 20
                     </Typography>
                   </Stack>
                   <Typography
@@ -743,7 +991,12 @@ export default function RegisterPage() {
             <Box ref={registerHeaderRef} sx={{ mb: { xs: 1.25, md: 0.75 } }}>
               <Button
                 startIcon={<ArrowBackIcon />}
-                onClick={() => setStep(0)}
+                onClick={() => {
+                  setStep(0);
+                  setPaystackReference(null);
+                  sessionStorage.removeItem("shms_reg_paystack_ref");
+                  sessionStorage.removeItem(REG_DRAFT_KEY);
+                }}
                 sx={{
                   color: "text.secondary",
                   mb: 1,
@@ -1050,9 +1303,7 @@ export default function RegisterPage() {
                       fullWidth
                       variant="contained"
                       disabled={
-                        loading ||
-                        form.password.length < 6 ||
-                        form.password !== form.confirm_password
+                        loading || completingRegistration || form.password.length < 6 || form.password !== form.confirm_password
                       }
                       sx={{
                         py: 1.1,
@@ -1065,7 +1316,7 @@ export default function RegisterPage() {
                         "&:disabled": { boxShadow: "none" },
                       }}
                     >
-                      {loading ? "Creating account…" : "Create account"}
+                      {completingRegistration ? "Completing registration…" : loading ? "Creating account…" : "Register"}
                     </Button>
                   </Stack>
                 </Paper>
@@ -1076,6 +1327,25 @@ export default function RegisterPage() {
         )}
         </Box>
       </Box>
+      {completingRegistration && (
+        <Box
+          sx={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            bgcolor: "rgba(255,255,255,0.85)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexDirection: "column",
+            gap: 2,
+          }}
+        >
+          <Typography variant="body1" sx={{ fontWeight: 700, color: "text.primary" }}>
+            Finishing your registration…
+          </Typography>
+        </Box>
+      )}
     </Box>
   );
 }

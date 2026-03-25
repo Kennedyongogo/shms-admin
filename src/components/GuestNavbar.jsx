@@ -4,7 +4,6 @@ import {
   Box,
   Button,
   IconButton,
-  Tooltip,
   useMediaQuery,
   useTheme,
   List,
@@ -21,6 +20,33 @@ import {
 
 const primaryTeal = "#00897B";
 const primaryTealDark = "#00695C";
+/** Solid fill for Login / Register — no teal outline, single flat color */
+const authFill = "#FFF8E7";
+const authFillHover = "#FFF3D6";
+
+const authButtonSx = {
+  color: primaryTeal,
+  bgcolor: authFill,
+  border: "none",
+  boxShadow: "none",
+  fontWeight: 700,
+  textTransform: "none",
+  px: 2,
+  py: 0.75,
+  borderRadius: 1,
+  "& .MuiSvgIcon-root": { color: primaryTeal },
+  "&:hover": {
+    bgcolor: authFillHover,
+    color: primaryTealDark,
+    boxShadow: "none",
+    border: "none",
+    "& .MuiSvgIcon-root": { color: primaryTealDark },
+  },
+  "&.Mui-focusVisible": {
+    outline: "none",
+    boxShadow: "0 0 0 2px rgba(237, 228, 211, 0.95)",
+  },
+};
 
 const navLinkSx = (onWhitePage, active) => ({
   color: onWhitePage
@@ -42,7 +68,7 @@ const navLinkSx = (onWhitePage, active) => ({
 
 /**
  * Transparent header navbar shown only on pre-login routes (/, /register, /about, /terms, /privacy, /refund-cancellation).
- * Far left: logo (favicon). Center: Home, About us, Terms of Service, Privacy Policy. Right: Register.
+ * Far left: logo (favicon). Center: nav links. Right (home): Login & Register (solid fill, no outline).
  */
 export default function GuestNavbar() {
   const theme = useTheme();
@@ -221,42 +247,24 @@ export default function GuestNavbar() {
                   }}
                 >
                   <Button
-                    variant="outlined"
+                    variant="contained"
+                    color="inherit"
+                    disableElevation
+                    disableRipple
                     startIcon={<LoginIcon />}
                     onClick={handleLoginClick}
-                    sx={{
-                      color: primaryTeal,
-                      borderColor: primaryTeal,
-                      borderWidth: 2,
-                      fontWeight: 700,
-                      bgcolor: "rgba(255,255,255,0.95)",
-                      "&:hover": {
-                        borderColor: primaryTealDark,
-                        borderWidth: 2,
-                        bgcolor: "white",
-                        color: primaryTealDark,
-                      },
-                    }}
+                    sx={authButtonSx}
                   >
                     Login
                   </Button>
                   <Button
-                    variant="outlined"
+                    variant="contained"
+                    color="inherit"
+                    disableElevation
+                    disableRipple
                     startIcon={<RegisterIcon />}
                     onClick={() => navigate("/register")}
-                    sx={{
-                      color: primaryTeal,
-                      borderColor: primaryTeal,
-                      borderWidth: 2,
-                      fontWeight: 700,
-                      bgcolor: "rgba(255,255,255,0.95)",
-                      "&:hover": {
-                        borderColor: primaryTealDark,
-                        borderWidth: 2,
-                        bgcolor: "white",
-                        color: primaryTealDark,
-                      },
-                    }}
+                    sx={authButtonSx}
                   >
                     Register
                   </Button>
@@ -416,16 +424,42 @@ export default function GuestNavbar() {
                       handleLoginClick();
                       setMobileOpen(false);
                     }}
+                    sx={{
+                      bgcolor: authFill,
+                      borderRadius: 1,
+                      mx: 1,
+                      mb: 0.5,
+                      border: "none",
+                      "&:hover": { bgcolor: authFillHover },
+                    }}
                   >
-                    <ListItemText primary="Login" />
+                    <ListItemText
+                      primary="Login"
+                      primaryTypographyProps={{
+                        sx: { color: primaryTeal, fontWeight: 700 },
+                      }}
+                    />
                   </ListItemButton>
                   <ListItemButton
                     onClick={() => {
                       navigate("/register");
                       setMobileOpen(false);
                     }}
+                    sx={{
+                      bgcolor: authFill,
+                      borderRadius: 1,
+                      mx: 1,
+                      mb: 0.5,
+                      border: "none",
+                      "&:hover": { bgcolor: authFillHover },
+                    }}
                   >
-                    <ListItemText primary="Register" />
+                    <ListItemText
+                      primary="Register"
+                      primaryTypographyProps={{
+                        sx: { color: primaryTeal, fontWeight: 700 },
+                      }}
+                    />
                   </ListItemButton>
                 </>
               )}
