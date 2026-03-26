@@ -31,6 +31,7 @@ import {
   Palette as PaletteIcon,
   CloudDownload,
   DeleteForever,
+  ArrowBack,
 } from "@mui/icons-material";
 import Avatar from "@mui/material/Avatar";
 import Swal from "sweetalert2";
@@ -167,6 +168,7 @@ export default function SettingsPage() {
   const [showPortabilityActions, setShowPortabilityActions] = useState(true);
   const [payBusy, setPayBusy] = useState(false);
   const [paystackPublicKey, setPaystackPublicKey] = useState(null);
+  const [currentSubscriptionPackage, setCurrentSubscriptionPackage] = useState("silver");
 
   const checkPasswordCriteria = (password) => {
     setPasswordCriteria({
@@ -207,10 +209,14 @@ export default function SettingsPage() {
           setExpiredMode(expired);
           setShowPortabilityActions(!expired);
           setPaystackPublicKey(hospitalFromApi?.paystack_public_key || null);
+          setCurrentSubscriptionPackage(
+            String(hospitalFromApi?.subscription_package || "silver").toLowerCase() === "gold" ? "gold" : "silver"
+          );
         } else {
           setExpiredMode(false);
           setShowPortabilityActions(true);
           setPaystackPublicKey(null);
+          setCurrentSubscriptionPackage("silver");
           try {
             const stored = JSON.parse(localStorage.getItem("hospital") || "null");
             if (stored?.id) {
@@ -224,6 +230,7 @@ export default function SettingsPage() {
         setExpiredMode(false);
         setShowPortabilityActions(true);
         setPaystackPublicKey(null);
+        setCurrentSubscriptionPackage("silver");
         Swal.fire({ icon: "error", title: "Error", text: "Failed to load profile." });
       } finally {
         setMeLoading(false);
@@ -526,18 +533,100 @@ export default function SettingsPage() {
 
   const handlePayWithPaystack = async () => {
     if (!expiredMode) return;
-    const { value: pkg } = await Swal.fire({
+    const prevLabel = currentSubscriptionPackage === "gold" ? "Gold" : "Silver";
+
+    const result = await Swal.fire({
       title: "Renew subscription",
-      text: "Choose the package you want to renew with Paystack.",
-      input: "select",
-      inputOptions: { silver: "Silver", gold: "Gold" },
-      inputValue: "silver",
+      html: `
+        <div style="text-align:left;margin-top:8px;">
+          <div style="font-size:13px;color:#6b7280;margin-bottom:12px;line-height:1.45;">
+            Choose a package to renew with Paystack.
+            <span style="display:inline-block;margin-left:8px;padding:3px 8px;border-radius:999px;background:rgba(0,137,123,0.10);color:#00695C;font-weight:700;">
+              Previous: ${prevLabel}
+            </span>
+          </div>
+
+          <div id="shms-renew-cards" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <button type="button" data-pkg="silver"
+              style="
+                all:unset;cursor:pointer;border-radius:14px;padding:14px 14px 12px;
+                border:1px solid rgba(0,0,0,0.10);background:linear-gradient(135deg,#f8fafc 0%, #eef2f7 100%);
+                box-shadow:0 10px 30px rgba(2,6,23,0.08);
+              ">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                <div style="font-weight:900;font-size:14px;color:#0f172a;">Silver</div>
+                <div style="font-weight:900;font-size:13px;color:#0f172a;">KES</div>
+              </div>
+              <div style="margin-top:10px;font-size:12px;color:#334155;line-height:1.35;">
+                Core modules for clinics: patients, appointments, lab, pharmacy, billing, users, settings.
+              </div>
+              <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;">
+                <div style="font-size:12px;color:#64748b;font-weight:700;">Recommended for clinics</div>
+                <div style="width:10px;height:10px;border-radius:999px;background:#94a3b8;"></div>
+              </div>
+            </button>
+
+            <button type="button" data-pkg="gold"
+              style="
+                all:unset;cursor:pointer;border-radius:14px;padding:14px 14px 12px;
+                border:1px solid rgba(180,83,9,0.30);background:linear-gradient(135deg,#fffbeb 0%, #fef3c7 60%, #fde68a 100%);
+                box-shadow:0 12px 34px rgba(180,83,9,0.18);
+              ">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                <div style="font-weight:900;font-size:14px;color:#7c2d12;">Gold</div>
+                <div style="font-weight:900;font-size:13px;color:#7c2d12;">KES</div>
+              </div>
+              <div style="margin-top:10px;font-size:12px;color:#7c2d12;line-height:1.35;">
+                Full hospital suite: everything in Silver plus ward, diet, inventory, audit log.
+              </div>
+              <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;">
+                <div style="font-size:12px;color:#92400e;font-weight:800;">Best for hospitals</div>
+                <div style="width:10px;height:10px;border-radius:999px;background:#f59e0b;"></div>
+              </div>
+            </button>
+          </div>
+
+          <div style="margin-top:12px;font-size:12px;color:#6b7280;">
+            Your payment will open securely in Paystack and return here automatically.
+          </div>
+        </div>
+      `,
       showCancelButton: true,
+      showConfirmButton: true,
       confirmButtonText: "Continue",
       cancelButtonText: "Cancel",
       confirmButtonColor: teal,
+      reverseButtons: true,
+      focusConfirm: false,
+      didOpen: () => {
+        const prev = currentSubscriptionPackage === "gold" ? "gold" : "silver";
+        const root = document.getElementById("shms-renew-cards");
+        if (!root) return;
+        const buttons = Array.from(root.querySelectorAll("button[data-pkg]"));
+        const setSelected = (pkg) => {
+          const val = pkg === "gold" ? "gold" : "silver";
+          Swal.getPopup().dataset.pkg = val;
+          buttons.forEach((b) => {
+            const isSel = b.dataset.pkg === val;
+            b.style.outline = isSel ? "3px solid rgba(0,137,123,0.55)" : "none";
+            b.style.transform = isSel ? "translateY(-1px)" : "translateY(0)";
+          });
+        };
+        setSelected(prev);
+        buttons.forEach((b) => b.addEventListener("click", () => setSelected(b.dataset.pkg)));
+      },
+      preConfirm: () => {
+        const pkg = Swal.getPopup()?.dataset?.pkg;
+        if (!pkg) {
+          Swal.showValidationMessage("Select a package to continue.");
+          return false;
+        }
+        return pkg;
+      },
     });
-    if (!pkg) return;
+
+    if (!result.isConfirmed) return;
+    const pkg = result.value;
 
     try {
       await startPaystackPayment(pkg);
@@ -612,6 +701,20 @@ export default function SettingsPage() {
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
         {expiredMode ? "Download your data or delete your organization." : "Update your profile and password."}
       </Typography>
+      {expiredMode && showPortabilityActions === true && (
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+          <Button
+            variant="text"
+            size="small"
+            startIcon={<ArrowBack />}
+            disabled={exportLoading || purgeBusy}
+            onClick={() => setShowPortabilityActions(false)}
+            sx={{ color: teal, fontWeight: 700, px: 0.5, "&:hover": { bgcolor: "transparent", color: tealDark } }}
+          >
+            Back
+          </Button>
+        </Stack>
+      )}
 
       <Stack spacing={3}>
         {!expiredMode && (
