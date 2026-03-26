@@ -34,6 +34,11 @@ import {
 } from "@mui/icons-material";
 import Avatar from "@mui/material/Avatar";
 import Swal from "sweetalert2";
+import {
+  setSubscriptionPaymentPending,
+  clearSubscriptionPaymentPending,
+  completeSubscriptionPaymentReturn,
+} from "../utils/subscriptionPaymentReturn";
 
 const API_ME = "/api/auth/me";
 const API_CHANGE_PASSWORD = "/api/auth/change-password";
@@ -41,6 +46,32 @@ const API_ME_PROFILE_IMAGE = "/api/auth/me/profile-image";
 const API_HOSPITALS = "/api/hospitals";
 const DEFAULT_PRIMARY_COLOR = "#00897B";
 const SUPER_ADMIN_ROLE_NAME = "Super Admin";
+
+let paystackInlineScriptPromise = null;
+async function ensurePaystackInlineScriptLoaded() {
+  // Paystack inline checkout uses a global `PaystackPop` object.
+  if (typeof window !== "undefined" && window.PaystackPop) return;
+  if (paystackInlineScriptPromise) return paystackInlineScriptPromise;
+
+  paystackInlineScriptPromise = new Promise((resolve, reject) => {
+    const existing = document.querySelector('script[data-paystack-inline="1"]');
+    if (existing) {
+      existing.addEventListener("load", () => resolve());
+      existing.addEventListener("error", () => reject(new Error("Failed to load Paystack script")));
+      return;
+    }
+
+    const s = document.createElement("script");
+    s.src = "https://js.paystack.co/v1/inline.js";
+    s.async = true;
+    s.setAttribute("data-paystack-inline", "1");
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error("Failed to load Paystack inline.js"));
+    document.body.appendChild(s);
+  });
+
+  return paystackInlineScriptPromise;
+}
 
 function resolveIsSuperAdmin(roleFromApi) {
   const name = roleFromApi?.name != null ? String(roleFromApi.name).trim() : "";
@@ -132,6 +163,10 @@ export default function SettingsPage() {
   const [exportLoading, setExportLoading] = useState(false);
   const [purgeBusy, setPurgeBusy] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [expiredMode, setExpiredMode] = useState(false);
+  const [showPortabilityActions, setShowPortabilityActions] = useState(true);
+  const [payBusy, setPayBusy] = useState(false);
+  const [paystackPublicKey, setPaystackPublicKey] = useState(null);
 
   const checkPasswordCriteria = (password) => {
     setPasswordCriteria({
@@ -154,6 +189,7 @@ export default function SettingsPage() {
       try {
         const data = await fetchJson(API_ME, { token });
         const u = data?.data?.user;
+        const hospitalFromApi = data?.data?.hospital;
         if (u) {
           setUserData({
             full_name: u.full_name || "",
@@ -164,11 +200,17 @@ export default function SettingsPage() {
         }
         const role = data?.data?.role;
         setIsSuperAdmin(resolveIsSuperAdmin(role));
-        const hospital = data?.data?.hospital;
-        if (hospital?.id) {
-          setHospitalId(hospital.id);
-          setPortalColor(hospital.primary_color || DEFAULT_PRIMARY_COLOR);
+        if (hospitalFromApi?.id) {
+          setHospitalId(hospitalFromApi.id);
+          setPortalColor(hospitalFromApi.primary_color || DEFAULT_PRIMARY_COLOR);
+          const expired = Boolean(hospitalFromApi?.subscription_status?.status === "expired");
+          setExpiredMode(expired);
+          setShowPortabilityActions(!expired);
+          setPaystackPublicKey(hospitalFromApi?.paystack_public_key || null);
         } else {
+          setExpiredMode(false);
+          setShowPortabilityActions(true);
+          setPaystackPublicKey(null);
           try {
             const stored = JSON.parse(localStorage.getItem("hospital") || "null");
             if (stored?.id) {
@@ -179,6 +221,9 @@ export default function SettingsPage() {
         }
       } catch {
         setIsSuperAdmin(resolveIsSuperAdmin(null));
+        setExpiredMode(false);
+        setShowPortabilityActions(true);
+        setPaystackPublicKey(null);
         Swal.fire({ icon: "error", title: "Error", text: "Failed to load profile." });
       } finally {
         setMeLoading(false);
@@ -389,6 +434,118 @@ export default function SettingsPage() {
     }
   };
 
+  const startPaystackPayment = async (pkg) => {
+    if (!hospitalId || !userData?.email || !paystackPublicKey) {
+      throw new Error("Missing payment details (hospital/email/paystack key).");
+    }
+
+    setPayBusy(true);
+    try {
+      setSubscriptionPaymentPending({
+        hospital_id: hospitalId,
+        package: pkg,
+        email: userData.email,
+      });
+
+      const res = await fetch("/api/auth/payment/initialize-registration", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          package: pkg,
+          email: userData.email,
+          hospital_id: hospitalId,
+        }),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success || !json.data?.reference) {
+        clearSubscriptionPaymentPending();
+        throw new Error(json.message || "Could not start Paystack payment.");
+      }
+
+      await ensurePaystackInlineScriptLoaded();
+      if (!window.PaystackPop) throw new Error("Paystack inline checkout is not available.");
+
+      const reference = json.data.reference;
+      const amount = json.data.amount_kes_subunits;
+      const currency = json.data.currency || "KES";
+
+      const handler = window.PaystackPop.setup({
+        key: paystackPublicKey,
+        email: userData.email,
+        amount,
+        currency,
+        ref: reference,
+        callback: function (response) {
+          const ref = response?.reference || reference;
+          completeSubscriptionPaymentReturn(ref)
+            .then(async (result) => {
+              if (result.ok) {
+                await Swal.fire({
+                  icon: "success",
+                  title: "Payment recorded",
+                  text: "Your subscription is active. Reloading…",
+                  confirmButtonColor: teal,
+                });
+                clearSubscriptionPaymentPending();
+                window.location.reload();
+              } else {
+                await Swal.fire({
+                  icon: "error",
+                  title: "Payment not confirmed",
+                  text: result.message || "Try again or contact support.",
+                  confirmButtonColor: teal,
+                });
+              }
+            })
+            .catch(async (err) => {
+              await Swal.fire({
+                icon: "error",
+                title: "Error confirming payment",
+                text: err?.message || "Something went wrong.",
+                confirmButtonColor: teal,
+              });
+            })
+            .finally(() => {
+              setPayBusy(false);
+            });
+        },
+        onClose: function () {
+          clearSubscriptionPaymentPending();
+          setPayBusy(false);
+        },
+      });
+
+      handler.openIframe();
+    } catch (e) {
+      clearSubscriptionPaymentPending();
+      setPayBusy(false);
+      throw e;
+    }
+  };
+
+  const handlePayWithPaystack = async () => {
+    if (!expiredMode) return;
+    const { value: pkg } = await Swal.fire({
+      title: "Renew subscription",
+      text: "Choose the package you want to renew with Paystack.",
+      input: "select",
+      inputOptions: { silver: "Silver", gold: "Gold" },
+      inputValue: "silver",
+      showCancelButton: true,
+      confirmButtonText: "Continue",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: teal,
+    });
+    if (!pkg) return;
+
+    try {
+      await startPaystackPayment(pkg);
+    } catch (e) {
+      Swal.fire({ icon: "error", title: "Payment error", text: e?.message || "Could not start payment.", confirmButtonColor: teal });
+    }
+  };
+
   const handlePortalColorSave = async () => {
     if (!hospitalId || !token) {
       Swal.fire({ icon: "warning", title: "Not available", text: "Portal theme can be set only when your account is linked to a hospital." });
@@ -453,11 +610,12 @@ export default function SettingsPage() {
         </Typography>
       </Stack>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Update your profile and password.
+        {expiredMode ? "Download your data or delete your organization." : "Update your profile and password."}
       </Typography>
 
       <Stack spacing={3}>
-        <Card elevation={0} sx={cardSx}>
+        {!expiredMode && (
+          <Card elevation={0} sx={cardSx}>
           <CardHeader
             title="User details"
             titleTypographyProps={{ fontWeight: 700, color: "text.primary" }}
@@ -540,9 +698,10 @@ export default function SettingsPage() {
               {dloading ? "Submitting…" : "Update details"}
             </Button>
           </CardActions>
-        </Card>
+          </Card>
+        )}
 
-        {hospitalId && (
+        {hospitalId && !expiredMode && (
           <Card elevation={0} sx={cardSx}>
             <CardHeader
               avatar={<PaletteIcon sx={{ color: teal }} />}
@@ -592,7 +751,43 @@ export default function SettingsPage() {
           </Card>
         )}
 
-        {hospitalId && isSuperAdmin && (
+        {expiredMode && isSuperAdmin && !showPortabilityActions && (
+          <Card elevation={0} sx={cardSx}>
+            <CardHeader
+              avatar={<DeleteForever sx={{ color: teal }} />}
+              title="Subscription expired"
+              subheader="You can pay to renew, or download your data and delete your organization."
+              titleTypographyProps={{ fontWeight: 700, color: "text.primary" }}
+              subheaderTypographyProps={{ color: "text.secondary", variant: "body2" }}
+              sx={{ pb: 0 }}
+            />
+            <Divider sx={{ borderColor: "divider" }} />
+            <CardContent>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} flexWrap="wrap">
+                <Button
+                  variant="contained"
+                  startIcon={<CloudDownload />}
+                  disabled={payBusy}
+                  onClick={handlePayWithPaystack}
+                  sx={{ bgcolor: teal, "&:hover": { bgcolor: tealDark } }}
+                >
+                  {payBusy ? "Processing…" : "Pay with Paystack"}
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  disabled={payBusy}
+                  onClick={() => setShowPortabilityActions(true)}
+                  sx={{ borderColor: "error.main" }}
+                >
+                  Continue without paying
+                </Button>
+              </Stack>
+            </CardContent>
+          </Card>
+        )}
+
+        {hospitalId && isSuperAdmin && (!expiredMode || showPortabilityActions) && (
           <Card elevation={0} sx={cardSx}>
             <CardHeader
               avatar={<CloudDownload sx={{ color: teal }} />}
@@ -634,8 +829,9 @@ export default function SettingsPage() {
           </Card>
         )}
 
-        <form onSubmit={handlePasswordUpdate}>
-          <Card elevation={0} sx={cardSx}>
+        {!expiredMode && (
+          <form onSubmit={handlePasswordUpdate}>
+            <Card elevation={0} sx={cardSx}>
             <CardHeader
               title="Password"
               subheader="Update password"
@@ -753,8 +949,9 @@ export default function SettingsPage() {
                 {ploading ? "Submitting…" : "Update password"}
               </Button>
             </CardActions>
-          </Card>
-        </form>
+            </Card>
+          </form>
+        )}
       </Stack>
     </Box>
   );

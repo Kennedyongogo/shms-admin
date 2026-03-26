@@ -193,6 +193,11 @@ const Navbar = (props) => {
     }
   })();
   const isSuperAdmin = role?.name === "Super Admin";
+  let expiredMode = false;
+  try {
+    const hospital = JSON.parse(localStorage.getItem("hospital") || "null");
+    expiredMode = hospital?.subscription_status?.status === "expired";
+  } catch (_) {}
   // Use package-filtered menu from API (login/me) for everyone including Super Admin (silver vs gold).
   // But ensure "Chat" is always visible for all authenticated users in a hospital.
   let visibleItems = [];
@@ -207,7 +212,7 @@ const Navbar = (props) => {
   }
 
   // Ensure Chat is always present for logged-in users
-  if (user) {
+  if (user && !expiredMode) {
     const hasChat = visibleItems.some((item) => item.key === "chat");
     if (!hasChat) {
       const chatItem = adminItems.find((item) => item.key === "chat");

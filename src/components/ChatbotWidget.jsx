@@ -4,7 +4,6 @@ import {
   Button,
   TextField,
   Typography,
-  CircularProgress,
   InputAdornment,
   useMediaQuery,
   useTheme,
@@ -186,11 +185,34 @@ export default function ChatbotWidget({
               </Box>
             ))}
             {chatLoading && (
-              <Box sx={{ display: "flex", alignItems: "center", mt: 0.5 }}>
-                <CircularProgress size={16} sx={{ mr: 1 }} />
-                <Typography variant="caption" color="text.secondary">
-                  Thinking…
-                </Typography>
+              <Box sx={{ display: "flex", justifyContent: "flex-start", mb: 1 }}>
+                <Box
+                  sx={{
+                    px: 1.5,
+                    py: 1,
+                    borderRadius: 2,
+                    bgcolor: "white",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.08)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 0.5,
+                  }}
+                >
+                  {[0, 1, 2].map((i) => (
+                    <Box
+                      key={i}
+                      sx={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: "50%",
+                        bgcolor: "text.secondary",
+                        opacity: 0.4,
+                        animation: "chatTypingDots 1.2s infinite ease-in-out",
+                        animationDelay: `${i * 0.2}s`,
+                      }}
+                    />
+                  ))}
+                </Box>
               </Box>
             )}
           </Box>
@@ -269,6 +291,10 @@ export default function ChatbotWidget({
           ) : null
         }
         sx={{
+          "@keyframes chatTypingDots": {
+            "0%, 80%, 100%": { transform: "translateY(0)", opacity: 0.35 },
+            "40%": { transform: "translateY(-3px)", opacity: 1 },
+          },
           borderRadius: 999,
           bgcolor: primaryTeal,
           color: "white",

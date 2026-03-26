@@ -40,6 +40,32 @@ import {
 const primaryTeal = "#00897B";
 const primaryTealDark = "#00695C";
 
+let paystackInlineScriptPromise = null;
+async function ensurePaystackInlineScriptLoaded() {
+  // Paystack inline checkout uses a global `PaystackPop` object.
+  if (typeof window !== "undefined" && window.PaystackPop) return;
+  if (paystackInlineScriptPromise) return paystackInlineScriptPromise;
+
+  paystackInlineScriptPromise = new Promise((resolve, reject) => {
+    const existing = document.querySelector('script[data-paystack-inline="1"]');
+    if (existing) {
+      existing.addEventListener("load", () => resolve());
+      existing.addEventListener("error", () => reject(new Error("Failed to load Paystack script")));
+      return;
+    }
+
+    const s = document.createElement("script");
+    s.src = "https://js.paystack.co/v1/inline.js";
+    s.async = true;
+    s.setAttribute("data-paystack-inline", "1");
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error("Failed to load Paystack inline.js"));
+    document.body.appendChild(s);
+  });
+
+  return paystackInlineScriptPromise;
+}
+
 function normalizeSubscriptionPackage(p) {
   return String(p || "silver").toLowerCase() === "gold" ? "gold" : "silver";
 }
@@ -214,7 +240,18 @@ export default function LoginPage() {
           localStorage.setItem("hospital", JSON.stringify(data.data.hospital));
         }
         setOpenLoginDialog(false);
-        navigate("/dashboard");
+        const subscriptionState = data?.data?.hospital?.subscription_status?.status;
+        if (subscriptionState === "expired") {
+          Swal.fire({
+            icon: "info",
+            title: "Subscription expired",
+            text: "You can download your data or delete your organization from Settings.",
+            confirmButtonColor: primaryTeal,
+          });
+          navigate("/settings");
+        } else {
+          navigate("/dashboard");
+        }
         Swal.fire({ icon: "success", title: "Success!", text: "Signed in successfully", timer: 1500, showConfirmButton: false });
       } else {
         Swal.fire({ icon: "error", title: "Login Failed", text: data.message || "Login failed", confirmButtonColor: primaryTeal });
@@ -295,7 +332,79 @@ export default function LoginPage() {
         });
         return;
       }
-      window.location.href = json.data.authorization_url;
+
+      const reference = json.data.reference;
+      const amount = json.data.amount_kes_subunits;
+      const currency = json.data.currency || "KES";
+
+      if (!reference || !amount) {
+        clearSubscriptionPaymentPending();
+        await Swal.fire({
+          icon: "error",
+          title: "Payment init failed",
+          text: "Missing Paystack reference/amount.",
+          confirmButtonColor: primaryTeal,
+        });
+        return;
+      }
+
+      await ensurePaystackInlineScriptLoaded();
+      if (!window.PaystackPop) {
+        clearSubscriptionPaymentPending();
+        throw new Error("Paystack inline script did not expose PaystackPop");
+      }
+
+      const handler = window.PaystackPop.setup({
+        key: paymentContext.paystack_public_key,
+        email: paymentContext.email,
+        amount,
+        currency,
+        ref: reference,
+        callback: function (response) {
+          // Paystack expects a normal function here (not an async function).
+          const ref = response?.reference || reference;
+          completeSubscriptionPaymentReturn(ref)
+            .then(async (result) => {
+              if (result.ok) {
+                await Swal.fire({
+                  icon: "success",
+                  title: "Payment recorded",
+                  text: "Your subscription is active. You can sign in now.",
+                  confirmButtonColor: primaryTeal,
+                });
+                setPaymentRequiredOpen(false);
+                setPaymentContext(null);
+                setRenewalPackage("silver");
+                setOpenLoginDialog(true);
+              } else {
+                await Swal.fire({
+                  icon: "error",
+                  title: "Could not confirm payment",
+                  text: result.message || "Try again or contact support.",
+                  confirmButtonColor: primaryTeal,
+                });
+              }
+            })
+            .catch(async (err) => {
+              await Swal.fire({
+                icon: "error",
+                title: "Error confirming payment",
+                text: err?.message || "Something went wrong.",
+                confirmButtonColor: primaryTeal,
+              });
+            })
+            .finally(() => {
+              setPayRedirecting(false);
+            });
+        },
+        onClose: function () {
+          // User closed/cancelled the Paystack iframe before completing payment.
+          clearSubscriptionPaymentPending();
+          setPayRedirecting(false);
+        },
+      });
+
+      handler.openIframe();
     } catch (e) {
       clearSubscriptionPaymentPending();
       await Swal.fire({
@@ -601,8 +710,7 @@ const inputSx = {
                 {fmtKes(getRenewalPackageAmountsSubunits(paymentContext)[normalizeSubscriptionPackage(renewalPackage)])}
               </Typography>
               <Typography variant="caption" color="text.secondary" display="block">
-                You will be redirected to Paystack using <strong>{paymentContext.email}</strong>. After paying, you will return here to
-                confirm and can sign in.
+                Paystack will open in a secure popup. After successful payment, you will return here automatically to confirm and sign in.
               </Typography>
             </Stack>
           )}
@@ -626,7 +734,7 @@ const inputSx = {
             startIcon={payRedirecting ? <CircularProgress size={18} color="inherit" /> : null}
             sx={{ bgcolor: primaryTeal, "&:hover": { bgcolor: primaryTealDark } }}
           >
-            {payRedirecting ? "Redirecting…" : "Pay with Paystack"}
+            {payRedirecting ? "Processing…" : "Pay with Paystack"}
           </Button>
         </DialogActions>
       </Dialog>
