@@ -57,8 +57,11 @@ const flipFaceSx = {
   overflow: "hidden",
 };
 
+const CARD_IMAGE_PLACEHOLDER_BG = "#dce8e4";
+
 const flipCardFrontSx = {
   ...flipFaceSx,
+  backgroundColor: CARD_IMAGE_PLACEHOLDER_BG,
   backgroundImage: `url(${CARD_IMAGE})`,
   backgroundSize: "cover",
   backgroundRepeat: "no-repeat",
@@ -110,7 +113,13 @@ export default function ServicesSection() {
           {services.map(({ name, description, image }) => (
             <Box key={name} sx={{ ...flipCardOuterSx, width: "100%", minWidth: 0 }}>
               <Box className="services-flip-inner" sx={flipCardInnerSx}>
-                <Box sx={{ ...flipCardFrontSx, backgroundImage: `url(${image || CARD_IMAGE})` }} />
+                <Box
+                  sx={{
+                    ...flipCardFrontSx,
+                    backgroundColor: CARD_IMAGE_PLACEHOLDER_BG,
+                    backgroundImage: `url(${image || CARD_IMAGE})`,
+                  }}
+                />
                 <Box sx={flipCardBackSx}>
                   <Typography
                     variant="body2"

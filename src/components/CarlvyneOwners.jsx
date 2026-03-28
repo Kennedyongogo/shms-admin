@@ -24,9 +24,20 @@ import {
   ArrowBack as ArrowBackIcon,
 } from "@mui/icons-material";
 
+/** Same-origin in dev (Vite proxy); set VITE_API_URL in production when the API (and uploads) live on another host. */
+function getApiBaseUrl() {
+  const env = typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL;
+  return env ? String(env).replace(/\/$/, "") : "";
+}
+
 const API = {
   owners: "/api/carlvyne-accounts",
 };
+
+function ownersListUrl() {
+  const base = getApiBaseUrl();
+  return `${base}${API.owners}?page=1&limit=2&is_active=true`;
+}
 
 async function fetchJson(url) {
   const res = await fetch(url, {
@@ -44,13 +55,29 @@ async function fetchJson(url) {
   return data;
 }
 
+/** Match Settings / public admin: relative uploads, optional API origin, Windows paths. */
 const buildImageUrl = (path) => {
   if (!path) return "";
-  if (String(path).startsWith("http")) return path;
-  if (String(path).startsWith("uploads/")) return `/${path}`;
-  if (String(path).startsWith("/uploads/")) return path;
-  return path;
+  let p = String(path).replace(/\\/g, "/").trim();
+  if (/^https?:\/\//i.test(p)) return p;
+  if (p.startsWith("/uploads/")) {
+    // ok
+  } else if (p.startsWith("uploads/")) {
+    p = `/${p}`;
+  } else if (/^(carlvyne|users|admins|misc)\//i.test(p) || /^[^/]+\.(jpe?g|png|gif|webp)$/i.test(p)) {
+    p = `/uploads/${p.replace(/^\/?uploads\//, "")}`;
+  } else {
+    return p;
+  }
+  const base = getApiBaseUrl();
+  if (base) return `${base}${p}`;
+  return p;
 };
+
+function ownerProfilePath(owner) {
+  if (!owner || typeof owner !== "object") return "";
+  return owner.profile_picture_path || owner.profilePicturePath || "";
+}
 
 export default function CarlvyneOwners() {
   const theme = useTheme();
@@ -64,7 +91,7 @@ export default function CarlvyneOwners() {
       setLoading(true);
       setError("");
       try {
-        const res = await fetchJson(`${API.owners}?page=1&limit=2&is_active=true`);
+        const res = await fetchJson(ownersListUrl());
         const rows = Array.isArray(res?.data) ? res.data : [];
         setOwners(rows.slice(0, 2));
       } catch (e) {
@@ -168,8 +195,7 @@ export default function CarlvyneOwners() {
           }}
         >
           {owners.map((owner) => {
-            const avatarUrl = buildImageUrl(owner.profile_picture_path);
-            const accent = owner.primary_color || primary;
+            const avatarUrl = buildImageUrl(ownerProfilePath(owner));
             return (
               <Card
                 key={owner.id}
@@ -186,28 +212,41 @@ export default function CarlvyneOwners() {
                   mb: "1px",
                 }}
               >
-                {/* Top image occupying half card height */}
+                {/* Fixed height so the strip is visible (absolute children do not set flex height). */}
                 <Box
                   sx={{
                     position: "relative",
-                    flex: 1,
-                    minHeight: 180,
-                    maxHeight: 240,
-                    backgroundImage: avatarUrl ? `url(${avatarUrl})` : "none",
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
+                    flexShrink: 0,
+                    height: 240,
+                    minHeight: 240,
                     borderRadius: { xs: 0, md: 0 },
                     borderBottomLeftRadius: 32,
                     borderBottomRightRadius: 32,
                     boxShadow: "0 20px 35px rgba(0,0,0,0.35)",
                     overflow: "hidden",
-                    bgcolor: avatarUrl ? "transparent" : "grey.900",
+                    bgcolor: "grey.900",
                   }}
                 >
+                  {avatarUrl ? (
+                    <Box
+                      component="img"
+                      src={avatarUrl}
+                      alt=""
+                      sx={{
+                        position: "absolute",
+                        inset: 0,
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        display: "block",
+                      }}
+                    />
+                  ) : null}
                   <Box
                     sx={{
                       position: "absolute",
                       inset: 0,
+                      pointerEvents: "none",
                       background: avatarUrl
                         ? "linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.65))"
                         : "radial-gradient(circle at 0 0, rgba(255,255,255,0.1), transparent 55%)",

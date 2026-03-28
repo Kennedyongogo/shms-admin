@@ -7,6 +7,11 @@ import {
   CardContent,
   Checkbox,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
   IconButton,
   Paper,
   Stepper,
@@ -33,7 +38,9 @@ import {
   VisibilityOff as VisibilityOffIcon,
   EmojiEvents as EmojiEventsIcon,
   Star as StarIcon,
+  Close as CloseIcon,
 } from "@mui/icons-material";
+import { motion } from "framer-motion";
 import Swal from "sweetalert2";
 import { completeSubscriptionPaymentReturn } from "../utils/subscriptionPaymentReturn";
 import GuestNavbar from "./GuestNavbar";
@@ -50,6 +57,82 @@ const GOLD_LIGHT = "#FFF8E7";
 const GOLD_MAIN = "#FFD700";
 const GOLD_DARK = "#DAA520";
 const GOLD_BORDER = "#B8860B";
+
+const chipLabelWrap = {
+  "& .MuiChip-label": { lineHeight: 1.25, whiteSpace: "normal", px: 0.75 },
+};
+
+/** Metallic silver chips — matches Silver package card. */
+const SILVER_PACKAGE_MENU_CHIP_SX = {
+  height: "auto",
+  py: 0.25,
+  fontSize: { xs: "0.6rem", sm: "0.65rem" },
+  fontWeight: 700,
+  color: "#1e293b",
+  background: "linear-gradient(145deg, #f8fafc 0%, #cbd5e1 45%, #94a3b8 100%)",
+  borderColor: "#64748b",
+  borderWidth: 1.5,
+  boxShadow: "0 2px 6px rgba(30, 41, 59, 0.18), inset 0 1px 0 rgba(255,255,255,0.65)",
+  ...chipLabelWrap,
+  "&:hover": {
+    background: "linear-gradient(145deg, #ffffff 0%, #e2e8f0 50%, #94a3b8 100%)",
+    borderColor: "#475569",
+    boxShadow: "0 4px 10px rgba(30, 41, 59, 0.22), inset 0 1px 0 rgba(255,255,255,0.8)",
+  },
+};
+
+const SILVER_PACKAGE_MENU_CHIP_VIEW_ALL_SX = {
+  cursor: "pointer",
+  fontWeight: 700,
+  fontSize: "0.7rem",
+  color: "#1e293b",
+  background: "linear-gradient(145deg, #f8fafc 0%, #cbd5e1 45%, #94a3b8 100%)",
+  borderColor: "#64748b",
+  borderWidth: 1.5,
+  boxShadow: "0 2px 6px rgba(30, 41, 59, 0.18), inset 0 1px 0 rgba(255,255,255,0.65)",
+  ...chipLabelWrap,
+  "&:hover": {
+    background: "linear-gradient(145deg, #ffffff 0%, #e2e8f0 50%, #94a3b8 100%)",
+    borderColor: "#475569",
+    boxShadow: "0 4px 10px rgba(30, 41, 59, 0.22), inset 0 1px 0 rgba(255,255,255,0.8)",
+  },
+};
+
+/** Rich gold/amber chips — matches Gold package card. */
+const GOLD_PACKAGE_MENU_CHIP_SX = {
+  height: "auto",
+  py: 0.25,
+  fontSize: { xs: "0.6rem", sm: "0.65rem" },
+  fontWeight: 700,
+  color: "#78350f",
+  background: "linear-gradient(145deg, #fef3c7 0%, #fcd34d 40%, #f59e0b 100%)",
+  borderColor: "#b45309",
+  borderWidth: 1.5,
+  boxShadow: "0 2px 8px rgba(120, 53, 15, 0.35), inset 0 1px 0 rgba(255,255,255,0.5)",
+  ...chipLabelWrap,
+  "&:hover": {
+    background: "linear-gradient(145deg, #fffbeb 0%, #fde047 45%, #d97706 100%)",
+    borderColor: "#92400e",
+    boxShadow: "0 4px 12px rgba(120, 53, 15, 0.4), inset 0 1px 0 rgba(255,255,255,0.6)",
+  },
+};
+
+const GOLD_PACKAGE_MENU_CHIP_VIEW_ALL_SX = {
+  cursor: "pointer",
+  fontWeight: 700,
+  fontSize: "0.7rem",
+  color: "#78350f",
+  background: "linear-gradient(145deg, #fef3c7 0%, #fcd34d 40%, #f59e0b 100%)",
+  borderColor: "#b45309",
+  borderWidth: 1.5,
+  boxShadow: "0 2px 8px rgba(120, 53, 15, 0.35), inset 0 1px 0 rgba(255,255,255,0.5)",
+  ...chipLabelWrap,
+  "&:hover": {
+    background: "linear-gradient(145deg, #fffbeb 0%, #fde047 45%, #d97706 100%)",
+    borderColor: "#92400e",
+    boxShadow: "0 4px 12px rgba(120, 53, 15, 0.4), inset 0 1px 0 rgba(255,255,255,0.6)",
+  },
+};
 
 /** Labels must match Navbar (adminItems[].text) and AdminUsersManagement MENU_KEY_LABELS. Order matches backend SILVER_PACKAGE_KEYS. */
 const SILVER_MENU_ITEMS = [
@@ -85,6 +168,47 @@ const SILVER_DESCRIPTION =
   "Essential clinic management: patient records, appointments, lab, pharmacy, and billing. Manage your facility profile, users, and roles. Best for small clinics, GP practices, and single-location outpatient centers.";
 const GOLD_DESCRIPTION =
   "Complete hospital system: everything in Silver plus ward admissions, diet & meals, inventory, and audit log. Full traceability and multi-department support. Best for hospitals, multi-ward facilities, and organizations that need in-patient and inventory management.";
+
+/** Long-form copy for the package detail dialog (Silver). */
+const SILVER_PACKAGE_DIALOG_OVERVIEW =
+  "Silver is built for outpatient-focused facilities: one location, strong clinical workflows, and straightforward billing. You get the core modules needed to run day-to-day operations without in-patient ward, kitchen, or stock-room complexity. Below is what each sidebar area is for and what your team can do there.";
+
+/** Long-form copy for the package detail dialog (Gold). */
+const GOLD_PACKAGE_DIALOG_OVERVIEW =
+  "Gold adds everything Silver offers, then layers on in-patient care, nutrition, and supply-chain control. It is aimed at hospitals and larger facilities that need beds, ward rounds, diet planning tied to patients, and full inventory alongside the same clinical and billing tools. Each menu item below explains the scope included in this package.";
+
+/**
+ * Detailed help text per navbar label (shared where the module exists in both packages).
+ * Keep keys aligned with SILVER_MENU_ITEMS / GOLD_MENU_ITEMS strings.
+ */
+const MENU_ITEM_DETAILS = {
+  Dashboard:
+    "A single place to see what matters today: key counts, shortcuts into busy modules, and signals that help supervisors spot workload or bottlenecks without opening every screen.",
+  Hospital:
+    "Maintain your facility profile: branding and contact details, departments, services you offer, and public-facing content such as news and events so patients and staff see accurate information.",
+  Patients:
+    "Register and manage patient demographics and history, link encounters and documents, and keep a consistent record across appointments, lab, pharmacy, and billing for each person.",
+  Appointments:
+    "Schedule and track visits: book slots, manage statuses, and move smoothly into consultations and follow-up so the front desk and clinicians stay aligned.",
+  Laboratory:
+    "Define tests and panels, capture orders from clinical workflows, record results, and support billing hand-off so lab work is traceable from order to report.",
+  Pharmacy:
+    "Maintain a medicine catalogue, manage prescriptions and dispensing, and connect dispensing to billing where configured so medication use is documented and auditable.",
+  "Billing & Payments":
+    "Create charges, invoices, and payment records across encounters and departments, with support for common payment paths so finance can reconcile what was billed versus collected.",
+  "Users & Roles":
+    "Invite staff, assign roles and permissions, and control who can see or change sensitive areas so access matches job function and policy.",
+  "Audit log":
+    "Review a trail of important actions—who did what and when—supporting accountability, troubleshooting, and compliance conversations.",
+  Settings:
+    "Configure organization preferences, subscriptions where applicable, and profile or security options so the system fits how your facility operates.",
+  "Ward & Admissions":
+    "Manage beds, admissions, discharges, and ward-level activity so in-patient stays are tracked from arrival through transfer or exit, with visibility for nursing and administration.",
+  "Diet & Meals":
+    "Plan and record patient diets and meal-related notes in line with care plans, helping kitchen and clinical teams coordinate nutrition for admitted patients.",
+  Inventory:
+    "Track stock movements, suppliers, and usage so consumables and supplies are visible to procurement and tied to operational needs across the hospital.",
+};
 
 const REG_DRAFT_KEY = "shms_reg_draft";
 /** ~3MB cap — sessionStorage limit varies by browser */
@@ -158,6 +282,149 @@ function isSubscriptionRenewalReturnFromPaystack() {
   return Boolean(ref?.trim() && sessionStorage.getItem("shms_subscription_pay_pending"));
 }
 
+function AnimatedPackageViewButton({ packageKey, onOpen }) {
+  const isSilver = packageKey === "silver";
+  return (
+    <Tooltip title="View full package details and what each menu offers" arrow>
+      <Box
+        component={motion.div}
+        animate={{
+          scale: [1, 1.09, 1],
+          boxShadow: isSilver
+            ? [
+                "0 2px 8px rgba(30,41,59,0.2)",
+                "0 4px 14px rgba(30,41,59,0.35)",
+                "0 2px 8px rgba(30,41,59,0.2)",
+              ]
+            : [
+                "0 2px 8px rgba(120,53,15,0.25)",
+                "0 4px 16px rgba(180,83,9,0.45)",
+                "0 2px 8px rgba(120,53,15,0.25)",
+              ],
+        }}
+        transition={{ duration: 2.3, repeat: Infinity, ease: "easeInOut" }}
+        sx={{ display: "inline-flex", borderRadius: "50%" }}
+      >
+        <IconButton
+          size="small"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpen(packageKey);
+          }}
+          aria-label={isSilver ? "View Silver package details" : "View Gold package details"}
+          sx={{
+            color: isSilver ? "#1e293b" : "#78350f",
+            bgcolor: isSilver ? "rgba(255,255,255,0.9)" : "rgba(255,248,220,0.95)",
+            border: isSilver ? "1.5px solid #64748b" : "1.5px solid #b45309",
+            "&:hover": {
+              bgcolor: isSilver ? "#ffffff" : "#fffbeb",
+            },
+          }}
+        >
+          <VisibilityIcon fontSize="small" />
+        </IconButton>
+      </Box>
+    </Tooltip>
+  );
+}
+
+function RegisterPackageDetailDialog({ open, packageKey, onClose }) {
+  if (!packageKey) return null;
+  const isSilver = packageKey === "silver";
+  const menuItems = isSilver ? SILVER_MENU_ITEMS : GOLD_MENU_ITEMS;
+  const overviewExtra = isSilver ? SILVER_PACKAGE_DIALOG_OVERVIEW : GOLD_PACKAGE_DIALOG_OVERVIEW;
+  const cardSummary = isSilver ? SILVER_DESCRIPTION : GOLD_DESCRIPTION;
+
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      scroll="paper"
+      aria-labelledby="register-package-detail-title"
+      slotProps={{
+        paper: {
+          sx: { borderRadius: 2 },
+        },
+      }}
+    >
+      <DialogTitle
+        id="register-package-detail-title"
+        sx={{
+          position: "relative",
+          pr: 6,
+          py: 2,
+          background: isSilver
+            ? "linear-gradient(135deg, #e2e8f0 0%, #64748b 100%)"
+            : "linear-gradient(135deg, #fbbf24 0%, #9a3412 100%)",
+          color: "#ffffff",
+        }}
+      >
+        <Typography variant="h6" sx={{ fontWeight: 800, textShadow: "0 1px 2px rgba(0,0,0,0.2)" }}>
+          {isSilver ? "Silver package — full breakdown" : "Gold package — full breakdown"}
+        </Typography>
+        <Typography variant="body2" sx={{ mt: 0.5, opacity: 0.95, fontWeight: 600 }}>
+          {isSilver ? "Clinic / outpatient — KES 10" : "Full hospital — KES 20"}
+        </Typography>
+        <IconButton
+          aria-label="Close package details"
+          onClick={onClose}
+          sx={{
+            position: "absolute",
+            right: 8,
+            top: "50%",
+            transform: "translateY(-50%)",
+            color: "#ffffff",
+            "&:hover": { bgcolor: "rgba(255,255,255,0.15)" },
+          }}
+        >
+          <CloseIcon />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent dividers sx={{ py: 2 }}>
+        <Typography variant="body1" sx={{ fontWeight: 600, mb: 1.5, lineHeight: 1.6 }}>
+          {cardSummary}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7, mb: 2 }}>
+          {overviewExtra}
+        </Typography>
+        <Divider sx={{ my: 2 }} />
+        <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1.5 }}>
+          What each menu item offers
+        </Typography>
+        <Stack spacing={1.5}>
+          {menuItems.map((label) => (
+            <Paper
+              key={label}
+              variant="outlined"
+              sx={{
+                p: 1.75,
+                borderRadius: 2,
+                borderColor: isSilver ? "rgba(100,116,139,0.35)" : "rgba(180,83,9,0.35)",
+                bgcolor: isSilver ? "rgba(241,245,249,0.5)" : "rgba(255,251,235,0.5)",
+              }}
+            >
+              <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.75, color: primaryTeal }}>
+                {label}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.65 }}>
+                {MENU_ITEM_DETAILS[label] ||
+                  "This area is included in your package. Use it from the sidebar after registration."}
+              </Typography>
+            </Paper>
+          ))}
+        </Stack>
+      </DialogContent>
+      <DialogActions sx={{ px: 3, py: 2 }}>
+        <Button variant="contained" onClick={onClose} sx={{ bgcolor: primaryTeal, fontWeight: 700, "&:hover": { bgcolor: primaryTealDark } }}>
+          Close
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 export default function RegisterPage() {
   const navigate = useNavigate();
   const [subscriptionReturnBusy, setSubscriptionReturnBusy] = useState(isSubscriptionRenewalReturnFromPaystack);
@@ -184,6 +451,7 @@ export default function RegisterPage() {
   const [showNavbar, setShowNavbar] = useState(true);
   const scrollContainerRef = useRef(null);
   const registerHeaderRef = useRef(null);
+  const [packageDetailDialog, setPackageDetailDialog] = useState(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -583,11 +851,8 @@ export default function RegisterPage() {
 
         {step === 0 && (
           <>
-            <Typography variant="h5" sx={{ fontWeight: 800, mb: 0.5, color: "text.primary", flexShrink: 0, fontSize: { xs: "1.25rem", sm: "1.5rem" } }}>
+            <Typography variant="h5" sx={{ fontWeight: 800, mb: 1, color: "text.primary", flexShrink: 0, fontSize: { xs: "1.25rem", sm: "1.5rem" } }}>
               Choose your package
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1, flexShrink: 0, maxWidth: 560 }}>
-              Select a package (Silver KES 10, Gold KES 20 in test mode). On the next step you will enter hospital and Super Admin details and register. Subscription payment is completed later, after the trial, when you sign in again as Super Admin.
             </Typography>
             <Box
               sx={{
@@ -651,7 +916,7 @@ export default function RegisterPage() {
                     direction="row"
                     alignItems="center"
                     spacing={1}
-                    sx={{ mb: 0.4, flexShrink: 0 }}
+                    sx={{ mb: 0.4, flexShrink: 0, position: "relative", zIndex: 2, pr: 0.5 }}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Checkbox
@@ -666,6 +931,8 @@ export default function RegisterPage() {
                     <Typography
                       variant="h6"
                       sx={{
+                        flex: 1,
+                        minWidth: 0,
                         fontWeight: 800,
                         fontSize: { xs: "0.95rem", sm: "1rem" },
                         color: "#ffffff",
@@ -674,6 +941,7 @@ export default function RegisterPage() {
                     >
                       Silver — KES 10
                     </Typography>
+                    <AnimatedPackageViewButton packageKey="silver" onOpen={setPackageDetailDialog} />
                   </Stack>
                   <Typography
                     variant="body2"
@@ -693,12 +961,14 @@ export default function RegisterPage() {
                   <Typography
                     variant="subtitle2"
                     sx={{
-                      fontWeight: 700,
-                      color: "rgba(255,255,255,0.95)",
+                      fontWeight: 800,
+                      color: "#1e293b",
                       mb: 0.25,
                       pl: { xs: 2.5, sm: 4.5 },
                       fontSize: { xs: "0.65rem", sm: "0.7rem" },
                       flexShrink: 0,
+                      letterSpacing: 0.02,
+                      textShadow: "0 1px 0 rgba(255,255,255,0.5)",
                     }}
                   >
                     Menu items ({SILVER_MENU_ITEMS.length}):
@@ -733,18 +1003,7 @@ export default function RegisterPage() {
                       <Chip
                         size="small"
                         label={`View all ${SILVER_MENU_ITEMS.length} menu items`}
-                        sx={{
-                          cursor: "pointer",
-                          fontWeight: 600,
-                          fontSize: "0.7rem",
-                          bgcolor: "rgba(255,255,255,0.22)",
-                          borderColor: "rgba(255,255,255,0.45)",
-                          color: "rgba(255,255,255,0.95)",
-                          "&:hover": {
-                            bgcolor: "rgba(255,255,255,0.30)",
-                            borderColor: "#ffffff",
-                          },
-                        }}
+                        sx={SILVER_PACKAGE_MENU_CHIP_VIEW_ALL_SX}
                         variant="outlined"
                       />
                     </Tooltip>
@@ -766,15 +1025,7 @@ export default function RegisterPage() {
                         key={item}
                         label={item}
                         size="small"
-                        sx={{
-                          height: "auto",
-                          py: 0.25,
-                          fontSize: { xs: "0.6rem", sm: "0.65rem" },
-                          fontWeight: 600,
-                          bgcolor: "rgba(255,255,255,0.22)",
-                          borderColor: "rgba(255,255,255,0.45)",
-                          color: "rgba(255,255,255,0.95)",
-                        }}
+                        sx={SILVER_PACKAGE_MENU_CHIP_SX}
                         variant="outlined"
                       />
                     ))}
@@ -833,7 +1084,7 @@ export default function RegisterPage() {
                     direction="row"
                     alignItems="center"
                     spacing={1}
-                    sx={{ mb: 0.4, flexShrink: 0 }}
+                    sx={{ mb: 0.4, flexShrink: 0, position: "relative", zIndex: 2, pr: 0.5 }}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Checkbox
@@ -848,6 +1099,8 @@ export default function RegisterPage() {
                     <Typography
                       variant="h6"
                       sx={{
+                        flex: 1,
+                        minWidth: 0,
                         fontWeight: 800,
                         fontSize: { xs: "0.95rem", sm: "1rem" },
                         color: "#ffffff",
@@ -856,6 +1109,7 @@ export default function RegisterPage() {
                     >
                       Gold — KES 20
                     </Typography>
+                    <AnimatedPackageViewButton packageKey="gold" onOpen={setPackageDetailDialog} />
                   </Stack>
                   <Typography
                     variant="body2"
@@ -875,12 +1129,14 @@ export default function RegisterPage() {
                   <Typography
                     variant="subtitle2"
                     sx={{
-                      fontWeight: 700,
-                      color: "rgba(255,255,255,0.95)",
+                      fontWeight: 800,
+                      color: "#78350f",
                       mb: 0.25,
                       pl: { xs: 2.5, sm: 4.5 },
                       fontSize: { xs: "0.65rem", sm: "0.7rem" },
                       flexShrink: 0,
+                      letterSpacing: 0.02,
+                      textShadow: "0 1px 0 rgba(255,255,255,0.35)",
                     }}
                   >
                     Menu items ({GOLD_MENU_ITEMS.length}):
@@ -915,18 +1171,7 @@ export default function RegisterPage() {
                       <Chip
                         size="small"
                         label={`View all ${GOLD_MENU_ITEMS.length} menu items`}
-                        sx={{
-                          cursor: "pointer",
-                          fontWeight: 600,
-                          fontSize: "0.7rem",
-                          bgcolor: "rgba(255,255,255,0.22)",
-                          borderColor: "rgba(255,255,255,0.45)",
-                          color: "rgba(255,255,255,0.95)",
-                          "&:hover": {
-                            bgcolor: "rgba(255,255,255,0.30)",
-                            borderColor: "#ffffff",
-                          },
-                        }}
+                        sx={GOLD_PACKAGE_MENU_CHIP_VIEW_ALL_SX}
                         variant="outlined"
                       />
                     </Tooltip>
@@ -948,15 +1193,7 @@ export default function RegisterPage() {
                         key={item}
                         label={item}
                         size="small"
-                        sx={{
-                          height: "auto",
-                          py: 0.25,
-                          fontSize: { xs: "0.6rem", sm: "0.65rem" },
-                          fontWeight: 600,
-                          bgcolor: "rgba(255,255,255,0.22)",
-                          borderColor: "rgba(255,255,255,0.45)",
-                          color: "rgba(255,255,255,0.95)",
-                        }}
+                        sx={GOLD_PACKAGE_MENU_CHIP_SX}
                         variant="outlined"
                       />
                     ))}
@@ -1346,6 +1583,11 @@ export default function RegisterPage() {
           </Typography>
         </Box>
       )}
+      <RegisterPackageDetailDialog
+        open={Boolean(packageDetailDialog)}
+        packageKey={packageDetailDialog}
+        onClose={() => setPackageDetailDialog(null)}
+      />
     </Box>
   );
 }

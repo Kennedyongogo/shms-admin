@@ -89,6 +89,8 @@ const BACKGROUND_IMAGES = [
   "/geralt-ai-generated-8685102_1920.jpg",
   "/vitalworks-hospital-ward-1338585_1920.jpg",
 ];
+/** Solid color under photos until each file decodes (avoids white flash behind rotating slides). */
+const LOGIN_HERO_PLACEHOLDER_BG = "#121a22";
 const BACKGROUND_INTERVAL_MS = 5500;
 const BACKGROUND_FADE_DURATION = "1.8s";
 
@@ -116,6 +118,14 @@ export default function LoginPage() {
       setBackgroundIndex((prev) => (prev + 1) % BACKGROUND_IMAGES.length);
     }, BACKGROUND_INTERVAL_MS);
     return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    BACKGROUND_IMAGES.forEach((src) => {
+      const img = new Image();
+      img.decoding = "async";
+      img.src = src;
+    });
   }, []);
 
   useEffect(() => {
@@ -225,7 +235,9 @@ export default function LoginPage() {
           await Swal.fire({
             icon: "info",
             title: "Subscription inactive",
-            text: data.message || "Your organization's subscription has expired. Please contact your Super Admin.",
+            text:
+              data.message ||
+              "This hospital's subscription has expired or is inactive. Please contact your Super Admin to renew the subscription.",
             confirmButtonColor: primaryTeal,
           });
         } else {
@@ -446,7 +458,17 @@ const inputSx = {
         boxSizing: "border-box",
       }}
     >
-      <Box sx={{ position: "relative", height: "100vh", minHeight: "100vh", flexShrink: 0, display: "flex", flexDirection: "column" }}>
+      <Box
+        sx={{
+          position: "relative",
+          height: "100vh",
+          minHeight: "100vh",
+          flexShrink: 0,
+          display: "flex",
+          flexDirection: "column",
+          bgcolor: LOGIN_HERO_PLACEHOLDER_BG,
+        }}
+      >
       {/* Rotating background images with crossfade */}
       <Box
         sx={{
@@ -458,6 +480,7 @@ const inputSx = {
           width: "100%",
           height: "100%",
           overflow: "hidden",
+          bgcolor: LOGIN_HERO_PLACEHOLDER_BG,
         }}
         aria-hidden
       >
@@ -472,6 +495,7 @@ const inputSx = {
               bottom: 0,
               width: "100%",
               height: "100%",
+              bgcolor: LOGIN_HERO_PLACEHOLDER_BG,
               backgroundImage: `url(${src})`,
               backgroundSize: "cover",
               backgroundRepeat: "no-repeat",
