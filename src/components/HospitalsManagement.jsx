@@ -163,6 +163,76 @@ const formatDate = (value) => {
   }
 };
 
+const msToDaysRemaining = (targetDate, nowMs) => {
+  const targetMs = new Date(targetDate).getTime();
+  if (!Number.isFinite(targetMs)) return null;
+  const diff = targetMs - nowMs;
+  if (diff <= 0) return 0;
+  return Math.ceil(diff / (24 * 60 * 60 * 1000));
+};
+
+const formatCountdown = (targetDate, nowMs) => {
+  const targetMs = new Date(targetDate).getTime();
+  if (!Number.isFinite(targetMs)) return "—";
+  const diff = Math.max(0, targetMs - nowMs);
+  const totalSeconds = Math.floor(diff / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+};
+
+const getHospitalCountdown = (hospital, nowMs) => {
+  const trialEndsAt = hospital?.trial_ends_at;
+  const subscriptionEndsAt = hospital?.subscription_ends_at;
+  const trialMs = trialEndsAt ? new Date(trialEndsAt).getTime() : null;
+  const subscriptionMs = subscriptionEndsAt ? new Date(subscriptionEndsAt).getTime() : null;
+  const derivedStatus =
+    trialMs && trialMs > nowMs
+      ? "trial"
+      : subscriptionMs && subscriptionMs > nowMs
+        ? "active"
+        : trialMs || subscriptionMs
+          ? "expired"
+          : "";
+  const status = String(hospital?.subscription_status?.status || derivedStatus || "").toLowerCase();
+
+  if (status === "trial" && trialEndsAt) {
+    const days = msToDaysRemaining(trialEndsAt, nowMs);
+    return {
+      label: "Trial remaining",
+      days,
+      countdownText: formatCountdown(trialEndsAt, nowMs),
+      tone: days > 0 ? "info" : "error",
+      endDate: trialEndsAt,
+    };
+  }
+
+  if (status === "active" && subscriptionEndsAt) {
+    const days = msToDaysRemaining(subscriptionEndsAt, nowMs);
+    return {
+      label: "Subscription remaining",
+      days,
+      countdownText: formatCountdown(subscriptionEndsAt, nowMs),
+      tone: days > 0 ? "success" : "error",
+      endDate: subscriptionEndsAt,
+    };
+  }
+
+  if (status === "expired") {
+    return {
+      label: "Subscription remaining",
+      days: 0,
+      countdownText: "0d 0h 0m 0s",
+      tone: "error",
+      endDate: subscriptionEndsAt || trialEndsAt || null,
+    };
+  }
+
+  return null;
+};
+
 const slugify = (value) =>
   String(value || "")
     .toLowerCase()
@@ -191,6 +261,7 @@ export default function HospitalsManagement() {
   const [hospitalsSearchLocked, setHospitalsSearchLocked] = useState(true);
 
   const [hospitalFilter, setHospitalFilter] = useState("");
+  const [countdownNowMs, setCountdownNowMs] = useState(() => Date.now());
 
   // Hospital dialogs
   const [hospitalDialog, setHospitalDialog] = useState({ open: false, mode: "create", id: null });
@@ -374,6 +445,13 @@ export default function HospitalsManagement() {
     const main = theme.palette.primary.main;
     return `linear-gradient(135deg, ${dark} 0%, ${main} 100%)`;
   }, [theme.palette.primary.dark, theme.palette.primary.main]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setCountdownNowMs(Date.now());
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const loadHospitals = async () => {
     if (!requireTokenGuard()) return;
@@ -1549,7 +1627,9 @@ export default function HospitalsManagement() {
                 </Stack>
               ) : (
                 <Stack spacing={2}>
-                  {hospitals.map((h) => (
+                  {hospitals.map((h) => {
+                    const countdown = getHospitalCountdown(h, countdownNowMs);
+                    return (
                     <Card key={h.id} variant="outlined" sx={{ borderRadius: 3, overflow: "hidden" }}>
                       <CardContent sx={{ p: 0, "&:last-child": { pb: 0 } }}>
                         <Stack
@@ -1613,6 +1693,15 @@ export default function HospitalsManagement() {
                                     color: (h.subscription_package || "silver") === "gold" ? "warning.contrastText" : "grey.800",
                                   }}
                                 />
+                                {countdown && (
+                                  <Chip
+                                    size="small"
+                                    label={`${countdown.label}: ${countdown.countdownText}`}
+                                    color={countdown.tone}
+                                    variant={countdown.tone === "error" ? "filled" : "outlined"}
+                                    sx={{ fontWeight: 700, display: { xs: "none", sm: "inline-flex" } }}
+                                  />
+                                )}
                               </Stack>
                               {isSuperAdmin && (
                                 <Tooltip title="Edit">
@@ -1640,11 +1729,24 @@ export default function HospitalsManagement() {
                               </Typography>
                               <Typography sx={{ fontWeight: 700 }}>{formatDate(h.createdAt)}</Typography>
                             </Box>
+                            {countdown && (
+                              <Box sx={{ mt: 1 }}>
+                                <Typography variant="caption" color="text.secondary">
+                                  {countdown.label}
+                                </Typography>
+                                <Typography sx={{ fontWeight: 800 }}>
+                                  {countdown.countdownText}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  Ends on {formatDate(countdown.endDate)}
+                                </Typography>
+                              </Box>
+                            )}
                           </Box>
                         </Stack>
                       </CardContent>
                     </Card>
-                  ))}
+                  )})}
                 </Stack>
               )}
             </Box>
@@ -2542,6 +2644,9 @@ export default function HospitalsManagement() {
       <Dialog open={hospitalView.open} onClose={() => setHospitalView({ open: false, hospital: null })} fullWidth maxWidth="sm" PaperProps={{ sx: { maxHeight: "90vh", m: { xs: 1, sm: 2 } } }}>
         <DialogTitle sx={{ fontWeight: 900 }}>Hospital Details</DialogTitle>
         <DialogContent sx={{ overflowY: "auto" }}>
+          {(() => {
+            const countdown = getHospitalCountdown(hospitalView.hospital, countdownNowMs);
+            return (
           <Stack spacing={1.25} sx={{ mt: 0.5 }}>
             <Stack direction="row" spacing={2} alignItems="center">
               <Avatar
@@ -2587,7 +2692,22 @@ export default function HospitalsManagement() {
                 {(hospitalView.hospital?.subscription_package || "silver") === "gold" ? "Gold" : "Silver"}
               </Typography>
             </Box>
+            {countdown && (
+              <Box sx={{ mt: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  {countdown.label}
+                </Typography>
+                <Typography sx={{ fontWeight: 800 }}>
+                  {countdown.countdownText}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Ends on {formatDate(countdown.endDate)}
+                </Typography>
+              </Box>
+            )}
           </Stack>
+            );
+          })()}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setHospitalView({ open: false, hospital: null })}>Close</Button>

@@ -540,7 +540,7 @@ export default function SettingsPage() {
       html: `
         <div style="text-align:left;margin-top:8px;">
           <div style="font-size:13px;color:#6b7280;margin-bottom:12px;line-height:1.45;">
-            Choose a package to renew with Paystack.
+            Choose a package to renew with Paystack. The renewed subscription runs for 30 days before expiry.
             <span style="display:inline-block;margin-left:8px;padding:3px 8px;border-radius:999px;background:rgba(0,137,123,0.10);color:#00695C;font-weight:700;">
               Previous: ${prevLabel}
             </span>
@@ -555,7 +555,7 @@ export default function SettingsPage() {
               ">
               <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
                 <div style="font-weight:900;font-size:14px;color:#0f172a;">Silver</div>
-                <div style="font-weight:900;font-size:13px;color:#0f172a;">KES</div>
+                <div style="font-weight:900;font-size:13px;color:#0f172a;">KES 900</div>
               </div>
               <div style="margin-top:10px;font-size:12px;color:#334155;line-height:1.35;">
                 Core modules for clinics: patients, appointments, lab, pharmacy, billing, users, settings.
@@ -574,7 +574,7 @@ export default function SettingsPage() {
               ">
               <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
                 <div style="font-weight:900;font-size:14px;color:#7c2d12;">Gold</div>
-                <div style="font-weight:900;font-size:13px;color:#7c2d12;">KES</div>
+                <div style="font-weight:900;font-size:13px;color:#7c2d12;">KES 1,800</div>
               </div>
               <div style="margin-top:10px;font-size:12px;color:#7c2d12;line-height:1.35;">
                 Full hospital suite: everything in Silver plus ward, diet, inventory, audit log.

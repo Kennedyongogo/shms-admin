@@ -58,6 +58,12 @@ const GOLD_MAIN = "#FFD700";
 const GOLD_DARK = "#DAA520";
 const GOLD_BORDER = "#B8860B";
 
+const SILVER_PRICE_LABEL = "KES 900";
+const GOLD_PRICE_LABEL = "KES 1,800";
+const SILVER_TRIAL_LABEL = "7-day trial";
+const GOLD_TRIAL_LABEL = "14-day trial";
+const PAID_PERIOD_LABEL = "30-day subscription after trial";
+
 const chipLabelWrap = {
   "& .MuiChip-label": { lineHeight: 1.25, whiteSpace: "normal", px: 0.75 },
 };
@@ -365,7 +371,9 @@ function RegisterPackageDetailDialog({ open, packageKey, onClose }) {
           {isSilver ? "Silver package — full breakdown" : "Gold package — full breakdown"}
         </Typography>
         <Typography variant="body2" sx={{ mt: 0.5, opacity: 0.95, fontWeight: 600 }}>
-          {isSilver ? "Clinic / outpatient — KES 10" : "Full hospital — KES 20"}
+          {isSilver
+            ? `Clinic / outpatient — ${SILVER_PRICE_LABEL} • ${SILVER_TRIAL_LABEL}`
+            : `Full hospital — ${GOLD_PRICE_LABEL} • ${GOLD_TRIAL_LABEL}`}
         </Typography>
         <IconButton
           aria-label="Close package details"
@@ -939,7 +947,7 @@ export default function RegisterPage() {
                         textShadow: "0 1px 2px rgba(0,0,0,0.18)",
                       }}
                     >
-                      Silver — KES 10
+                      Silver — {SILVER_PRICE_LABEL}
                     </Typography>
                     <AnimatedPackageViewButton packageKey="silver" onOpen={setPackageDetailDialog} />
                   </Stack>
@@ -957,6 +965,20 @@ export default function RegisterPage() {
                     }}
                   >
                     {SILVER_DESCRIPTION}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      display: "block",
+                      pl: { xs: 2.5, sm: 4.5 },
+                      pr: { xs: 0.5, sm: 0 },
+                      mb: 0.5,
+                      color: "#0f172a",
+                      fontWeight: 800,
+                      fontSize: { xs: "0.62rem", sm: "0.7rem" },
+                    }}
+                  >
+                    {SILVER_TRIAL_LABEL} then {PAID_PERIOD_LABEL}
                   </Typography>
                   <Typography
                     variant="subtitle2"
@@ -1107,7 +1129,7 @@ export default function RegisterPage() {
                         textShadow: "0 1px 2px rgba(0,0,0,0.18)",
                       }}
                     >
-                      Gold — KES 20
+                      Gold — {GOLD_PRICE_LABEL}
                     </Typography>
                     <AnimatedPackageViewButton packageKey="gold" onOpen={setPackageDetailDialog} />
                   </Stack>
@@ -1125,6 +1147,20 @@ export default function RegisterPage() {
                     }}
                   >
                     {GOLD_DESCRIPTION}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      display: "block",
+                      pl: { xs: 2.5, sm: 4.5 },
+                      pr: { xs: 0.5, sm: 0 },
+                      mb: 0.5,
+                      color: "#4a2206",
+                      fontWeight: 800,
+                      fontSize: { xs: "0.62rem", sm: "0.7rem" },
+                    }}
+                  >
+                    {GOLD_TRIAL_LABEL} then {PAID_PERIOD_LABEL}
                   </Typography>
                   <Typography
                     variant="subtitle2"

@@ -39,6 +39,10 @@ import {
 
 const primaryTeal = "#00897B";
 const primaryTealDark = "#00695C";
+const PACKAGE_PRICE_SUBUNITS = {
+  silver: 900 * 100,
+  gold: 1800 * 100,
+};
 
 let paystackInlineScriptPromise = null;
 async function ensurePaystackInlineScriptLoaded() {
@@ -79,8 +83,8 @@ function getRenewalPackageAmountsSubunits(ctx) {
   const cur = normalizeSubscriptionPackage(ctx?.subscription_package);
   const sub = Number(ctx?.amount_kes_subunits || 0);
   return {
-    silver: cur === "silver" ? sub : 10 * 100,
-    gold: cur === "gold" ? sub : 20 * 100,
+    silver: cur === "silver" ? sub : PACKAGE_PRICE_SUBUNITS.silver,
+    gold: cur === "gold" ? sub : PACKAGE_PRICE_SUBUNITS.gold,
   };
 }
 
@@ -695,7 +699,7 @@ const inputSx = {
         <DialogContent>
           <DialogContentText sx={{ mb: 2, color: "text.primary" }}>
             Your trial or paid period has ended. Choose the package you want for this renewal (you can upgrade or downgrade). Pay with
-            Paystack, then return here to confirm and sign in.
+            Paystack, then return here to confirm and sign in. Each renewal activates a 30-day subscription period before it expires again.
           </DialogContentText>
           {paymentContext && (
             <Stack spacing={2} sx={{ mb: 2 }}>
@@ -704,6 +708,9 @@ const inputSx = {
                 <strong>
                   {normalizeSubscriptionPackage(paymentContext.subscription_package) === "gold" ? "Gold" : "Silver"}
                 </strong>
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Renewal terms: Silver starts at KES 900, Gold starts at KES 1,800. Renewals run for 30 days.
               </Typography>
               <Box>
                 <FormLabel component="legend" sx={{ mb: 1, display: "block", fontWeight: 700, color: "text.primary" }}>
