@@ -36,6 +36,7 @@ import {
   Tooltip,
   Typography,
   Checkbox,
+  FormGroup,
 } from "@mui/material";
 import {
   Add,
@@ -1039,7 +1040,22 @@ export default function LaboratoryManagement() {
           const answer = q?.answer;
 
           if (type === "checkbox" || type === "boolean") {
-            initialValues[key] = String(answer).toLowerCase() === "true";
+            const optArr = Array.isArray(q?.options) ? q.options.map(String) : [];
+            if (optArr.length) {
+              if (Array.isArray(answer)) {
+                initialValues[key] = answer.map(String);
+              } else if (typeof answer === "string" && answer.trim()) {
+                const picked = answer
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter((s) => optArr.includes(s));
+                initialValues[key] = picked;
+              } else {
+                initialValues[key] = [];
+              }
+            } else {
+              initialValues[key] = String(answer).toLowerCase() === "true";
+            }
             return;
           }
 
@@ -1126,8 +1142,10 @@ export default function LaboratoryManagement() {
         required: !!f.required,
         answer: String(f.answer || "").trim() || undefined,
         options:
-          (String(f.type || "").toLowerCase() === "select" || String(f.type || "").toLowerCase() === "multi_select") &&
-          String(f.options || "").trim()
+          (() => {
+            const ty = String(f.type || "").toLowerCase();
+            return (ty === "select" || ty === "multi_select" || ty === "checkbox") && String(f.options || "").trim();
+          })()
             ? String(f.options)
                 .split(",")
                 .map((s) => s.trim())
@@ -1135,18 +1153,39 @@ export default function LaboratoryManagement() {
             : undefined,
         show_if: f.show_if ?? null,
       }));
+      {
+        const seen = new Set();
+        for (let i = 0; i < clean.length; i++) {
+          let k = String(clean[i].key || "").trim();
+          if (!k) continue;
+          const base = k;
+          let n = 2;
+          while (seen.has(k)) {
+            k = `${base}_${n}`;
+            n += 1;
+          }
+          clean[i].key = k;
+          seen.add(k);
+        }
+      }
       const errors = [];
-      const used = new Set();
-      for (const q of clean) {
+      for (let i = 0; i < clean.length; i++) {
+        const q = clean[i];
+        const rawF = (testTemplateFields || [])[i];
         if (!q.label) errors.push("Each question must have text");
         if (!q.key) errors.push("Each question must have text");
-        if (q.key) {
-          if (used.has(q.key)) errors.push(`Duplicate question: "${q.label}"`);
-          used.add(q.key);
-        }
         const t = String(q.type || "").toLowerCase();
         if ((t === "select" || t === "multi_select") && (!Array.isArray(q.options) || q.options.length === 0)) {
           errors.push(`Question "${q.label}" needs options`);
+        }
+        if (
+          t === "checkbox" &&
+          String(rawF?.options || "").trim() &&
+          (!Array.isArray(q.options) || q.options.length === 0)
+        ) {
+          errors.push(
+            `Question "${q.label}": add at least one option, or clear options to use a single yes/no checkbox`,
+          );
         }
       }
       if (clean.length === 0) errors.push("Add at least one question or disable template");
@@ -2663,7 +2702,7 @@ export default function LaboratoryManagement() {
                 <Stack spacing={1.25}>
                   {(testTemplateFields || []).map((q, idx) => {
                     const type = String(q.type || "text").toLowerCase();
-                    const showOptions = type === "select" || type === "multi_select";
+                    const showOptions = type === "select" || type === "multi_select" || type === "checkbox";
                     const selectedDep = (testTemplateFields || []).find((x) => x?.id === q?.show_if?.dependsOnId) || null;
                     const depType = String(selectedDep?.type || "text").toLowerCase();
                     const depOptionsArr =
@@ -2707,7 +2746,13 @@ export default function LaboratoryManagement() {
                               value={q.type}
                               onChange={(e) =>
                                 setTestTemplateFields((prev) =>
-                                  prev.map((x, i) => (i === idx ? { ...x, type: e.target.value } : x)),
+                                  prev.map((x, i) => {
+                                    if (i !== idx) return x;
+                                    const nv = e.target.value;
+                                    const keepOpts =
+                                      nv === "select" || nv === "multi_select" || nv === "checkbox";
+                                    return { ...x, type: nv, options: keepOpts ? x.options : "" };
+                                  }),
                                 )
                               }
                             >
@@ -2764,9 +2809,13 @@ export default function LaboratoryManagement() {
                                         : [];
                                     let defaultEquals = "";
                                     if (!dependsOnId) defaultEquals = "";
-                                    else if (nextDepType === "checkbox" || nextDepType === "boolean") defaultEquals = "true";
-                                    else if (nextDepType === "select" || nextDepType === "multi_select") defaultEquals = nextDepOptions[0] || "";
-                                    else defaultEquals = prev?.[idx]?.show_if?.equals ?? "";
+                                    else if (nextDepType === "checkbox" || nextDepType === "boolean") {
+                                      defaultEquals = nextDepOptions.length ? nextDepOptions[0] : "true";
+                                    }                                     else if (nextDepType === "select" || nextDepType === "multi_select") {
+                                      defaultEquals = nextDepOptions[0] || "";
+                                    } else {
+                                      defaultEquals = prev?.[idx]?.show_if?.equals ?? "";
+                                    }
 
                                     return prev.map((x, i) => {
                                       if (i !== idx) return x;
@@ -2797,26 +2846,52 @@ export default function LaboratoryManagement() {
                             </FormControl>
                             {q.show_if?.dependsOnId ? (
                               depType === "checkbox" || depType === "boolean" ? (
-                                <FormControl fullWidth size="small">
-                                  <InputLabel>Equals</InputLabel>
-                                  <Select
-                                    label="Equals"
-                                    value={q.show_if?.equals ?? ""}
-                                    onChange={(e) =>
-                                      setTestTemplateFields((prev) =>
-                                        prev.map((x, i) => {
-                                          if (i !== idx) return x;
-                                          return x?.show_if
-                                            ? { ...x, show_if: { ...x.show_if, equals: e.target.value } }
-                                            : x;
-                                        }),
-                                      )
-                                    }
-                                  >
-                                    <MenuItem value="true">true</MenuItem>
-                                    <MenuItem value="false">false</MenuItem>
-                                  </Select>
-                                </FormControl>
+                                depOptionsArr.length ? (
+                                  <FormControl fullWidth size="small">
+                                    <InputLabel>Equals (any checked)</InputLabel>
+                                    <Select
+                                      label="Equals (any checked)"
+                                      value={q.show_if?.equals ?? ""}
+                                      onChange={(e) =>
+                                        setTestTemplateFields((prev) =>
+                                          prev.map((x, i) => {
+                                            if (i !== idx) return x;
+                                            return x?.show_if
+                                              ? { ...x, show_if: { ...x.show_if, equals: e.target.value } }
+                                              : x;
+                                          }),
+                                        )
+                                      }
+                                    >
+                                      {depOptionsArr.map((o) => (
+                                        <MenuItem key={o} value={o}>
+                                          {o}
+                                        </MenuItem>
+                                      ))}
+                                    </Select>
+                                  </FormControl>
+                                ) : (
+                                  <FormControl fullWidth size="small">
+                                    <InputLabel>Equals</InputLabel>
+                                    <Select
+                                      label="Equals"
+                                      value={q.show_if?.equals ?? ""}
+                                      onChange={(e) =>
+                                        setTestTemplateFields((prev) =>
+                                          prev.map((x, i) => {
+                                            if (i !== idx) return x;
+                                            return x?.show_if
+                                              ? { ...x, show_if: { ...x.show_if, equals: e.target.value } }
+                                              : x;
+                                          }),
+                                        )
+                                      }
+                                    >
+                                      <MenuItem value="true">true</MenuItem>
+                                      <MenuItem value="false">false</MenuItem>
+                                    </Select>
+                                  </FormControl>
+                                )
                               ) : depType === "select" || depType === "multi_select" ? (
                                 <FormControl fullWidth size="small">
                                   <InputLabel>Equals</InputLabel>
@@ -2979,6 +3054,44 @@ export default function LaboratoryManagement() {
                       if (!shouldShowTemplateField(q, testTemplateValues)) return null;
 
                       if (type === "checkbox" || type === "boolean") {
+                        if (options.length) {
+                          const valueArr = Array.isArray(testTemplateValues?.[fieldKey])
+                            ? testTemplateValues[fieldKey].map(String)
+                            : [];
+                          return (
+                            <Box
+                              key={q.key || i}
+                              sx={{ p: 1.5, borderRadius: 2, bgcolor: "background.paper", border: "1px solid", borderColor: "divider" }}
+                            >
+                              <Typography sx={{ fontWeight: 800, mb: 0.5 }}>
+                                {label}
+                                {required ? " *" : ""}
+                              </Typography>
+                              <FormGroup>
+                                {options.map((opt) => (
+                                  <FormControlLabel
+                                    key={opt}
+                                    control={
+                                      <Checkbox
+                                        checked={valueArr.indexOf(String(opt)) > -1}
+                                        onChange={() => {
+                                          setTestTemplateValues((p) => {
+                                            const cur = Array.isArray(p?.[fieldKey]) ? p[fieldKey].map(String) : [];
+                                            const next = new Set(cur);
+                                            if (next.has(String(opt))) next.delete(String(opt));
+                                            else next.add(String(opt));
+                                            return { ...(p || {}), [fieldKey]: Array.from(next) };
+                                          });
+                                        }}
+                                      />
+                                    }
+                                    label={opt}
+                                  />
+                                ))}
+                              </FormGroup>
+                            </Box>
+                          );
+                        }
                         const checked =
                           testTemplateValues?.[fieldKey] != null
                             ? Boolean(testTemplateValues[fieldKey])
@@ -3189,7 +3302,38 @@ export default function LaboratoryManagement() {
                   if (!visible) return null;
                   const value = resultValues?.[key];
 
-                  if (type === "checkbox") {
+                  if (type === "checkbox" || type === "boolean") {
+                    if (options.length) {
+                      const arr = Array.isArray(value) ? value.map(String) : [];
+                      return (
+                        <Box key={key}>
+                          <Typography sx={{ fontWeight: 800, mb: 0.5 }}>{required ? `${label} *` : label}</Typography>
+                          <FormGroup>
+                            {options.map((opt) => (
+                              <FormControlLabel
+                                key={opt}
+                                control={
+                                  <Checkbox
+                                    checked={arr.indexOf(opt) > -1}
+                                    disabled={readOnly}
+                                    onChange={() => {
+                                      setResultValues((p) => {
+                                        const cur = Array.isArray(p?.[key]) ? p[key].map(String) : [];
+                                        const next = new Set(cur);
+                                        if (next.has(opt)) next.delete(opt);
+                                        else next.add(opt);
+                                        return { ...(p || {}), [key]: Array.from(next) };
+                                      });
+                                    }}
+                                  />
+                                }
+                                label={opt}
+                              />
+                            ))}
+                          </FormGroup>
+                        </Box>
+                      );
+                    }
                     return (
                       <FormControlLabel
                         key={key}

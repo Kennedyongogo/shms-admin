@@ -174,8 +174,21 @@ export default function LabResultViewReceipt({
                 const options = Array.isArray(q?.options) ? q.options : [];
                 const value = resultValues?.[key];
 
-                // Checkbox/boolean
+                // Checkbox/boolean (optional list of options = multiple checkboxes)
                 if (type === "checkbox" || type === "boolean") {
+                  if (options.length) {
+                    const arr = Array.isArray(value) ? value.map(String) : [];
+                    return (
+                      <Box key={key}>
+                        <Typography variant="body2" sx={{ fontWeight: 800 }}>
+                          {label}
+                        </Typography>
+                        <Stack direction="row" spacing={0.75} sx={{ flexWrap: "wrap", mt: 0.5, alignItems: "center" }}>
+                          {arr.length ? arr.map((v) => <Chip key={v} size="small" label={v} />) : <Typography color="text.secondary">—</Typography>}
+                        </Stack>
+                      </Box>
+                    );
+                  }
                   return (
                     <Box key={key} sx={{ display: "flex", gap: 1, alignItems: "center" }}>
                       <Checkbox checked={Boolean(value)} disabled />

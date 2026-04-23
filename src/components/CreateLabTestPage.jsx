@@ -1,15 +1,22 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
   Card,
   CardContent,
+  Checkbox,
+  Chip,
   CircularProgress,
+  FormControl,
+  FormControlLabel,
+  FormGroup,
   IconButton,
   InputAdornment,
+  InputLabel,
+  ListItemText,
   MenuItem,
-  FormControlLabel,
+  Select,
   Switch,
   Stack,
   TextField,
@@ -43,6 +50,75 @@ async function fetchJson(url, { method = "GET", token, body } = {}) {
   return data;
 }
 
+function parseOptionsCsv(f) {
+  return String(f.options || "")
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
+function defaultPreviewValueForField(f) {
+  const t = String(f.type || "text").toLowerCase();
+  const a = f.answer;
+  const opts = parseOptionsCsv(f);
+
+  if (t === "checkbox" || t === "boolean") {
+    if (opts.length) {
+      if (a == null || String(a).trim() === "") return [];
+      if (Array.isArray(a)) return a.map(String);
+      return String(a)
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => opts.includes(s));
+    }
+    return String(a).toLowerCase() === "true";
+  }
+  if (t === "multi_select") {
+    if (Array.isArray(a)) return a.map(String);
+    if (typeof a === "string" && a.trim()) {
+      return a
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+    return [];
+  }
+  if (t === "select") {
+    if (a != null && String(a).trim() !== "") return String(a);
+    return "";
+  }
+  if (t === "multi_text") {
+    if (Array.isArray(a)) return a.map(String);
+    if (a != null && String(a).trim() !== "") return [String(a)];
+    return [];
+  }
+  if (t === "number") {
+    if (a == null || String(a).trim() === "") return "";
+    const n = Number(a);
+    return Number.isFinite(n) ? n : "";
+  }
+  return a != null ? String(a) : "";
+}
+
+function previewValueMatchesFieldType(val, f) {
+  const t = String(f.type || "text").toLowerCase();
+  const opts = parseOptionsCsv(f);
+  if (t === "checkbox" || t === "boolean") {
+    if (opts.length) return Array.isArray(val);
+    return typeof val === "boolean";
+  }
+  if (t === "number") {
+    return val === "" || typeof val === "number";
+  }
+  if (t === "multi_text" || t === "multi_select") {
+    return Array.isArray(val);
+  }
+  if (t === "select" || t === "text") {
+    return typeof val === "string";
+  }
+  return true;
+}
+
 export default function CreateLabTestPage() {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -64,6 +140,23 @@ export default function CreateLabTestPage() {
   ]);
   const [templateUiError, setTemplateUiError] = useState("");
   const [saving, setSaving] = useState(false);
+  /** Sample answers for the template preview (one entry per template row). */
+  const [previewByRow, setPreviewByRow] = useState([]);
+
+  const templateTypeSignature = useMemo(
+    () => (templateFields || []).map((f) => `${String(f.type || "text")}|${f.options || ""}`).join(";"),
+    [templateFields]
+  );
+
+  useEffect(() => {
+    if (!useTemplate) return;
+    setPreviewByRow((prev) =>
+      (templateFields || []).map((f, i) => {
+        if (i < prev.length && previewValueMatchesFieldType(prev[i], f)) return prev[i];
+        return defaultPreviewValueForField(f);
+      })
+    );
+  }, [useTemplate, templateTypeSignature, templateFields.length]);
 
   // Load this hospital's lab tests first so we never show already-added tests in the cards
   const loadExistingLabTests = useCallback(async () => {
@@ -165,7 +258,11 @@ export default function CreateLabTestPage() {
               }
             : undefined,
         options:
-          String(f.options || "").trim() && (String(f.type || "").toLowerCase() === "select" || String(f.type || "").toLowerCase() === "multi_select")
+          String(f.options || "").trim() &&
+          (() => {
+            const ty = String(f.type || "").toLowerCase();
+            return ty === "select" || ty === "multi_select" || ty === "checkbox";
+          })()
             ? String(f.options)
                 .split(",")
                 .map((s) => s.trim())
@@ -173,20 +270,44 @@ export default function CreateLabTestPage() {
             : undefined,
       }));
 
-      const errors = [];
-      const used = new Set();
-      for (const fld of clean) {
-        // Auto-generate key from question if missing
+      for (let i = 0; i < clean.length; i++) {
+        const fld = clean[i];
         if (!fld.key && fld.label) fld.key = slugifyKey(fld.label);
+      }
+      {
+        const seen = new Set();
+        for (let i = 0; i < clean.length; i++) {
+          let k = String(clean[i].key || "").trim();
+          if (!k) continue;
+          const base = k;
+          let n = 2;
+          while (seen.has(k)) {
+            k = `${base}_${n}`;
+            n += 1;
+          }
+          clean[i].key = k;
+          seen.add(k);
+        }
+      }
+
+      const errors = [];
+      for (let i = 0; i < clean.length; i++) {
+        const fld = clean[i];
+        const rawRow = (templateFields || [])[i];
         if (!fld.key) errors.push("Each question must have text (used to generate a key)");
         if (!fld.label) errors.push(`Each question must have text`);
-        if (fld.key) {
-          if (used.has(fld.key)) errors.push(`Duplicate field key: "${fld.key}"`);
-          used.add(fld.key);
-        }
         const t = String(fld.type || "").toLowerCase();
         if ((t === "select" || t === "multi_select") && (!Array.isArray(fld.options) || fld.options.length === 0)) {
           errors.push(`Field "${fld.key}" needs options (comma separated)`);
+        }
+        if (
+          t === "checkbox" &&
+          String(rawRow?.options || "").trim() &&
+          (!Array.isArray(fld.options) || fld.options.length === 0)
+        ) {
+          errors.push(
+            `Field "${fld.key}": add at least one option, or clear options to use a single yes/no checkbox`,
+          );
         }
         if (fld.range) {
           const lo = fld.range.low;
@@ -234,6 +355,26 @@ export default function CreateLabTestPage() {
   };
 
   const heroGradient = `linear-gradient(135deg, ${theme.palette.primary.dark || "#00695C"} 0%, ${theme.palette.primary.main} 100%)`;
+
+  const getPreviewValue = (i) => {
+    const f = (templateFields || [])[i];
+    if (!f) return null;
+    if (i < previewByRow.length && previewValueMatchesFieldType(previewByRow[i], f)) {
+      return previewByRow[i];
+    }
+    return defaultPreviewValueForField(f);
+  };
+
+  const setPreviewAt = (i, v) => {
+    setPreviewByRow((prev) => {
+      const tfs = templateFields || [];
+      return tfs.map((f, j) => {
+        if (j === i) return v;
+        if (j < prev.length && previewValueMatchesFieldType(prev[j], f)) return prev[j];
+        return defaultPreviewValueForField(f);
+      });
+    });
+  };
 
   return (
     <Box sx={{ pb: 4 }}>
@@ -440,8 +581,9 @@ export default function CreateLabTestPage() {
                     Result template
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                    Build the result entry form for this test (no JSON needed). Supported field types:
-                    <b> checkbox</b>, <b>text</b>, <b>multi_text</b>, <b>number</b>, <b>select</b>, <b>multi_select</b>.
+                    Build the result entry form for this test (no JSON needed). <b>checkbox</b> can be a single yes/no, or
+                    add <b>Options (comma separated)</b> for multiple checkboxes. Other types: <b>text</b>, <b>multi_text</b>,{" "}
+                    <b>number</b>, <b>select</b>, <b>multi_select</b>. Use the <b>Preview</b> below to try the form before creating.
                   </Typography>
 
                   <FormControlLabel
@@ -461,7 +603,7 @@ export default function CreateLabTestPage() {
                       <Stack spacing={1.25}>
                         {(templateFields || []).map((f, idx) => {
                           const type = String(f.type || "text");
-                          const showOptions = type === "select" || type === "multi_select";
+                          const showOptions = type === "select" || type === "multi_select" || type === "checkbox";
                           const showRange = type === "number";
                           return (
                             <Card key={`${idx}-${f.key || "field"}`} variant="outlined" sx={{ borderRadius: 2 }}>
@@ -488,7 +630,15 @@ export default function CreateLabTestPage() {
                                         prev.map((x, i) => (i === idx ? { ...x, answer: e.target.value } : x)),
                                       )
                                     }
-                                    placeholder={type === "checkbox" ? "e.g. true" : type === "number" ? "e.g. 13.5" : "e.g. Negative"}
+                                    placeholder={
+                                      type === "checkbox" && String(f.options || "").trim()
+                                        ? "e.g. first option, second (as default selected)"
+                                        : type === "checkbox"
+                                          ? "e.g. true"
+                                          : type === "number"
+                                            ? "e.g. 13.5"
+                                            : "e.g. Negative"
+                                    }
                                     fullWidth
                                   />
                                   <TextField
@@ -500,7 +650,14 @@ export default function CreateLabTestPage() {
                                       setTemplateFields((prev) =>
                                         prev.map((x, i) =>
                                           i === idx
-                                            ? { ...x, type: e.target.value, options: e.target.value === "select" || e.target.value === "multi_select" ? x.options : "" }
+                                            ? {
+                                                ...x,
+                                                type: e.target.value,
+                                                options:
+                                                  e.target.value === "select" || e.target.value === "multi_select" || e.target.value === "checkbox"
+                                                    ? x.options
+                                                    : "",
+                                              }
                                             : x,
                                         ),
                                       )
@@ -573,6 +730,199 @@ export default function CreateLabTestPage() {
                         >
                           Add question
                         </Button>
+
+                        <Card
+                          variant="outlined"
+                          sx={{ mt: 1.5, borderRadius: 2, borderStyle: "dashed", borderColor: "divider", bgcolor: "action.selected" }}
+                        >
+                          <CardContent sx={{ py: 2, "&:last-child": { pb: 2 } }}>
+                            <Stack
+                              direction="row"
+                              alignItems="flex-start"
+                              justifyContent="space-between"
+                              flexWrap="wrap"
+                              gap={1}
+                              sx={{ mb: 1.5 }}
+                            >
+                              <Box>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+                                  Preview
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  How the result form will look for staff. Try it before you create the test.
+                                </Typography>
+                              </Box>
+                              <Button
+                                type="button"
+                                size="small"
+                                variant="outlined"
+                                onClick={() =>
+                                  setPreviewByRow((templateFields || []).map((f) => defaultPreviewValueForField(f)))
+                                }
+                              >
+                                Reset preview
+                              </Button>
+                            </Stack>
+                            <Stack spacing={1.5}>
+                              {(templateFields || []).map((f, idx) => {
+                                const t = String(f.type || "text").toLowerCase();
+                                const label = f.label || "(no question text yet)";
+                                const options = parseOptionsCsv(f);
+                                const required = !!f.required;
+                                const v = getPreviewValue(idx);
+                                return (
+                                  <Box
+                                    key={idx}
+                                    sx={{
+                                      p: 1.5,
+                                      borderRadius: 2,
+                                      bgcolor: "background.paper",
+                                      border: "1px solid",
+                                      borderColor: "divider",
+                                    }}
+                                  >
+                                    {t === "checkbox" || t === "boolean" ? (
+                                      options.length ? (
+                                        <>
+                                          <Typography sx={{ fontWeight: 800, mb: 0.5 }}>
+                                            {label}
+                                            {required ? " *" : ""}
+                                          </Typography>
+                                          <FormGroup>
+                                            {options.map((opt) => {
+                                              const arr = Array.isArray(v) ? v.map(String) : [];
+                                              return (
+                                                <FormControlLabel
+                                                  key={opt}
+                                                  control={
+                                                    <Checkbox
+                                                      size="small"
+                                                      checked={arr.indexOf(opt) > -1}
+                                                      onChange={() => {
+                                                        const next = new Set(arr);
+                                                        if (next.has(opt)) next.delete(opt);
+                                                        else next.add(opt);
+                                                        setPreviewAt(idx, Array.from(next));
+                                                      }}
+                                                    />
+                                                  }
+                                                  label={opt}
+                                                />
+                                              );
+                                            })}
+                                          </FormGroup>
+                                        </>
+                                      ) : (
+                                        <FormControlLabel
+                                          control={
+                                            <Checkbox
+                                              size="small"
+                                              checked={Boolean(v)}
+                                              onChange={(e) => setPreviewAt(idx, e.target.checked)}
+                                            />
+                                          }
+                                          label={
+                                            <Typography component="span" sx={{ fontWeight: 800 }}>
+                                              {label}
+                                              {required ? " *" : ""}
+                                            </Typography>
+                                          }
+                                        />
+                                      )
+                                    ) : t === "select" ? (
+                                      <FormControl fullWidth size="small">
+                                        <InputLabel>{required ? `${label} *` : label}</InputLabel>
+                                        <Select
+                                          label={required ? `${label} *` : label}
+                                          value={options.includes(String(v)) ? String(v) : ""}
+                                          onChange={(e) => setPreviewAt(idx, e.target.value)}
+                                        >
+                                          <MenuItem value="">
+                                            <em>None</em>
+                                          </MenuItem>
+                                          {options.map((opt) => (
+                                            <MenuItem key={opt} value={opt}>
+                                              {opt}
+                                            </MenuItem>
+                                          ))}
+                                        </Select>
+                                      </FormControl>
+                                    ) : t === "multi_select" ? (
+                                      <FormControl fullWidth size="small">
+                                        <InputLabel>{required ? `${label} *` : label}</InputLabel>
+                                        <Select
+                                          multiple
+                                          label={required ? `${label} *` : label}
+                                          value={Array.isArray(v) ? v.map(String) : []}
+                                          onChange={(e) => setPreviewAt(idx, e.target.value)}
+                                          renderValue={(selected) => (
+                                            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.75 }}>
+                                              {(selected || []).map((x) => (
+                                                <Chip key={x} size="small" label={x} />
+                                              ))}
+                                            </Box>
+                                          )}
+                                        >
+                                          {options.map((opt) => (
+                                            <MenuItem key={opt} value={opt}>
+                                              <Checkbox
+                                                size="small"
+                                                checked={Array.isArray(v) && v.map(String).indexOf(opt) > -1}
+                                              />
+                                              <ListItemText primary={opt} />
+                                            </MenuItem>
+                                          ))}
+                                        </Select>
+                                      </FormControl>
+                                    ) : t === "multi_text" ? (
+                                      <TextField
+                                        fullWidth
+                                        size="small"
+                                        multiline
+                                        minRows={2}
+                                        label={required ? `${label} *` : label}
+                                        value={Array.isArray(v) ? v.join("\n") : ""}
+                                        onChange={(e) => {
+                                          const lines = e.target.value
+                                            .split("\n")
+                                            .map((s) => s.trim())
+                                            .filter((s) => s.length);
+                                          setPreviewAt(idx, lines);
+                                        }}
+                                      />
+                                    ) : t === "number" ? (
+                                      <TextField
+                                        fullWidth
+                                        size="small"
+                                        type="number"
+                                        label={required ? `${label} *` : label}
+                                        value={v === "" || v === null || v === undefined ? "" : v}
+                                        onChange={(e) => {
+                                          const s = e.target.value;
+                                          if (s === "") {
+                                            setPreviewAt(idx, "");
+                                            return;
+                                          }
+                                          const n = Number(s);
+                                          setPreviewAt(idx, Number.isFinite(n) ? n : "");
+                                        }}
+                                        inputProps={{ step: "any" }}
+                                      />
+                                    ) : (
+                                      <TextField
+                                        fullWidth
+                                        size="small"
+                                        label={required ? `${label} *` : label}
+                                        value={v != null ? String(v) : ""}
+                                        onChange={(e) => setPreviewAt(idx, e.target.value)}
+                                      />
+                                    )}
+                                  </Box>
+                                );
+                              })}
+                            </Stack>
+                          </CardContent>
+                        </Card>
                       </Stack>
                     </>
                   )}
